@@ -105,6 +105,12 @@ string SequenceTree::write(bool print_lengths) const
   return RT.write(print_lengths);
 }
 
+string SequenceTree::write_with_internal_names(bool print_lengths) const 
+{
+  RootedSequenceTree RT(*this,directed_branch(0).target());
+  return RT.write_with_internal_names(print_lengths);
+}
+
 string SequenceTree::write_with_bootstrap_fraction(const vector<double>& bf, bool print_lengths) const 
 {
   RootedSequenceTree RT(*this,directed_branch(0).target());
@@ -249,6 +255,58 @@ string write_with_bootstrap_fraction(const RootedTree& T, const vector<string>& 
 string RootedSequenceTree::write(bool print_lengths) const 
 {
   return ::write(*this, get_sequences(), print_lengths);
+}
+
+string write_with_internal_names(const vector<string>& names, const_branchview b, bool print_lengths)
+{
+  string output;
+
+  // If this is a leaf node, then print the name
+  if (b.target().is_leaf_node())
+ 	output += "[&name=" + names[b.target()]+"]";
+  // If this is an internal node, then print the subtrees
+  else {
+    vector<const_branchview> branches = sorted_branches_after(b);
+    output = "(";
+    for(int i=0;i<branches.size();i++) {
+      output += write_with_internal_names(names,branches[i],print_lengths);
+
+      if (i+1<branches.size())
+	output += ",";
+    }
+    output += ")";
+	output += "[&name=A" + convertToString(b.target().name()) + "]";
+  }
+
+  // print the branch length if requested
+  if (print_lengths)
+    output += ":" + convertToString(b.length());
+
+  return output;
+}
+
+string write_with_internal_names(const RootedTree& T, const vector<string>& names, bool print_lengths) 
+{
+  vector<const_branchview> branches = sorted_neighbors(T.root());
+
+  string output = "(";
+  for(int i=0;i<branches.size();i++) {
+    output += write_with_internal_names(names,branches[i],print_lengths);
+    if (i+1 < branches.size())
+      output += ',';
+  }
+  output += ")";
+  output += "[&name=A" + convertToString(T.root().name()) + "];";
+  return output;
+}
+
+string RootedSequenceTree::write_with_internal_names(const_branchview b,bool print_lengths) const {
+  return ::write_with_internal_names(get_sequences(), b, print_lengths);
+}
+
+string RootedSequenceTree::write_with_internal_names(bool print_lengths) const 
+{
+  return ::write_with_internal_names(*this, get_sequences(), print_lengths);
 }
 
 string RootedSequenceTree::write_with_bootstrap_fraction(const vector<double>& bf, bool print_lengths) const 

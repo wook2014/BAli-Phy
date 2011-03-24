@@ -38,6 +38,8 @@ extern "C" {
 #include "alignment.H"
 #include "alignment-util.H"
 
+#define TRIAL_OUTPUT
+
 using std::valarray;
 using std::endl;
 
@@ -102,8 +104,20 @@ void print_stats(std::ostream& o, const Parameters& P, bool print_alignment)
 
   o<<"    likelihood = "<<Pr_likelihood<<"    logp = "<<Pr
    <<"    beta = " <<P.get_beta()  <<"\n";
-
-  o<<"\n";
+      
+    if (print_alignment) {
+      for(int i=0;i<P.n_data_partitions();i++) {
+        o<<standardize(*P[i].A, *P.T)<<"\n";
+#ifdef TRIAL_OUTPUT
+      //o<<(T).write_with_internal_names()<<"\n";
+      o<<(*P.T).write_with_internal_names()<<"\n";
+#endif
+      }
+    } 
+    
+  o<<*P.T<<std::endl;
+  o.flush();
+  
   show_parameters(o,P);
   o.flush();
 

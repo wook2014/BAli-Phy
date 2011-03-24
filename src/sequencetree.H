@@ -71,6 +71,7 @@ public:
 
   /// compute a string representing the tree, w/ or w/o branch lengths
   virtual std::string write_with_bootstrap_fraction(const std::vector<double>& bf, bool print_lengths=true) const;
+  virtual std::string write_with_internal_names(bool print_lengths=true) const;
 
   /// load this tree from the string \a s
   virtual int parse(const std::string& s);
@@ -111,6 +112,8 @@ public:
 
   /// compute a string representing the tree, w/ or w/o branch lengths
   std::string write(bool=true) const;
+  std::string write_with_internal_names(bool print_lengths) const;
+  std::string write_with_internal_names(const_branchview b,bool print_lengths) const;
 
   std::string write_with_bootstrap_fraction(const std::vector<double>&, bool print_lengths=true) const;
 
