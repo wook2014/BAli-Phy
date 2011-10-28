@@ -1149,6 +1149,8 @@ int main(int argc,char* argv[])
   int n_procs = 1;
   int proc_id = 0;
 
+  cout<<"WELCOME NIMROD"<<endl;
+  
 #ifdef HAVE_MPI
   mpi::environment env(argc, argv);
   mpi::communicator world;
