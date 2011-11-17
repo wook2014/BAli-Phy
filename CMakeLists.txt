@@ -3,7 +3,7 @@ project (BAli-Phy)
 
 set(BAli-Phy_VERSION_MAJOR 2)
 set(BAli-Phy_VERSION_MINOR 1)
-set(BAli-Phy_VERSION_LAST 1)
+set(BAli-Phy_PATCH_LEVEL 1)
 
 
 include(CheckIncludeFile)
