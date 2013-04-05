@@ -8,6 +8,7 @@
 // Currently, since I'm not using T*, this only works for POD type.
 // Perhaps I should clear list entries by setting their x equal to T()?
 
+#if 0
 template <typename T>
 using CacheList = std::list<T>;
 
@@ -36,8 +37,8 @@ typename CacheList<T>::iterator mypush_back(CacheList<T>& L, const T& t)
   i--;
   return i;
 }
+#else
 
-/*
 template <typename T>
 class CacheList
 {
@@ -77,6 +78,14 @@ public:
 
   int size() const 
   {
+    Node* p = head_node;
+    while(p and p->next)
+    {
+      assert(p->next->prev == p);
+      p = p->next;
+    }
+    assert(p == last_node);
+
     int count = 0;
     for(auto t:*this)
       count++;
@@ -92,6 +101,10 @@ public:
   /// Remove an element from the list. (Place it in the free area.)
   void erase(iterator loc) 
   {
+    assert(not head_node or not head_node->prev);
+    assert(not last_node or not last_node->next);
+    int s1 = size();
+
     Node* p = loc.get();
 
     if (p->prev)
@@ -104,34 +117,42 @@ public:
     else
       last_node = p->prev;
 
+    assert(not head_node or not head_node->prev);
+    assert(not last_node or not last_node->next);
+    assert(size() == s1-1);
     delete p;
   }
 
   /// Insert the value t *before* loc.
   iterator insert(iterator loc, const T& t)
   {
+    assert(not head_node or not head_node->prev);
+    assert(not last_node or not last_node->next);
+    int s1 = size();
+
     Node* p = loc.get();
 
     Node* new_node = new Node(t);
+    new_node->next = p;
 
-    if (not p)
-    {
-      last_node = new_node;
-      if (not head_node)
-	head_node = new_node;
-    }
+    if (new_node->next)
+      new_node->prev = new_node->next->prev;
     else
-    {
-      new_node->prev = p->prev;
-      new_node->next = p;
+      new_node->prev = last_node;
 
-      if (new_node->prev)
-	new_node->prev->next = new_node;
-      else
-	head_node = new_node;
+    if (new_node->next)
+      new_node->next->prev = new_node;
+    else
+      last_node = new_node;
 
-	new_node->next->prev = new_node;
-    }
+    if (new_node->prev)
+      new_node->prev->next = new_node;
+    else
+      head_node = new_node;
+
+    assert(not head_node or not head_node->prev);
+    assert(not last_node or not last_node->next);
+    assert(size() == s1+1);
     return new_node;
   }
 
@@ -149,14 +170,7 @@ public:
   {
     if (not last_node) return;
 
-    Node* temp = last_node;
-
-    last_node = last_node->prev;
-
-    if (not last_node)
-      head_node = nullptr;
-
-    delete temp;
+    erase(last_node);
   }
 
   iterator push_back(const T& t)
@@ -192,16 +206,8 @@ public:
 
   void clear() 
   {
-    if (empty()) return;
-
-    Node* p = head_node;
-    while (p)
-    {
-      Node* p2 = p;
-      p = p->next;
-      delete p2;
-    }
-    head_node = last_node = nullptr;
+    while(not empty())
+      pop_front();
   }
 
   int capacity() const
@@ -267,7 +273,29 @@ public:
   { 
     swap(L);
   }
-};
-*/
 
+  ~CacheList()
+  {
+    clear();
+  }
+};
+
+template <typename T>
+bool contains(const CacheList<T>& L, const T& t)
+{
+  return L.count(t);
+}
+
+template <typename T>
+int count(const CacheList<T>& L, const T& t)
+{
+  return L.count(t);
+}
+
+template <typename T>
+typename CacheList<T>::iterator mypush_back(CacheList<T>& L, const T& t)
+{
+  return L.push_back(t);
+}
+#endif
 #endif
