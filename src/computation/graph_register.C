@@ -602,7 +602,9 @@ void reg_heap::clear_call(int R)
   if (not R2) return;
   assert(R2 > 0 and R2 < n_regs());
   
-  assert( *access(R).call_reverse == R );
+  // If R2 is not used, then the list that call_reverse points to may have been de-allocated.
+  assert( access(R2).state != reg::used or *access(R).call_reverse == R );
+
   access(R).call = 0;
 
   // If this reg is unused, then upstream regs are in the process of being destroyed.
