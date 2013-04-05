@@ -4,127 +4,159 @@
 #include <list>
 #include <cassert>
 #include <initializer_list>
+#include <iterator>
 // Currently, since I'm not using T*, this only works for POD type.
 // Perhaps I should clear list entries by setting their x equal to T()?
 
 template <typename T>
+using CacheList = std::list<T>;
+
+template <typename T>
+bool contains(const CacheList<T>& L, const T& t)
+{
+  for(T x: L)
+    if (x == t) return true;
+  return false;
+}
+
+template <typename T>
+int count(const CacheList<T>& L, const T& t)
+{
+  int total = 0;
+  for(T x: L)
+    if (x == t) total++;
+  return total;
+}
+
+template <typename T>
+typename CacheList<T>::iterator mypush_back(CacheList<T>& L, const T& t)
+{
+  L.push_back(t);
+  typename CacheList<T>::iterator i = L.end();
+  i--;
+  return i;
+}
+
+/*
+template <typename T>
 class CacheList
 {
-  /// The actual storage.
-  std::list<T> L;
-
-  /// How many entries on the used list?
-  int n_used = 0;
-
-  /// How many entries on the free list?
-  int n_free = 0;
-
-  /// This points to the first free node.
-  typename std::list<T>::iterator begin_free;
-
-  int count_n_used() const
+  struct Node
   {
-    int count = 0;
-    for(auto i = L.begin();i!=begin_free;i++)
-      count++;
-    return count;
-  }
+    Node* prev = nullptr;
+    Node* next = nullptr;
+    T entry;
+    Node() {}
+    Node(const T& t):entry(t) {}
+  };
 
-  int count_n_free() const
-  {
-    int count = 0;
-    for(auto i = begin_free;i!=L.end();i++)
-      count++;
-    return count;
-  }
+  Node* head_node = nullptr;
+  Node* last_node = nullptr;
 
 public:
-  typedef typename std::list<T>::iterator iterator;
-  typedef typename std::list<T>::const_iterator const_iterator;
 
-  int size() const {return n_used;}
-
-  const_iterator begin() const 
+  class iterator: public std::iterator<std::input_iterator_tag,T,void>
   {
-    return L.begin();
+    Node* p = nullptr;
+  public:
+    iterator() {}
+    iterator(Node* p_):p(p_) {}
+
+    iterator& operator++() {p=p->next; return *this;}
+    iterator operator++(int) {iterator temp(*this); operator++(); return temp;}
+    bool operator==(const iterator& i2) const {return p==i2.p;}
+    bool operator!=(const iterator& i2) const {return p!=i2.p;}
+
+    T& operator*() const {return p->entry;}
+    T* operator->() const {return &(p->entry);}
+
+    Node* get() const {return p;}
+  };
+
+  typedef iterator const_iterator;
+
+  int size() const 
+  {
+    int count = 0;
+    for(auto t:*this)
+      count++;
+    return count;
   }
 
-  iterator begin()
-  {
-    return L.begin();
-  }
+  const_iterator begin() const { return head_node; }
+        iterator begin()       { return head_node; }
 
-  const_iterator end() const {return begin_free;}
-  iterator end() {return begin_free;}
-
-  void check() const
-  {
-    assert(n_free == count_n_free());
-    assert(n_used == count_n_used());
-  }
+  const_iterator end() const {return nullptr;}
+        iterator end()       {return nullptr;}
 
   /// Remove an element from the list. (Place it in the free area.)
   void erase(iterator loc) 
   {
-    assert(loc != begin_free);
+    Node* p = loc.get();
 
-    // Move (used) element from loc to *before* begin_free.
-    L.splice(begin_free, L, loc);
-    // Adjust begin_free to point to the new element.
-    begin_free = loc;
+    if (p->prev)
+      p->prev->next = p->next;
+    else
+      head_node = p->next;
 
-    n_used--;
-    n_free++;
+    if (p->next)
+      p->next->prev = p->prev;
+    else
+      last_node = p->prev;
+
+    delete p;
   }
 
   /// Insert the value t *before* loc.
   iterator insert(iterator loc, const T& t)
   {
-    if (begin_free == L.end())
+    Node* p = loc.get();
+
+    Node* new_node = new Node(t);
+
+    if (not p)
     {
-      assert(n_free == 0);
-      n_used++;
-      return L.insert(begin_free, t);
+      last_node = new_node;
+      if (not head_node)
+	head_node = new_node;
     }
-    assert(n_free > 0);
+    else
+    {
+      new_node->prev = p->prev;
+      new_node->next = p;
 
-    // Set the value
-    iterator node = begin_free;
-    *node = t;
+      if (new_node->prev)
+	new_node->prev->next = new_node;
+      else
+	head_node = new_node;
 
-    // Move begin_free to the next free value
-    begin_free++;
-
-    n_used++;
-    n_free--;
-
-    // Move (used) element from loc to *before* begin_free.
-    L.splice(loc, L, node);
-
-    return node;
+	new_node->next->prev = new_node;
+    }
+    return new_node;
   }
 
   const T& back() const
   {
-    iterator last = begin_free;
-    last--;
-    return *last;
+    return *last_node;
   }
 
   T& back()
   {
-    iterator last = begin_free;
-    last--;
-    return *last;
+    return *last_node;
   }
 
   void pop_back()
   {
-    assert(size());
+    if (not last_node) return;
 
-    iterator last = begin_free;
-    last--;
-    erase(last);
+    Node* temp = last_node;
+
+    last_node = last_node->prev;
+
+    if (not last_node)
+      head_node = nullptr;
+
+    delete temp;
   }
 
   iterator push_back(const T& t)
@@ -146,7 +178,7 @@ public:
 
   bool empty() const
   {
-    return not n_used;
+    return head_node == nullptr;
   }
 
   int count(const T& t) const
@@ -160,40 +192,35 @@ public:
 
   void clear() 
   {
-    n_free += n_used;
-    n_used = 0;
+    if (empty()) return;
 
-    assert(n_free == L.size());
-
-    begin_free = L.begin();
+    Node* p = head_node;
+    while (p)
+    {
+      Node* p2 = p;
+      p = p->next;
+      delete p2;
+    }
+    head_node = last_node = nullptr;
   }
 
   int capacity() const
   {
-    assert(n_used + n_free = L.size());
-    return L.size();
+    return size();
   }
 
   void swap(CacheList<T>& CL2) noexcept
   {
-    bool bf_is_end = (begin_free == L.end());
-    bool CL2_bf_is_end = (CL2.begin_free == CL2.L.end());
-      
-    std::swap(L, CL2.L);
-    std::swap(n_used, CL2.n_used);
-    std::swap(n_free, CL2.n_free);
-
-    std::swap(begin_free, CL2.begin_free);
-    if (CL2_bf_is_end)
-      begin_free = L.end();
-    if (bf_is_end)
-      CL2.begin_free = CL2.L.end();
+    std::swap(head_node, CL2.head_node);
+    std::swap(last_node, CL2.last_node);
   }
 
   CacheList<T>& operator=(std::initializer_list<T> L2)
   {
-    L = L2;
-    begin_free = L.end();
+    clear();
+    for(auto i: L2)
+      push_back(i);
+    return *this;
   }
 
   CacheList<T>& operator=(const CacheList<T>& CL2)
@@ -212,41 +239,35 @@ public:
   }
 
   CacheList()
-    :begin_free(L.end())
   { }
 
   CacheList(const std::list<T>& L2)
-    :L(L2),
-     n_used(L.size()),
-     n_free(0),
-     begin_free(L.end())
-  { }
+  { 
+    operator=(L2);
+  }
 
-  CacheList(const std::list<T>&& L2)
-    :L(L2),
-     n_used(L.size()),
-     n_free(0),
-     begin_free(L.end())
-  { }
+//  CacheList(const std::list<T>&& L2)
+//    :L(L2),
+//     n_used(L.size()),
+//     n_free(0),
+//     begin_free(L.end())
+//  { }
 
   CacheList(std::initializer_list<T> L2)
-    :L(L2),
-     n_used(L.size()),
-     n_free(0),
-     begin_free(L.end())
-  { }
+  { 
+    operator=(L2);
+  }
 
   CacheList(const CacheList<T>& L)
-    :CacheList()
   {
     operator=(L);
   }
 
   CacheList(CacheList<T>&& L) noexcept
-    :CacheList()
   { 
     swap(L);
   }
 };
+*/
 
 #endif

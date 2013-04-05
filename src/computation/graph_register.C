@@ -402,13 +402,14 @@ expression_ref Fun_normalize(const expression_ref& E)
 reg& reg::operator=(reg&& R) noexcept
 {
   owners = std::move( R.owners );
-  ownership_category = std::move( R.ownership_category );
+  ownership_category = R.ownership_category;
   C = std::move(R.C);
   referenced_by_in_E_reverse = std::move( R.referenced_by_in_E_reverse );
   changeable = R.changeable;
   result = R.result;
   call = R.call;
-  call_reverse = std::move( R.call_reverse );
+  if (R.call)
+    call_reverse = R.call_reverse;
   used_inputs  = std::move( R.used_inputs );
   outputs = std::move( R.outputs );
   call_outputs = std::move( R.call_outputs );
@@ -429,13 +430,11 @@ reg& reg::operator=(reg&& R) noexcept
 
 reg::reg(reg&& R) noexcept
  :owners( std::move( R.owners ) ),
-  ownership_category( std::move( R.ownership_category) ),
   C( std::move(R.C) ),
   referenced_by_in_E_reverse ( std::move( R.referenced_by_in_E_reverse ) ),
   changeable( R.changeable ),
   result( R.result ),
   call ( R.call ),
-  call_reverse ( std::move( R.call_reverse) ),
   used_inputs ( std::move(R.used_inputs) ),
   outputs ( std::move( R.outputs) ),
   call_outputs ( std::move( R.call_outputs) ),
@@ -450,6 +449,10 @@ reg::reg(reg&& R) noexcept
   R.prev_reg = -1;
   R.next_reg = -1;
   R.state = reg::none;
+  if (state != reg::free)
+    ownership_category = R.ownership_category;
+  if (R.call)
+    call_reverse = R.call_reverse;
 }
 
 void reg_heap::clear(int R)
@@ -610,7 +613,7 @@ void reg_heap::clear_call(int R)
   // If this reg is unused, then upstream regs are in the process of being destroyed.
   // However, if this reg is used, then upstream regs may be live, and so should have
   //  correct edges.
-  assert( access(R).state != reg::used or access(R2).call_outputs.count(R) );
+  assert( access(R).state != reg::used or contains(access(R2).call_outputs, R) );
 
   // If the call points to a freed reg, then its call_outputs list should already be cleared.
   if (access(R2).state == reg::free)
@@ -642,14 +645,14 @@ void reg_heap::set_C(int R, closure&& C)
     assert(reg_is_owned_by_all_of(r, get_reg_owners(R)) );
 
     // check that *r is not already marked as being referenced by R
-    assert(not access(r).referenced_by_in_E.count(R) );
+    assert(not contains(access(r).referenced_by_in_E, R) );
   }
 #endif
 
   // mark R2 as being referenced by R
   for(int R2: access(R).C.Env)
   {
-    reg::back_edge_deleter D = access(R2).referenced_by_in_E.push_back(R);
+    reg::back_edge_deleter D = mypush_back( access(R2).referenced_by_in_E, R);
     access(R).referenced_by_in_E_reverse.push_back(D);
   }
 }
@@ -1159,7 +1162,7 @@ void reg_heap::compute_ownership_categories()
   canonical_ownership_categories.clear();
   {
     owner_set_t empty;
-    canonical_ownership_categories.insert(empty, ownership_categories.push_back(empty) );
+    canonical_ownership_categories.insert(empty, mypush_back(ownership_categories, empty) );
   }
 
   int here = first_used_reg;
@@ -1250,7 +1253,7 @@ void reg_heap::set_reg_owners(int r, const owner_set_t& owners)
   // Find or create the category for this specific bitmask.
   auto p = canonical_ownership_categories.find_or_add(owners);
   if (p.second)
-    p.first = ownership_categories.push_back(owners);
+    p.first = mypush_back(ownership_categories, owners);
 
   set_reg_ownership_category(r, p.first );
 }
@@ -1783,7 +1786,7 @@ int reg_heap::uniquify_reg(int R, int t)
 	access(I1).outputs.erase(D);
 
 	// Add the edge to I2
-	D = access(I2).outputs.push_back(Q1);
+	D = mypush_back(access(I2).outputs, Q1);
 	I1 = I2;
       }
     }
@@ -1896,7 +1899,7 @@ void reg_heap::check_used_reg(int index) const
     assert(reg_is_owned_by_all_of(r, get_reg_owners(index) ) );
     
     // Check that referenced regs are have back-references to R
-    assert(access(r).referenced_by_in_E.count(index) );
+    assert(contains(access(r).referenced_by_in_E, index) );
   }
   
   for(const auto& i: R.used_inputs)
@@ -1907,7 +1910,7 @@ void reg_heap::check_used_reg(int index) const
     assert( reg_is_owned_by_all_of(r, get_reg_owners(index) ) );
 
     // Check that used regs are have back-references to R
-    assert( access(r).outputs.count(index) );
+    assert( contains(access(r).outputs, index) );
   }
 
   if (R.call)
@@ -1919,7 +1922,7 @@ void reg_heap::check_used_reg(int index) const
     assert( reg_is_owned_by_all_of(R.call, get_reg_owners(index) ) );
 
     // Check that the call-used reg has back-references to R
-    assert( access(R.call).call_outputs.count(index) == 1 );
+    assert( count(access(R.call).call_outputs, index) == 1 );
   }
 }
 
@@ -2253,7 +2256,7 @@ reg_heap::reg_heap()
   memory.resize(1);
 
   owner_set_t empty;
-  canonical_ownership_categories.insert(empty, ownership_categories.push_back(empty));
+  canonical_ownership_categories.insert(empty, mypush_back(ownership_categories, empty));
 }
 
 #include "computation.H"
