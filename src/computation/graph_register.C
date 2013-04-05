@@ -1123,6 +1123,7 @@ void reg_heap::trace_and_reclaim_unreachable()
       R.state = reg::checked;
 
       // Count the references from E
+      // FIXME - speed?
       next_scan.insert(next_scan.end(), R.C.Env.begin(), R.C.Env.end());
 
       // Count also the references from the call
@@ -1232,9 +1233,12 @@ const owner_set_t& reg_heap::get_reg_owners(int R) const
   return *get_reg_ownership_category(R);
 }
 
+typedef CacheList<owner_set_t>::const_iterator const_ownership_category_t;
+
+
 const ownership_category_t& reg_heap::get_reg_ownership_category(int R) const
 {
-  assert(access(R).ownership_category != ownership_categories.end());
+  assert((const_ownership_category_t)access(R).ownership_category != ownership_categories.end());
   //  assert(access(R).owners == *access(R).ownership_category);
   return access(R).ownership_category;
 }
@@ -1366,6 +1370,13 @@ vector<int> reg_heap::find_call_ancestors_in_context(int R,int t) const
    just as for indirect use (i.e. dependence).
  */
 
+template <typename T>
+void insert_at_end(vector<int>& v,T& t)
+{
+  for(auto x:t)
+    v.push_back(x);
+}
+
 void reg_heap::find_shared_ancestor_regs_in_context(int R, int t, vector<int>& unique) const
 {
   assert(reg_is_owned_by(R,t));
@@ -1396,10 +1407,10 @@ void reg_heap::find_shared_ancestor_regs_in_context(int R, int t, vector<int>& u
     unique.push_back(scan[i]);
 
     // Count the references from E in other regs
-    scan.insert(scan.end(), R.referenced_by_in_E.begin(), R.referenced_by_in_E.end());
+    insert_at_end(scan, R.referenced_by_in_E);
 
     // Count the references from calls by other regs
-    scan.insert(scan.end(), R.call_outputs.begin(), R.call_outputs.end());
+    insert_at_end(scan, R.call_outputs);
   }
 
   for(int R: unique)
