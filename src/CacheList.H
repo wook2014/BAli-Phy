@@ -113,7 +113,6 @@ private:
   void _erase(Node* p)
   {
     assert(p != &before_head_node);
-    assert(p != &end_node);
     assert(p != &end_free_node);
 
     assert(p);
@@ -140,6 +139,10 @@ public:
   /// Remove an element from the list. (Place it in the free area.)
   void erase(iterator loc) 
   {
+    assert(loc != before_begin());
+    assert(loc != end());
+    assert(loc.get() != &end_free_node);
+
 #ifndef NDEBUG
     int s1 = size();
 #endif
@@ -278,10 +281,11 @@ public:
     return total;
   }
 
+  // This needs to be O(1)!
   void clear() 
   {
-    while(not empty())
-      pop_front();
+    _erase(&end_node);
+    _insert(before_head_node.next,&end_node);
   }
 
   int capacity() const
