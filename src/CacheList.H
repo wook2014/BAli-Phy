@@ -111,6 +111,17 @@ private:
     p->next->prev = p->prev;
   }
 
+  void _insert(Node* p, Node* n)
+  {
+    n->next = p;
+
+    n->prev = n->next->prev;
+
+    n->next->prev = n;
+
+    n->prev->next = n;
+  }
+
 public:
 
   /// Remove an element from the list. (Place it in the free area.)
@@ -140,13 +151,8 @@ public:
     assert(p->prev);
 
     Node* new_node = new Node(t);
-    new_node->next = p;
 
-    new_node->prev = new_node->next->prev;
-
-    new_node->next->prev = new_node;
-
-    new_node->prev->next = new_node;
+    _insert(p, new_node);
 
     assert(size() == s1+1);
     return new_node;
