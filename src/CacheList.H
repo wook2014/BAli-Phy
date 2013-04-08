@@ -51,7 +51,7 @@ class CacheList
     Node(const T& t):entry(t) {}
   };
 
-  Node* head_node = nullptr;
+  Node before_head_node;
   Node end_node;
 
 public:
@@ -84,8 +84,14 @@ public:
     return count;
   }
 
-  const_iterator begin() const { return head_node; }
-        iterator begin()       { return head_node; }
+  const_iterator before_begin() const { return const_cast<Node*>(&before_head_node);}
+        iterator before_begin()       { return &before_head_node; }
+
+  const_iterator begin() const { return const_cast<Node*>(before_head_node.next);}
+        iterator begin()       { return before_head_node.next; }
+
+  const_iterator last() const {return const_cast<Node*>(end_node.prev);}
+        iterator last()       {return end_node.prev;}
 
   const_iterator end() const {return const_cast<Node*>(&end_node);}
         iterator end()       {return &end_node;}
@@ -93,22 +99,20 @@ public:
   /// Remove an element from the list. (Place it in the free area.)
   void erase(iterator loc) 
   {
+    assert(loc != before_begin());
     assert(loc != end());
-    assert(not head_node or not head_node->prev);
+#ifndef NDEBUG
     int s1 = size();
+#endif
 
     Node* p = loc.get();
     assert(p);
+    assert(p->prev);
     assert(p->next);
 
-    if (p->prev)
-      p->prev->next = p->next;
-    else
-      head_node = p->next;
-
+    p->prev->next = p->next;
     p->next->prev = p->prev;
 
-    assert(not head_node or not head_node->prev);
     assert(size() == s1-1);
     delete p;
   }
@@ -116,11 +120,14 @@ public:
   /// Insert the value t *before* loc.
   iterator insert(iterator loc, const T& t)
   {
-    assert(not head_node or not head_node->prev);
+    assert(loc != before_begin());
+#ifndef NDEBUG
     int s1 = size();
+#endif
 
     Node* p = loc.get();
     assert(p);
+    assert(p->prev);
 
     Node* new_node = new Node(t);
     new_node->next = p;
@@ -129,31 +136,57 @@ public:
 
     new_node->next->prev = new_node;
 
-    if (new_node->prev)
-      new_node->prev->next = new_node;
-    else
-      head_node = new_node;
+    new_node->prev->next = new_node;
 
-    assert(not head_node or not head_node->prev);
     assert(size() == s1+1);
     return new_node;
   }
 
+  void fixup()
+  {
+    before_head_node.next->prev = &before_head_node;
+    end_node.prev->next = &end_node;
+  }
+
+  void swap(CacheList<T>& CL2) noexcept
+  {
+    std::swap(before_head_node, CL2.before_head_node);
+    std::swap(end_node , CL2.end_node );
+
+    // Fix up pointers in case CL2 was empty
+    if (before_head_node.next == &CL2.end_node)
+    {
+      before_head_node.next = &end_node;
+      end_node.next = &before_head_node;
+    }
+
+    // Fix up pointers in case *this was empty
+    if (CL2.before_head_node.next == &end_node)
+    {
+      CL2.before_head_node.next = &CL2.end_node;
+      CL2.end_node.next = &CL2.before_head_node;
+    }
+
+    // The last element - if there is one -- must be updated to point to the new non-heap-allocated end node that is part of the structure.
+    fixup();
+    CL2.fixup();
+  }
+
   const T& back() const
   {
-    return end_node.prev->entry;
+    return *last();
   }
 
   T& back()
   {
-    return end_node.prev->entry;
+    return *last();
   }
 
   void pop_back()
   {
-    iterator i(end_node.prev);
+    assert(size());
 
-    erase(i);
+    erase(last());
   }
 
   iterator push_back(const T& t)
@@ -198,30 +231,6 @@ public:
     return size();
   }
 
-  void fixup()
-  {
-    if (end_node.prev)
-      end_node.prev->next = &end_node;
-  }
-
-  void swap(CacheList<T>& CL2) noexcept
-  {
-    std::swap(head_node, CL2.head_node);
-    std::swap(end_node , CL2.end_node );
-
-    // Fix up pointers in case CL2 was empty
-    if (head_node == &CL2.end_node)
-      head_node = &end_node;
-
-    // Fix up pointers in case *this was empty
-    if (CL2.head_node == &end_node)
-      CL2.head_node = &CL2.end_node;
-
-    // The last element - if there is one -- must be updated to point to the new non-heap-allocated end node that is part of the structure.
-    fixup();
-    CL2.fixup();
-  }
-
   CacheList<T>& operator=(std::initializer_list<T> L2)
   {
     clear();
@@ -247,7 +256,8 @@ public:
 
   CacheList()
   { 
-    head_node = &end_node;
+    before_head_node.next = &end_node;
+    end_node.prev = &before_head_node;
   }
 
   CacheList(const std::list<T>& L2)
