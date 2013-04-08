@@ -173,14 +173,14 @@ public:
     if (before_head_node.next == &CL2.end_node)
     {
       before_head_node.next = &end_node;
-      end_node.next = &before_head_node;
+      end_node.prev = &before_head_node;
     }
 
     // Fix up pointers in case *this was empty
     if (CL2.before_head_node.next == &end_node)
     {
       CL2.before_head_node.next = &CL2.end_node;
-      CL2.end_node.next = &CL2.before_head_node;
+      CL2.end_node.prev = &CL2.before_head_node;
     }
 
     // The last element - if there is one -- must be updated to point to the new non-heap-allocated end node that is part of the structure.
