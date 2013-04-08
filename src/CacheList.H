@@ -96,22 +96,32 @@ public:
   const_iterator end() const {return const_cast<Node*>(&end_node);}
         iterator end()       {return &end_node;}
 
-  /// Remove an element from the list. (Place it in the free area.)
-  void erase(iterator loc) 
+private:
+  void _erase(Node* p)
   {
-    assert(loc != before_begin());
-    assert(loc != end());
-#ifndef NDEBUG
-    int s1 = size();
-#endif
+    assert(p != &before_head_node);
+    assert(p != &end_node);
+    assert(p != &last_free_node);
 
-    Node* p = loc.get();
     assert(p);
     assert(p->prev);
     assert(p->next);
 
     p->prev->next = p->next;
     p->next->prev = p->prev;
+  }
+
+public:
+
+  /// Remove an element from the list. (Place it in the free area.)
+  void erase(iterator loc) 
+  {
+#ifndef NDEBUG
+    int s1 = size();
+#endif
+
+    Node* p = loc.get();
+    _erase(p);
 
     assert(size() == s1-1);
     delete p;
