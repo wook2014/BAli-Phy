@@ -47,8 +47,6 @@ class CacheList
     Node* prev = nullptr;
     Node* next = nullptr;
     T entry;
-    Node() {}
-    Node(const T& t):entry(t) {}
   };
 
   Node before_head_node;
@@ -174,11 +172,11 @@ public:
     {
       new_node = end_node.next;
       _erase(new_node);
-      new_node->entry = t;
     }
     else
-      new_node = new Node(t);
+      new_node = new Node;
 
+    new_node->entry = t;
     _insert(p, new_node);
 
     assert(size() == s1+1);
