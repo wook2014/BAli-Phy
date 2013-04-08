@@ -52,7 +52,7 @@ class CacheList
   };
 
   Node* head_node = nullptr;
-  Node* last_node = nullptr;
+  Node end_node;
 
 public:
 
@@ -78,14 +78,6 @@ public:
 
   int size() const 
   {
-    Node* p = head_node;
-    while(p and p->next)
-    {
-      assert(p->next->prev == p);
-      p = p->next;
-    }
-    assert(p == last_node);
-
     int count = 0;
     for(auto t:*this)
       count++;
@@ -95,30 +87,28 @@ public:
   const_iterator begin() const { return head_node; }
         iterator begin()       { return head_node; }
 
-  const_iterator end() const {return nullptr;}
-        iterator end()       {return nullptr;}
+  const_iterator end() const {return const_cast<Node*>(&end_node);}
+        iterator end()       {return &end_node;}
 
   /// Remove an element from the list. (Place it in the free area.)
   void erase(iterator loc) 
   {
+    assert(loc != end());
     assert(not head_node or not head_node->prev);
-    assert(not last_node or not last_node->next);
     int s1 = size();
 
     Node* p = loc.get();
+    assert(p);
+    assert(p->next);
 
     if (p->prev)
       p->prev->next = p->next;
     else
       head_node = p->next;
 
-    if (p->next)
-      p->next->prev = p->prev;
-    else
-      last_node = p->prev;
+    p->next->prev = p->prev;
 
     assert(not head_node or not head_node->prev);
-    assert(not last_node or not last_node->next);
     assert(size() == s1-1);
     delete p;
   }
@@ -127,23 +117,17 @@ public:
   iterator insert(iterator loc, const T& t)
   {
     assert(not head_node or not head_node->prev);
-    assert(not last_node or not last_node->next);
     int s1 = size();
 
     Node* p = loc.get();
+    assert(p);
 
     Node* new_node = new Node(t);
     new_node->next = p;
 
-    if (new_node->next)
-      new_node->prev = new_node->next->prev;
-    else
-      new_node->prev = last_node;
+    new_node->prev = new_node->next->prev;
 
-    if (new_node->next)
-      new_node->next->prev = new_node;
-    else
-      last_node = new_node;
+    new_node->next->prev = new_node;
 
     if (new_node->prev)
       new_node->prev->next = new_node;
@@ -151,26 +135,25 @@ public:
       head_node = new_node;
 
     assert(not head_node or not head_node->prev);
-    assert(not last_node or not last_node->next);
     assert(size() == s1+1);
     return new_node;
   }
 
   const T& back() const
   {
-    return *last_node;
+    return end_node.prev->entry;
   }
 
   T& back()
   {
-    return *last_node;
+    return end_node.prev->entry;
   }
 
   void pop_back()
   {
-    if (not last_node) return;
+    iterator i(end_node.prev);
 
-    erase(last_node);
+    erase(i);
   }
 
   iterator push_back(const T& t)
@@ -192,7 +175,7 @@ public:
 
   bool empty() const
   {
-    return head_node == nullptr;
+    return begin() == end();
   }
 
   int count(const T& t) const
@@ -215,10 +198,28 @@ public:
     return size();
   }
 
+  void fixup()
+  {
+    if (end_node.prev)
+      end_node.prev->next = &end_node;
+  }
+
   void swap(CacheList<T>& CL2) noexcept
   {
     std::swap(head_node, CL2.head_node);
-    std::swap(last_node, CL2.last_node);
+    std::swap(end_node , CL2.end_node );
+
+    // Fix up pointers in case CL2 was empty
+    if (head_node == &CL2.end_node)
+      head_node = &end_node;
+
+    // Fix up pointers in case *this was empty
+    if (CL2.head_node == &end_node)
+      CL2.head_node = &CL2.end_node;
+
+    // The last element - if there is one -- must be updated to point to the new non-heap-allocated end node that is part of the structure.
+    fixup();
+    CL2.fixup();
   }
 
   CacheList<T>& operator=(std::initializer_list<T> L2)
@@ -245,9 +246,12 @@ public:
   }
 
   CacheList()
-  { }
+  { 
+    head_node = &end_node;
+  }
 
   CacheList(const std::list<T>& L2)
+    :CacheList()
   { 
     operator=(L2);
   }
@@ -260,16 +264,19 @@ public:
 //  { }
 
   CacheList(std::initializer_list<T> L2)
+    :CacheList()
   { 
     operator=(L2);
   }
 
   CacheList(const CacheList<T>& L)
+    :CacheList()
   {
     operator=(L);
   }
 
   CacheList(CacheList<T>&& L) noexcept
+    :CacheList()
   { 
     swap(L);
   }
