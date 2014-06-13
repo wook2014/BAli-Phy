@@ -51,11 +51,11 @@ using std::endl;
  */
 
 /*
- * 1. Make operations return a reg_address
+ * 1. ?
  *
- * 2. Start recording created regs.
+ * 2. [DONE] Start recording created regs.
  *
- * 3. Separate the computation from the computed_result.
+ * 3. [DONE] Separate the computation from the computed_result.
  *
  * 4. Make let into an operation.
  */
