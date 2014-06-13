@@ -199,6 +199,7 @@ void computation::clear()
   truncate(used_inputs);
   truncate(used_by);
   truncate(called_by);
+  info.reset();
 
   // This should already be cleared.
   assert(temp == -1);
@@ -211,6 +212,7 @@ void computation::check_cleared()
   assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
+  assert(not info);
 }
 
 computation& computation::operator=(computation&& R) noexcept
@@ -222,6 +224,7 @@ computation& computation::operator=(computation&& R) noexcept
   used_inputs  = std::move( R.used_inputs );
   used_by = std::move( R.used_by );
   called_by = std::move( R.called_by );
+  info = std::move( R.info );
   temp = R.temp;
 
   return *this;
@@ -235,6 +238,7 @@ computation::computation(computation&& R) noexcept
   used_inputs ( std::move(R.used_inputs) ),
   used_by ( std::move( R.used_by) ),
   called_by ( std::move( R.called_by) ),
+  info( std::move( R.info) ),
   temp ( R.temp )
 { }
 
@@ -1670,6 +1674,7 @@ void reg_heap::duplicate_computation(int rc1, int rc2) const
   assert(not computations[rc2].call);
   computations[rc2].call = computations[rc1].call;
   computations[rc2].used_inputs = computations[rc1].used_inputs;
+  computations[rc2].info = computations[rc2].info;
 
   // set back-edges for used inputs
   for(int rcu: computations[rc2].used_inputs)

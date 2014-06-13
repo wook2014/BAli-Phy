@@ -320,6 +320,9 @@ int reg_heap::incremental_evaluate(int R, int t)
       if (not has_computation(t,R))
 	add_shared_computation(t,R);
 
+      // Add an empty set of computation effects
+      computation_for_reg(t,R).info = object_ptr<computation_info>(new computation_info);
+
       object_ptr<const Operation> O = assert_is_a<Operation>( access(R).C.exp );
 
       // Although the reg itself is not a modifiable, it will stay changeable if it ever computes a changeable result.

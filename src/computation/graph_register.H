@@ -12,6 +12,15 @@
 #include "program.H"
 #include <boost/shared_ptr.hpp>
 
+class reg;
+
+struct computation_info: public Object
+{
+  computation_info* clone() const {return new computation_info(*this);}
+  std::vector< pool<reg>::weak_ref > created_regs;
+  std::vector<int> forced_results;
+};
+
 struct computation
 {
   int source_token = -1;
@@ -32,6 +41,8 @@ struct computation
 
   /// Which reduction results made use of the value of this expression (via call)
   std::vector< pool<computation>::weak_ref > called_by;
+
+  object_ptr<computation_info> info;
 
   int temp = -1;
 
