@@ -201,6 +201,8 @@ void computation::clear()
   truncate(called_by);
   info.reset();
 
+  //assert(force_count == 0);
+  force_count = -2;
   // This should already be cleared.
   assert(temp == -1);
 }
@@ -212,6 +214,8 @@ void computation::check_cleared()
   assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
+  assert(force_count == -2);
+  assert(temp == -1);
   assert(not info);
 }
 
@@ -225,6 +229,7 @@ computation& computation::operator=(computation&& R) noexcept
   used_by = std::move( R.used_by );
   called_by = std::move( R.called_by );
   info = std::move( R.info );
+  force_count = R.force_count;
   temp = R.temp;
 
   return *this;
@@ -239,6 +244,7 @@ computation::computation(computation&& R) noexcept
   used_by ( std::move( R.used_by) ),
   called_by ( std::move( R.called_by) ),
   info( std::move( R.info) ),
+  force_count( R.force_count ),
   temp ( R.temp )
 { }
 
@@ -634,6 +640,33 @@ void reg_heap::set_computation_result_for_reg(int t, int r1)
 
   // Add a called-by edge to R2.
   computation_for_reg(t,call).called_by.push_back(computations.get_weak_ref(rc1));
+}
+
+void reg_heap::record_force(int t, int R1, int R2)
+{
+  // ?? So, is there some context-independent state for a reg
+  // I guess the reg has to be EITHER changeable OR contingent?
+  
+  assert(is_used(R1));
+  assert(is_used(R2));
+
+  assert(access(R1).C);
+  assert(access(R2).C);
+
+  assert(has_computation(t, R1));
+  assert(has_computation(t, R2));
+
+  assert(computation_result_for_reg(t,R2));
+
+  // An index_var's result only changes if the thing the index-var points to also changes.
+  // So, we may as well forbid using an index_var as an input.
+  assert(access(R2).C.exp->head->type() != index_var_type);
+
+  int rc1 = computation_index_for_reg(t,R1);
+  int rc2 = computation_index_for_reg(t,R2);
+
+  computations[rc1].info->forced_results.push_back(rc2);
+  computations[rc2].force_count++;
 }
 
 void reg_heap::set_used_input(int t, int R1, int R2)
@@ -2210,7 +2243,7 @@ reg_heap::reg_heap()
 { 
   //  computations.collect_garbage = [this](){collect_garbage();};
   computations.collect_garbage = [](){};
-  computations.clear_references = [](int){};
+  computations.clear_references = [this](int rc){};
   tokens[0].vm_relative.resize(1);
   tokens[0].used = true;
   tokens[0].referenced = true;

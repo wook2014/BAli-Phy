@@ -46,6 +46,8 @@ struct computation
 
   int temp = -1;
 
+  int force_count = -2;
+
   void clear();
 
   void check_cleared();
@@ -166,6 +168,7 @@ public:
 
   void set_used_input(int t, int R1, int R2);
   void set_call(int t, int R1, int R2);
+  void record_force(int t, int R1, int R2);
   void clear_call(int rc);
   void clear_call_for_reg(int t, int R);
   void clear_C(int R);

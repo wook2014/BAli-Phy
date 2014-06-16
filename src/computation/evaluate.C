@@ -55,6 +55,9 @@ class RegOperationArgs: public OperationArgs
       M.set_used_input(t, R, R3);
     }
 
+    if (M.has_computation(t,R3) and t)
+      M.record_force(t, R, R3);
+
     return R3;
   }
 
