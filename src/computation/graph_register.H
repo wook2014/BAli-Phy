@@ -46,7 +46,7 @@ struct computation
 
   int temp = -1;
 
-  int force_count = -2;
+  int force_count = 0;
 
   void clear();
 

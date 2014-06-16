@@ -202,7 +202,7 @@ void computation::clear()
   info.reset();
 
   //assert(force_count == 0);
-  force_count = -2;
+  force_count = 0;
   // This should already be cleared.
   assert(temp == -1);
 }
@@ -214,7 +214,7 @@ void computation::check_cleared()
   assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
-  assert(force_count == -2);
+  assert(force_count == 0);
   assert(temp == -1);
   assert(not info);
 }
