@@ -33,6 +33,9 @@ struct computation
   /// Does C reduce to another reg that we need to evaluate to get the true result?
   int call = -1;
 
+  /// Do we know which computation we are calling
+  int call_comp = 0;
+
   /// Which reg's were used to reduce this expression?
   std::vector< int > used_inputs;
 

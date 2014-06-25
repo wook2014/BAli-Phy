@@ -196,6 +196,7 @@ void computation::clear()
   source_reg = -1;
   result = 0;
   call = 0;
+  call_comp = 0;
   truncate(used_inputs);
   truncate(used_by);
   truncate(called_by);
@@ -211,6 +212,7 @@ void computation::check_cleared()
 {
   assert(not result);
   assert(not call);
+  assert(not call_comp);
   assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
@@ -225,6 +227,7 @@ computation& computation::operator=(computation&& R) noexcept
   source_token = R.source_token;
   source_reg = R.source_reg;
   call = R.call;
+  call_comp = R.call_comp;
   used_inputs  = std::move( R.used_inputs );
   used_by = std::move( R.used_by );
   called_by = std::move( R.called_by );
@@ -240,6 +243,7 @@ computation::computation(computation&& R) noexcept
   source_reg(R.source_reg),
   result (R.result), 
   call ( R.call ),
+  call_comp ( R.call_comp ),
   used_inputs ( std::move(R.used_inputs) ),
   used_by ( std::move( R.used_by) ),
   called_by ( std::move( R.called_by) ),
@@ -639,7 +643,8 @@ void reg_heap::set_computation_result_for_reg(int t, int r1)
   int rc1 = computation_index_for_reg(t,r1);
 
   // Add a called-by edge to R2.
-  computation_for_reg(t,call).called_by.push_back(computations.get_weak_ref(rc1));
+  int rc2 = computation_index_for_reg(t,call);
+  computations[rc2].called_by.push_back(computations.get_weak_ref(rc1));
 }
 
 void reg_heap::record_force(int t, int R1, int R2)
