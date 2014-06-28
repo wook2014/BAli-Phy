@@ -645,6 +645,19 @@ void reg_heap::set_computation_result_for_reg(int t, int r1)
   // Add a called-by edge to R2.
   int rc2 = computation_index_for_reg(t,call);
   computations[rc2].called_by.push_back(computations.get_weak_ref(rc1));
+
+  auto& call_comp = computation_for_reg(t,r1).call_comp;
+  int rc2_ = 0;
+  if (not call_comp.is_null())
+    rc2_ = call_comp.get(computations);
+
+  if (rc2_)
+    assert(rc2_ == rc2);
+  else
+  {
+    call_comp = computations.get_weak_ref(rc2);
+    computations[rc2].force_count++;
+  }
 }
 
 void reg_heap::record_force(int t, int R1, int R2)
