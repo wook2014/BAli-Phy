@@ -774,6 +774,7 @@ void reg_heap::unforce_computation(int rc)
 
 void reg_heap::pre_destroy_computation(int rc)
 {
+  assert(rc > 0);
   unforce_computation(computations[rc].call_comp);
 }
 
@@ -956,7 +957,10 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
 
     int rc = share_and_clear(token,R);
     if (rc > 0)
+    {
+      pre_destroy_computation(rc);
       computations.reclaim_used(rc);
+    }
 
     // Mark this reg for re_evaluation if it is flagged and hasn't been seen before.
     if (access(R).re_evaluate)
@@ -1502,6 +1506,13 @@ void reg_heap::trace_and_reclaim_unreachable()
     shrink(rc.called_by);
   }
 
+  for(auto p = computations.begin();p!=computations.end();p++)
+  {
+    int rc = p.addr();
+    if (not computations.is_marked(rc))
+      pre_destroy_computation(rc);
+  }
+
 #ifdef DEBUG_MACHINE
   check_used_regs();
 #endif
@@ -1867,7 +1878,10 @@ void reg_heap::try_release_token(int t)
   {
     int rc = tokens[t].vm_relative[r];
     if (rc > 0)
+    {
+      pre_destroy_computation(rc);
       computations.reclaim_used(rc);
+    }
   }
   tokens[t].vm_relative.clear();
 
