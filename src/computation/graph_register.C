@@ -756,10 +756,25 @@ void reg_heap::force_computation(int rc)
   computations[rc].force_count++;
 }
 
+void reg_heap:: unforce_computation(const pool<computation>::weak_ref& wrc)
+{
+  if (not wrc.is_null())
+  {
+    int rc = wrc.get(computations);
+    if (rc)
+      unforce_computation(rc);
+  }
+}
+
 void reg_heap::unforce_computation(int rc)
 {
   computations[rc].force_count--;
   assert( computations[rc].force_count >= 0);
+}
+
+void reg_heap::pre_destroy_computation(int rc)
+{
+  unforce_computation(computations[rc].call_comp);
 }
 
 void reg_heap::clear_call(int rc)

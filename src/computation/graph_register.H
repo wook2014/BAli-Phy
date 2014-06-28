@@ -172,6 +172,7 @@ public:
   void set_used_input(int t, int R1, int R2);
   void set_call(int t, int R1, int R2);
   void force_computation(int rc);
+  void unforce_computation(const pool<computation>::weak_ref& wrc);
   void unforce_computation(int rc);
   void record_force(int t, int R1, int R2);
   void clear_call(int rc);
