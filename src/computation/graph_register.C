@@ -232,8 +232,8 @@ computation& computation::operator=(computation&& R) noexcept
   used_by = std::move( R.used_by );
   called_by = std::move( R.called_by );
   info = std::move( R.info );
-  force_count = R.force_count;
   temp = R.temp;
+  force_count = R.force_count;
 
   return *this;
 }
@@ -248,8 +248,8 @@ computation::computation(computation&& R) noexcept
   used_by ( std::move( R.used_by) ),
   called_by ( std::move( R.called_by) ),
   info( std::move( R.info) ),
-  force_count( R.force_count ),
-  temp ( R.temp )
+  temp ( R.temp ),
+  force_count( R.force_count )
 { }
 
 reg& reg::operator=(reg&& R) noexcept
