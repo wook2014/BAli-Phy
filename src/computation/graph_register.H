@@ -34,7 +34,7 @@ struct computation
   int call = -1;
 
   /// Do we know which computation we are calling
-  int call_comp = 0;
+  pool<computation>::weak_ref call_comp;
 
   /// Which reg's were used to reduce this expression?
   std::vector< int > used_inputs;

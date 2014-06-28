@@ -196,7 +196,7 @@ void computation::clear()
   source_reg = -1;
   result = 0;
   call = 0;
-  call_comp = 0;
+  call_comp.reset();
   truncate(used_inputs);
   truncate(used_by);
   truncate(called_by);
@@ -212,7 +212,7 @@ void computation::check_cleared()
 {
   assert(not result);
   assert(not call);
-  assert(not call_comp);
+  assert(call_comp.is_null());
   assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
