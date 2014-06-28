@@ -776,6 +776,13 @@ void reg_heap::pre_destroy_computation(int rc)
 {
   assert(rc > 0);
   unforce_computation(computations[rc].call_comp);
+
+  auto& info = computations[rc].info;
+  if (info and info->ref_count() == 1)
+  {
+    for(int rc: info->forced_results)
+      unforce_computation(rc);
+  }
 }
 
 void reg_heap::clear_call(int rc)
@@ -1878,10 +1885,13 @@ void reg_heap::try_release_token(int t)
   {
     int rc = tokens[t].vm_relative[r];
     if (rc > 0)
-    {
       pre_destroy_computation(rc);
+  }
+  for(int r: tokens[t].vm_relative.modified())
+  {
+    int rc = tokens[t].vm_relative[r];
+    if (rc > 0)
       computations.reclaim_used(rc);
-    }
   }
   tokens[t].vm_relative.clear();
 
