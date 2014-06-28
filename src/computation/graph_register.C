@@ -656,7 +656,7 @@ void reg_heap::set_computation_result_for_reg(int t, int r1)
   else
   {
     call_comp = computations.get_weak_ref(rc2);
-    computations[rc2].force_count++;
+    force_computation(rc2);
   }
 }
 
@@ -684,7 +684,7 @@ void reg_heap::record_force(int t, int R1, int R2)
   int rc2 = computation_index_for_reg(t,R2);
 
   computations[rc1].info->forced_results.push_back(rc2);
-  computations[rc2].force_count++;
+  force_computation(rc2);
 }
 
 void reg_heap::set_used_input(int t, int R1, int R2)
@@ -748,6 +748,18 @@ void reg_heap::set_call(int t, int R1, int R2)
   // Set the call
   int rc1 = computation_index_for_reg_(t,R1);
   computations[rc1].call = R2;
+}
+
+void reg_heap::force_computation(int rc)
+{
+  assert( computations[rc].force_count >= 0);
+  computations[rc].force_count++;
+}
+
+void reg_heap::unforce_computation(int rc)
+{
+  computations[rc].force_count--;
+  assert( computations[rc].force_count >= 0);
 }
 
 void reg_heap::clear_call(int rc)
