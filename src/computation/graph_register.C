@@ -51,14 +51,19 @@ using std::endl;
  */
 
 /*
- * 1. ?
+ * 1. Merge new_computation_for_reg(t,r) with 
+ *    tokens[t].vm_relative.set_value(r, rc);
  *
  * 2. [DONE] Start recording created regs.
  *
  * 3. [DONE] Separate the computation from the computed_result.
  *
+ * 4. Move call and used_inputs into computation_info
+ *
  * 4. Make let into an operation.
  */
+
+
 
 /*
  * OK, so when we invalidate a modifiable, we also unref any local computations that
