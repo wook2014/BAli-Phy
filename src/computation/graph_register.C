@@ -54,13 +54,15 @@ using std::endl;
  * 1. Merge new_computation_for_reg(t,r) with 
  *    tokens[t].vm_relative.set_value(r, rc);
  *
+ * 5. Make wrappers around add_value, set_value, etc. to handle setting source_token.
+ *
  * 2. [DONE] Start recording created regs.
  *
  * 3. [DONE] Separate the computation from the computed_result.
  *
  * 4. Move call and used_inputs into computation_info
  *
- * 4. Make let into an operation.
+ * 6. Make let into an operation.
  */
 
 
