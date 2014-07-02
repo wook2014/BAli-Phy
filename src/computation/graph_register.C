@@ -51,8 +51,7 @@ using std::endl;
  */
 
 /*
- * 1. Merge new_computation_for_reg(t,r) with 
- *    tokens[t].vm_relative.set_value(r, rc);
+ * 1. [DONE] Merge new_computation_for_reg(t,r) with add_shared_computation(t,r)
  *
  * 5. Make wrappers around add_value, set_value, etc. to handle setting source_token.
  *
@@ -1761,14 +1760,6 @@ int reg_heap::remove_shared_computation(int t, int r)
     return tokens[t].vm_relative.erase_value(r);
   else
     return tokens[t].vm_relative.set_value(r,-1);
-}
-
-int reg_heap::new_computation_for_reg(int t, int r) const
-{
-  int rc = computations.allocate();
-  computations[rc].source_token = t;
-  computations[rc].source_reg = r;
-  return rc;
 }
 
 int reg_heap::move_computation(int t1, int t2, int r)
