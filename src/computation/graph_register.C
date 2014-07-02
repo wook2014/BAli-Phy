@@ -1752,6 +1752,7 @@ void reg_heap::check_used_regs() const
     check_used_reg( r.addr() );
 }
 
+// This routine should only be called by other routines.  It is not safe to call directly.
 int reg_heap::remove_shared_computation(int t, int r)
 {
   if (not t or is_root_token(t))
@@ -1782,7 +1783,7 @@ void reg_heap::duplicate_computation(int rc1, int rc2) const
     computations[rcu].used_by.push_back(computations.get_weak_ref(rc2));
 }
 
-// Add a shared computation at (t,r) -- assuming there isn't one already
+/// Add a shared computation at (t,r) -- assuming there isn't one already
 int reg_heap::add_shared_computation(int t, int r)
 {
   assert(tokens[t].vm_relative[r] <= 0);
