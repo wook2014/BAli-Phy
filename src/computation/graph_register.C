@@ -1292,7 +1292,7 @@ void reg_heap::invalidate_shared_regs(int t1, int t2)
 
     if (not computation_index_for_reg_(t1,r))
     {
-      // move rc2 from t2 -> t1.  Then make a new one in t2, and copy the computation-step part.
+      // move rc1 from t2 -> t1.  Then make a new one in t2, and copy the computation-step part.
       tokens[t1].vm_relative.add_value(r, rc1);
       RC.source_token = t1;
       int rc2 = new_computation_for_reg(t2, r);
