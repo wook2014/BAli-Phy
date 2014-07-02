@@ -1811,6 +1811,7 @@ void reg_heap::clear_computation(int t, int r)
   if (rc > 0)
   {
     pre_destroy_computation(rc);
+    computations.inc_version();
     computations.reclaim_used(rc);
   }
 }
