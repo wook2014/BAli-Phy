@@ -53,15 +53,23 @@ using std::endl;
 /*
  * 1. [DONE] Merge new_computation_for_reg(t,r) with add_shared_computation(t,r)
  *
- * 5. Make wrappers around add_value, set_value, etc. to handle setting source_token.
+ * 2. [DONE] Make the root token fixed. (currently, 1).
  *
- * 2. [DONE] Start recording created regs.
+ * 3. Avoid swapping mappings in merge_split_token( ).
  *
- * 3. [DONE] Separate the computation from the computed_result.
+ * 4. Update source_token in pivot_mapping( ) and merge_split_mapping( ).
  *
- * 4. Move call and used_inputs into computation_info
+ * 5. Check that source_token is always up-to-date.
  *
- * 6. Make let into an operation.
+ * 6. Make wrappers around add_value, set_value, etc. to handle setting source_token.
+ *
+ * 7. [DONE] Start recording created regs.
+ *
+ * 8. [DONE] Separate the computation from the computed_result.
+ *
+ * 9. Move call and used_inputs into computation_info
+ *
+ * 10. Make let into an operation.
  */
 
 
