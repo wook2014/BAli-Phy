@@ -1047,7 +1047,7 @@ void swap_value(mapping& vm1, mapping& vm2, int r)
 
 // Given mapping (m1,v1) followed by (m2,v2), compute a combined mapping for (m1,v1)+(m2,v2) -> (m2,v2)
 // and a mapping (m1,v1)-(m2,v2)->(m1,v1) for things that now are unused.
-void merge_split_mapping(mapping& vm1, mapping& vm2)
+bool merge_split_mapping(mapping& vm1, mapping& vm2)
 {
   if (vm1.modified().size() < vm2.modified().size())
   {
@@ -1064,6 +1064,7 @@ void merge_split_mapping(mapping& vm1, mapping& vm2)
       else
 	i++;
     }
+    return false;
   }
   else
   {
@@ -1083,7 +1084,7 @@ void merge_split_mapping(mapping& vm1, mapping& vm2)
 	vm2.erase_value(r);
       }
     }
-    std::swap(vm1,vm2);
+    return true;
   }
 }
 
@@ -1918,7 +1919,10 @@ void reg_heap::try_release_token(int t)
       return;
     }
 
-    merge_split_mapping(tokens[t].vm_relative, tokens[child_token].vm_relative);
+    if (merge_split_mapping(tokens[t].vm_relative, tokens[child_token].vm_relative))
+    {
+      std::swap(tokens[t].vm_relative, tokens[child_token].vm_relative);
+    }
 
     invalidate_shared_regs(t, child_token);
 
