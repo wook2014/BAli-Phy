@@ -799,6 +799,24 @@ void reg_heap::pre_destroy_computation(int rc)
   }
 }
 
+void reg_heap::destroy_all_computations_in_token(int t)
+{
+  computations.inc_version();
+  for(int r: tokens[t].vm_relative.modified())
+  {
+    int rc = tokens[t].vm_relative[r];
+    if (rc > 0)
+      pre_destroy_computation(rc);
+  }
+  for(int r: tokens[t].vm_relative.modified())
+  {
+    int rc = tokens[t].vm_relative[r];
+    if (rc > 0)
+      computations.reclaim_used(rc);
+  }
+  tokens[t].vm_relative.clear();
+}
+
 void reg_heap::clear_call(int rc)
 {
   computations.access_unused(rc).call = 0;
@@ -1899,20 +1917,7 @@ void reg_heap::try_release_token(int t)
   }
 
   // clear only the mappings that were actually updated here.
-  computations.inc_version();
-  for(int r: tokens[t].vm_relative.modified())
-  {
-    int rc = tokens[t].vm_relative[r];
-    if (rc > 0)
-      pre_destroy_computation(rc);
-  }
-  for(int r: tokens[t].vm_relative.modified())
-  {
-    int rc = tokens[t].vm_relative[r];
-    if (rc > 0)
-      computations.reclaim_used(rc);
-  }
-  tokens[t].vm_relative.clear();
+  destroy_all_computations_in_token(t);
 
   // If we just released a terminal token, maybe it's parent is not terminal also.
   if (parent != -1)
