@@ -817,6 +817,7 @@ void reg_heap::pre_destroy_computation(int rc)
     for(int rc: info->forced_results)
       unforce_computation(rc);
   }
+  info.reset();
 }
 
 void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs)
@@ -830,6 +831,7 @@ void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs)
     for(int rc: info->forced_results)
       unforce_computation(rc, rcs);
   }
+  info.reset();
 }
 
 void reg_heap::destroy_computations(vector<int>& rcs)
