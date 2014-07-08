@@ -1887,8 +1887,6 @@ void reg_heap::try_release_token(int t)
   // mark token for this context unused
   int parent = parent_token(t);
 
-  release_token(t);
-
   if (t == root_token)
     assert(not n_children);
 
@@ -1918,6 +1916,7 @@ void reg_heap::try_release_token(int t)
 
   // clear only the mappings that were actually updated here.
   destroy_all_computations_in_token(t);
+  release_token(t);
 
   // If we just released a terminal token, maybe it's parent is not terminal also.
   if (parent != -1)
