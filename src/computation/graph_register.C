@@ -780,10 +780,30 @@ void reg_heap:: unforce_computation(const pool<computation>::weak_ref& wrc)
   }
 }
 
+void reg_heap:: unforce_computation(const pool<computation>::weak_ref& wrc,
+				    vector<int>& rcs)
+{
+  if (not wrc.is_null())
+  {
+    int rc = wrc.get(computations);
+    if (rc)
+      unforce_computation(rc, rcs);
+  }
+}
+
 void reg_heap::unforce_computation(int rc)
 {
   computations[rc].force_count--;
   assert( computations[rc].force_count >= 0);
+}
+
+void reg_heap::unforce_computation(int rc, vector<int>& rcs)
+{
+  int& count = computations[rc].force_count;
+  count--;
+  assert( count >= 0);
+  if (count == 0)
+    rcs.push_back(rc);
 }
 
 void reg_heap::pre_destroy_computation(int rc)
@@ -797,6 +817,35 @@ void reg_heap::pre_destroy_computation(int rc)
     for(int rc: info->forced_results)
       unforce_computation(rc);
   }
+}
+
+void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs)
+{
+  assert(rc > 0);
+  unforce_computation(computations[rc].call_comp, rcs);
+
+  auto& info = computations[rc].info;
+  if (info and info->ref_count() == 1)
+  {
+    for(int rc: info->forced_results)
+      unforce_computation(rc, rcs);
+  }
+}
+
+void reg_heap::destroy_computations(vector<int>& rcs)
+{
+  for(int i=0;i<rcs.size();i++)
+  {
+    int rc = rcs[i];
+    int t = computations[rc].source_token;
+    int r = computations[rc].source_reg;
+    pre_destroy_computation(rcs[i], rcs);
+    assert(tokens[t].vm_relative[r] == rc);
+    remove_shared_computation(t,r);
+  }
+  computations.inc_version();
+  for(int rc: rcs)
+    computations.reclaim_used(rc);
 }
 
 void reg_heap::destroy_all_computations_in_token(int t)

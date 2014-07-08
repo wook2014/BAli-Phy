@@ -173,9 +173,13 @@ public:
   void set_call(int t, int R1, int R2);
   void force_computation(int rc);
   void unforce_computation(const pool<computation>::weak_ref& wrc);
+  void unforce_computation(const pool<computation>::weak_ref& wrc, std::vector<int>&);
   void unforce_computation(int rc);
+  void unforce_computation(int rc, std::vector<int>&);
   void pre_destroy_computation(int rc);
+  void pre_destroy_computation(int rc, std::vector<int>&);
   void destroy_all_computations_in_token(int t);
+  void destroy_computations(std::vector<int>&);
   void record_force(int t, int R1, int R2);
   void clear_call(int rc);
   void clear_call_for_reg(int t, int R);
