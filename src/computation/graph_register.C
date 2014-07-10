@@ -1823,11 +1823,19 @@ void reg_heap::check_used_reg(int index) const
   {
     if (not token_is_used(t)) continue;
 
+    int rc = tokens[t].vm_relative[index];
+
     if (is_root_token(t))
-      assert(tokens[t].vm_relative[index] != -1);
+      assert(rc != -1);
+
+    if (rc > 0)
+    {
+      assert(computations[rc].source_token == t);
+      assert(computations[rc].source_reg == index);
+    }
 
     if (not is_root_token(t) and tokens[t].vm_relative[index] > 0 and tokens[parent_token(t)].vm_relative[index] > 0)
-      assert(tokens[t].vm_relative[index] != tokens[parent_token(t)].vm_relative[index]);
+      assert(rc != tokens[parent_token(t)].vm_relative[index]);
 
     if (access(index).type == reg::type_t::constant)
       assert(not has_computation_(t,index));
