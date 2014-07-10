@@ -839,15 +839,27 @@ void reg_heap::destroy_computations(vector<int>& rcs)
   for(int i=0;i<rcs.size();i++)
   {
     int rc = rcs[i];
+    if (computations.is_marked(rc)) continue;
+
     int t = computations[rc].source_token;
     int r = computations[rc].source_reg;
     pre_destroy_computation(rcs[i], rcs);
     assert(tokens[t].vm_relative[r] == rc);
     remove_shared_computation(t,r);
+
+    computations.set_mark(rc);
   }
+
   computations.inc_version();
   for(int rc: rcs)
-    computations.reclaim_used(rc);
+  {
+    // Only destroy things once.
+    if (computations.is_marked(rc))
+    {
+      computations.unmark(rc);
+      computations.reclaim_used(rc);
+    }
+  }
 }
 
 void reg_heap::destroy_all_computations_in_token(int t)
