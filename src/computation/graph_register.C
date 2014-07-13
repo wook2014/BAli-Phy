@@ -1947,6 +1947,7 @@ int reg_heap::add_shared_computation(int t, int r)
 #if DEBUG_MACHINE >= 3
   check_used_reg(r);
 #endif
+  assert(not computations[rc].info);
 
   return rc;
 }
