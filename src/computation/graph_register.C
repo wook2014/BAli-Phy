@@ -1654,18 +1654,22 @@ void reg_heap::trace_and_reclaim_unreachable()
     shrink(rc.called_by);
   }
 
+  auto& dead_computations = get_scratch_list();
   for(auto p = computations.begin();p!=computations.end();p++)
   {
     int rc = p.addr();
     if (not computations.is_marked(rc))
-      pre_destroy_computation(rc);
+      dead_computations.push_back(rc);
+    else
+      computations.unmark(rc);
   }
+  destroy_computations(dead_computations);
+  release_scratch_list();
 
 #ifdef DEBUG_MACHINE
   check_used_regs();
 #endif
   reclaim_unmarked();
-  computations.reclaim_unmarked();
 #ifdef DEBUG_MACHINE
   check_used_regs();
 #endif
