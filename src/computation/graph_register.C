@@ -864,19 +864,15 @@ void reg_heap::destroy_computations(vector<int>& rcs)
 
 void reg_heap::destroy_all_computations_in_token(int t)
 {
-  computations.inc_version();
+  vector<int>& dead_computations = get_scratch_list();
   for(int r: tokens[t].vm_relative.modified())
   {
     int rc = tokens[t].vm_relative[r];
     if (rc > 0)
-      pre_destroy_computation(rc);
+      dead_computations.push_back(rc);
   }
-  for(int r: tokens[t].vm_relative.modified())
-  {
-    int rc = tokens[t].vm_relative[r];
-    if (rc > 0)
-      computations.reclaim_used(rc);
-  }
+  destroy_computations(dead_computations);
+  release_scratch_list();
   tokens[t].vm_relative.clear();
 }
 
