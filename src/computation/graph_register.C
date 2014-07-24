@@ -809,7 +809,10 @@ void reg_heap::unforce_computation(int rc, vector<int>& rcs)
   int& count = computations[rc].force_count;
   count--;
   assert( count >= 0);
-  if (count == 0)
+  int R = computations[rc].source_reg;
+  int head_count = access(R).n_heads;
+  assert(head_count >= 0);
+  if (count + head_count == 0)
     rcs.push_back(rc);
 }
 
