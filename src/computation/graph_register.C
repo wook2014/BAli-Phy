@@ -1984,9 +1984,11 @@ void reg_heap::duplicate_computation(int rc1, int rc2) const
   computations[rc2].used_inputs = computations[rc1].used_inputs;
   computations[rc2].info = computations[rc2].info;
 
-  // set back-edges for used inputs
+  // Set back-edges for used inputs
   for(int rcu: computations[rc2].used_inputs)
     computations[rcu].used_by.push_back(computations.get_weak_ref(rc2));
+
+  // Because the result of rc2 is not set, we do not need to set a called-by edge.
 }
 
 /// Add a shared computation at (t,r) -- assuming there isn't one already
