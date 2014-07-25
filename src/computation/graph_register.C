@@ -853,8 +853,8 @@ void reg_heap::destroy_computations(vector<int>& rcs)
 
     int t = computations[rc].source_token;
     int r = computations[rc].source_reg;
-    pre_destroy_computation(rcs[i], rcs);
     assert(tokens[t].vm_relative[r] == rc);
+    pre_destroy_computation(rcs[i], rcs);
     remove_shared_computation(t,r);
 
     computations.set_mark(rc);
