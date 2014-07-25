@@ -1044,8 +1044,8 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
       regs_to_re_evaluate.push_back(R);
   }
 
-  computations.inc_version();
   // Clear the marks: 2a
+  vector<int>& dead_computations = get_scratch_list();
   for(int R: call_and_result_may_be_changed)
   {
     assert(has_computation_(token,R));
@@ -1063,7 +1063,7 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
 
     assert(not is_modifiable(access(R).C.exp));
 
-    clear_computation(token,R);
+    push_computation(token, R, dead_computations);
 
     // Mark this reg for re_evaluation if it is flagged and hasn't been seen before.
     if (access(R).re_evaluate)
@@ -1073,8 +1073,10 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
   if (has_computation_(token,P))
   {
     computation_for_reg_(token,P).temp = -1;
-    clear_computation(token,P);
+    push_computation(token, P, dead_computations);
   }
+  destroy_computations(dead_computations);
+  release_scratch_list();
 
   // Finally set the new value.
   add_shared_computation(token,P);
@@ -1445,6 +1447,7 @@ void reg_heap::invalidate_shared_regs(int t1, int t2)
       regs_to_re_evaluate.push_back(r);
   }
 
+  vector<int>& dead_computations = get_scratch_list();
   for(int r:call_and_result_may_be_changed)
   {
     int rc2 = computation_index_for_reg_(t2,r);
@@ -1459,12 +1462,14 @@ void reg_heap::invalidate_shared_regs(int t1, int t2)
     if (not computation_index_for_reg_(t1,r))
       move_computation(t2, t1, r);
     else
-      clear_computation(t2, r);
+      push_computation(t2, r, dead_computations);
 
     // Mark this reg for re_evaluation if it is flagged and hasn't been seen before.
     if (access(r).re_evaluate)
       regs_to_re_evaluate.push_back(r);
   }
+  destroy_computations(dead_computations);
+  release_scratch_list();
 
   // find all regs in t2 that are not shared from t1.  Nothing needs to be done to these - they are already split.
   // Anything that uses these needs to be unshared.
@@ -2017,6 +2022,14 @@ void reg_heap::clear_computation(int t, int r)
     computations.inc_version();
     computations.reclaim_used(rc);
   }
+}
+
+void reg_heap::push_computation(int t, int r, vector<int>& rcs)
+{
+  int rc = computation_index_for_reg_(t,r);
+
+  if (rc > 0)
+    rcs.push_back(rc);
 }
 
 void reg_heap::release_child_token(int t)

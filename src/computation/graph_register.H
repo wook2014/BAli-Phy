@@ -437,6 +437,8 @@ public:
 
   void clear_computation(int t, int r);
 
+  void push_computation(int t, int r, std::vector<int>& rcs);
+
   int move_computation(int t1, int t2, int r);
 
   bool computation_is_referenced(int,int) const;
