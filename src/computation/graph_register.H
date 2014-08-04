@@ -36,7 +36,7 @@ struct computation
   /// Do we know which computation we are calling
   pool<computation>::weak_ref call_comp;
 
-  /// Which reg's were used to reduce this expression?
+  /// Which computations were used to reduce this expression?
   std::vector< int > used_inputs;
 
   /// Which pairs (reg,slot) USED the reduction result of C (via an operation)?
