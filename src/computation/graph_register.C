@@ -1940,13 +1940,13 @@ void reg_heap::check_tokens() const
 
 }
 
-void reg_heap::check_used_reg(int index) const
+void reg_heap::check_used_reg(int R) const
 {
   for(int t=1;t<get_n_tokens();t++)
   {
     if (not token_is_used(t)) continue;
 
-    int rc = tokens[t].vm_relative[index];
+    int rc = tokens[t].vm_relative[R];
 
     if (is_root_token(t))
       assert(rc != -1);
@@ -1954,19 +1954,19 @@ void reg_heap::check_used_reg(int index) const
     if (rc > 0)
     {
       assert(computations[rc].source_token == t);
-      assert(computations[rc].source_reg == index);
+      assert(computations[rc].source_reg == R);
     }
 
-    if (not is_root_token(t) and tokens[t].vm_relative[index] > 0 and tokens[parent_token(t)].vm_relative[index] > 0)
-      assert(rc != tokens[parent_token(t)].vm_relative[index]);
+    if (not is_root_token(t) and tokens[t].vm_relative[R] > 0 and tokens[parent_token(t)].vm_relative[R] > 0)
+      assert(rc != tokens[parent_token(t)].vm_relative[R]);
 
-    if (access(index).type == reg::type_t::constant)
-      assert(not has_computation_(t,index));
+    if (access(R).type == reg::type_t::constant)
+      assert(not has_computation_(t,R));
 
-    if (not has_computation_(t, index)) continue;
+    if (not has_computation_(t, R)) continue;
 
-    int call = call_for_reg_(t,index);
-    int result = computation_result_for_reg_(t,index);
+    int call = call_for_reg_(t,R);
+    int result = computation_result_for_reg_(t,R);
 
     if (result)
       assert(call);
@@ -1977,14 +1977,12 @@ void reg_heap::check_used_reg(int index) const
     if (call and result and access(call).type == reg::type_t::constant)
       assert(result == call);
 
-    int index_c = computation_index_for_reg_(t,index);
-
-    const computation& RC = computation_for_reg_(t,index);
+    const computation& RC = computation_for_reg_(t,R);
 
     for(int rc2: RC.info->used_inputs)
     {
       // Used regs should have back-references to R
-      assert( computation_is_used_by(index_c, rc2) );
+      assert( computation_is_used_by(rc, rc2) );
 
       // Used computations should be mapped computation for the current token, if we are at the root
       int R2 = computations[rc2].source_reg;
@@ -2005,7 +2003,7 @@ void reg_heap::check_used_reg(int index) const
     {
       assert( has_computation(t,call) );
       int rc2 = computation_index_for_reg(t,call);
-      assert( computation_is_called_by(index_c, rc2) );
+      assert( computation_is_called_by(rc, rc2) );
     }
 
     // If we have a result, then our call should have a result
