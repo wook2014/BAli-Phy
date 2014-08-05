@@ -217,7 +217,8 @@ void computation::clear()
   info.reset();
 
   //assert(force_count == 0);
-  force_count = 0;
+  use_force_count = 0;
+  call_force_count = 0;
   // This should already be cleared.
   assert(temp == -1);
 }
@@ -230,7 +231,8 @@ void computation::check_cleared()
   assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
-  assert(force_count == 0);
+  assert(use_force_count == 0);
+  assert(call_force_count == 0);
   assert(temp == -1);
   assert(not info);
 }
@@ -247,7 +249,8 @@ computation& computation::operator=(computation&& R) noexcept
   called_by = std::move( R.called_by );
   info = std::move( R.info );
   temp = R.temp;
-  force_count = R.force_count;
+  use_force_count = R.use_force_count;
+  call_force_count = R.call_force_count;
 
   return *this;
 }
@@ -263,7 +266,8 @@ computation::computation(computation&& R) noexcept
   called_by ( std::move( R.called_by) ),
   info( std::move( R.info) ),
   temp ( R.temp ),
-  force_count( R.force_count )
+  use_force_count( R.use_force_count ),
+  call_force_count( R.call_force_count )
 { }
 
 reg& reg::operator=(reg&& R) noexcept
@@ -677,7 +681,7 @@ void reg_heap::set_computation_result_for_reg(int t, int r1)
   else
   {
     call_comp = computations.get_weak_ref(rc2);
-    force_computation(rc2);
+    force_computation_by_call(rc2);
   }
 }
 
@@ -705,7 +709,7 @@ void reg_heap::record_force(int t, int R1, int R2)
   int rc2 = computation_index_for_reg(t,R2);
 
   computations[rc1].info->forced_results.push_back(rc2);
-  force_computation(rc2);
+  force_computation_by_use(rc2);
 }
 
 void reg_heap::set_used_input(int t, int R1, int R2)
@@ -771,61 +775,114 @@ void reg_heap::set_call(int t, int R1, int R2)
   computations[rc1].call = R2;
 }
 
-void reg_heap::force_computation(int rc)
+void reg_heap::force_computation_by_use(int rc)
 {
-  assert( computations[rc].force_count >= 0);
-  computations[rc].force_count++;
+  assert( computations[rc].use_force_count >= 0);
+  computations[rc].use_force_count++;
 }
 
-void reg_heap:: unforce_computation(const pool<computation>::weak_ref& wrc)
+void reg_heap::force_computation_by_call(int rc)
+{
+  assert( computations[rc].use_force_count >= 0);
+  computations[rc].call_force_count++;
+}
+
+void reg_heap:: unforce_computation_by_use(const pool<computation>::weak_ref& wrc)
 {
   if (not wrc.is_null())
   {
     int rc = wrc.get(computations);
     if (rc)
-      unforce_computation(rc);
+      unforce_computation_by_use(rc);
   }
 }
 
-void reg_heap:: unforce_computation(const pool<computation>::weak_ref& wrc,
+void reg_heap:: unforce_computation_by_use(const pool<computation>::weak_ref& wrc,
 				    vector<int>& rcs)
 {
   if (not wrc.is_null())
   {
     int rc = wrc.get(computations);
     if (rc)
-      unforce_computation(rc, rcs);
+      unforce_computation_by_use(rc, rcs);
   }
 }
 
-void reg_heap::unforce_computation(int rc)
+void reg_heap:: unforce_computation_by_call(const pool<computation>::weak_ref& wrc)
 {
-  computations[rc].force_count--;
-  assert( computations[rc].force_count >= 0);
+  if (not wrc.is_null())
+  {
+    int rc = wrc.get(computations);
+    if (rc)
+      unforce_computation_by_call(rc);
+  }
 }
 
-void reg_heap::unforce_computation(int rc, vector<int>& rcs)
+void reg_heap:: unforce_computation_by_call(const pool<computation>::weak_ref& wrc,
+				    vector<int>& rcs)
 {
-  int& count = computations[rc].force_count;
-  count--;
-  assert( count >= 0);
+  if (not wrc.is_null())
+  {
+    int rc = wrc.get(computations);
+    if (rc)
+      unforce_computation_by_call(rc, rcs);
+  }
+}
+
+void reg_heap::unforce_computation_by_use(int rc)
+{
+  computations[rc].use_force_count--;
+  assert( computations[rc].use_force_count >= 0);
+}
+
+void reg_heap::unforce_computation_by_call(int rc)
+{
+  computations[rc].call_force_count--;
+  assert( computations[rc].call_force_count >= 0);
+}
+
+void reg_heap::unforce_computation_by_use(int rc, vector<int>& rcs)
+{
+  int& use_count = computations[rc].use_force_count;
+  use_count--;
+  assert( use_count >= 0);
+
+  int call_count = computations[rc].call_force_count;
+
   int R = computations[rc].source_reg;
   int head_count = access(R).n_heads;
   assert(head_count >= 0);
-  if (count + head_count == 0)
+
+  if (use_count + call_count + head_count == 0)
+    rcs.push_back(rc);
+}
+
+void reg_heap::unforce_computation_by_call(int rc, vector<int>& rcs)
+{
+  int use_count = computations[rc].use_force_count;
+
+  int& call_count = computations[rc].call_force_count;
+  call_count--;
+  assert( call_count >= 0);
+
+  int R = computations[rc].source_reg;
+  int head_count = access(R).n_heads;
+  assert(head_count >= 0);
+
+  if (use_count + call_count + head_count == 0)
     rcs.push_back(rc);
 }
 
 void reg_heap::pre_destroy_computation(int rc)
 {
   assert(rc > 0);
-  unforce_computation(computations[rc].call_comp);
+  unforce_computation_by_call(computations[rc].call_comp);
 
   auto& info = computations[rc].info;
   if (info and info->ref_count() == 1)
   {
     for(int rc: info->forced_results)
-      unforce_computation(rc);
+      unforce_computation_by_use(rc);
   }
   info.reset();
 }
@@ -833,13 +890,13 @@ void reg_heap::pre_destroy_computation(int rc)
 void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs)
 {
   assert(rc > 0);
-  unforce_computation(computations[rc].call_comp, rcs);
+  unforce_computation_by_call(computations[rc].call_comp, rcs);
 
   auto& info = computations[rc].info;
   if (info and info->ref_count() == 1)
   {
     for(int rc: info->forced_results)
-      unforce_computation(rc, rcs);
+      unforce_computation_by_use(rc, rcs);
   }
   info.reset();
 }
@@ -1080,7 +1137,7 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
 
   // Finally set the new value.
   add_shared_computation(token,P);
-  computation_for_reg_(token,P).force_count++;
+  computation_for_reg_(token,P).call_force_count++;
   set_reduction_result(token, P, std::move(C) );
 
   release_scratch_list();

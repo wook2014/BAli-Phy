@@ -49,7 +49,9 @@ struct computation
 
   int temp = -1;
 
-  int force_count = 0;
+  int use_force_count = 0;
+
+  int call_force_count = 0;
 
   void clear();
 
@@ -176,11 +178,16 @@ public:
 
   void set_used_input(int t, int R1, int R2);
   void set_call(int t, int R1, int R2);
-  void force_computation(int rc);
-  void unforce_computation(const pool<computation>::weak_ref& wrc);
-  void unforce_computation(const pool<computation>::weak_ref& wrc, std::vector<int>&);
-  void unforce_computation(int rc);
-  void unforce_computation(int rc, std::vector<int>&);
+  void force_computation_by_call(int rc);
+  void force_computation_by_use(int rc);
+  void unforce_computation_by_use(const pool<computation>::weak_ref& wrc);
+  void unforce_computation_by_use(const pool<computation>::weak_ref& wrc, std::vector<int>&);
+  void unforce_computation_by_call(const pool<computation>::weak_ref& wrc);
+  void unforce_computation_by_call(const pool<computation>::weak_ref& wrc, std::vector<int>&);
+  void unforce_computation_by_use(int rc);
+  void unforce_computation_by_use(int rc, std::vector<int>&);
+  void unforce_computation_by_call(int rc);
+  void unforce_computation_by_call(int rc, std::vector<int>&);
   void pre_destroy_computation(int rc);
   void pre_destroy_computation(int rc, std::vector<int>&);
   void destroy_all_computations_in_token(int t);
