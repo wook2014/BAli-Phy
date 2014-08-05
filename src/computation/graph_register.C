@@ -1486,6 +1486,7 @@ void reg_heap::invalidate_shared_regs(int t1, int t2)
   {
     int rc1 = computation_index_for_reg_(t2,r);
     auto& RC = computations[rc1];
+    assert(computations[rc1].info);
 
     if (RC.temp > mark_result) continue;
 
@@ -1757,7 +1758,7 @@ void reg_heap::trace_and_reclaim_unreachable()
       scan1.push_back(RC.source_reg);
       
       // Count also the computation we call
-      if (RC.info->call) 
+      if (RC.info and RC.info->call) 
 	scan1.push_back(RC.info->call);
     }
     std::swap(scan2,next_scan2);
@@ -1990,8 +1991,10 @@ void reg_heap::check_used_reg(int R) const
 
       // The used computation should be referenced somewhere more root-ward
       // so that this computation can be invalidated, and the used computation won't be GC-ed.
-      assert(is_modifiable(access(R2).C.exp) or computation_is_referenced(t,rc2));
-      
+      //      assert(is_modifiable(access(R2).C.exp) or computation_is_referenced(t,rc2));
+      // FIXME! This is commented out because capture_parent_token( ) is called after
+      //        invalidate_shared_regs( ) in try_release_token( ).
+
       // Used computations should have results
       assert(computations[rc2].result);
     }
