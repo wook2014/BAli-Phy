@@ -17,7 +17,15 @@ class reg;
 struct computation_info: public Object
 {
   computation_info* clone() const {return new computation_info(*this);}
+
+  /// Does C reduce to another reg that we need to evaluate to get the true result?
+  int call = 0;
+
+  /// Which computations were used to reduce this expression?
+  std::vector< int > used_inputs;
+
   std::vector< pool<reg>::weak_ref > created_regs;
+
   std::vector<int> forced_results;
 };
 
@@ -30,14 +38,8 @@ struct computation
   /// What final WHNF does this computation reduce to?
   int result = -1;
 
-  /// Does C reduce to another reg that we need to evaluate to get the true result?
-  int call = -1;
-
   /// Do we know which computation we are calling
   pool<computation>::weak_ref call_comp;
-
-  /// Which computations were used to reduce this expression?
-  std::vector< int > used_inputs;
 
   /// Which pairs (reg,slot) USED the reduction result of C (via an operation)?
   std::vector< pool<computation>::weak_ref > used_by;
@@ -421,6 +423,7 @@ public:
   bool reg_has_result_(int t, int r) const;
   bool reg_has_computation_result_(int t, int r) const;
   int computation_result_for_reg_(int t, int r) const;
+  bool reg_has_info_(int t, int r) const;
   bool reg_has_call_(int t, int r) const;
   int call_for_reg_(int t, int r) const;
 
@@ -431,6 +434,7 @@ public:
   bool reg_has_result(int t, int r) const;
   bool reg_has_computation_result(int t, int r) const;
   int computation_result_for_reg(int t, int r) const;
+  bool reg_has_info(int t, int r) const;
   bool reg_has_call(int t, int r) const;
   int call_for_reg(int t, int r) const;
 

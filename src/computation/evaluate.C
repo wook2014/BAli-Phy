@@ -89,7 +89,7 @@ public:
     :R(r),M(m),t(T), n_allocated(0)
   { 
     // I think these should already be cleared.
-    assert(M.computation_for_reg(t,R).used_inputs.empty());
+    assert(M.computation_for_reg(t,R).info->used_inputs.empty());
   }
 
   ~RegOperationArgs()
@@ -353,7 +353,7 @@ int reg_heap::incremental_evaluate(int R, int t)
 	  // The old used_input slots are not invalid, which is OK since none of them are changeable.
 	  assert(not reg_has_call(t,R) );
 	  assert(not reg_has_result(t,R));
-	  assert(computation_for_reg(t,R).used_inputs.empty());
+	  assert(computation_for_reg(t,R).info->used_inputs.empty());
 	  set_C(R, std::move(result) );
 	}
 	// If the reg is changeable and this is token 0, then it is in normal form, and we are done.

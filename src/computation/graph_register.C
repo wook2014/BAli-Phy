@@ -209,9 +209,7 @@ void computation::clear()
   source_token = -1;
   source_reg = -1;
   result = 0;
-  call = 0;
   call_comp.reset();
-  truncate(used_inputs);
   truncate(used_by);
   truncate(called_by);
   info.reset();
@@ -226,9 +224,7 @@ void computation::clear()
 void computation::check_cleared()
 {
   assert(not result);
-  assert(not call);
   assert(call_comp.is_null());
-  assert(used_inputs.empty());
   assert(called_by.empty());
   assert(used_by.empty());
   assert(use_force_count == 0);
@@ -242,9 +238,7 @@ computation& computation::operator=(computation&& R) noexcept
   result = R.result;
   source_token = R.source_token;
   source_reg = R.source_reg;
-  call = R.call;
   call_comp = R.call_comp;
-  used_inputs  = std::move( R.used_inputs );
   used_by = std::move( R.used_by );
   called_by = std::move( R.called_by );
   info = std::move( R.info );
@@ -259,9 +253,7 @@ computation::computation(computation&& R) noexcept
 :source_token(R.source_token),
   source_reg(R.source_reg),
   result (R.result), 
-  call ( R.call ),
   call_comp ( R.call_comp ),
-  used_inputs ( std::move(R.used_inputs) ),
   used_by ( std::move( R.used_by) ),
   called_by ( std::move( R.called_by) ),
   info( std::move( R.info) ),
@@ -543,14 +535,19 @@ bool reg_heap::reg_has_computation_result(int t, int r) const
   return has_computation(t,r) and computation_result_for_reg(t,r);
 }
 
+bool reg_heap::reg_has_info(int t, int r) const
+{
+  return has_computation(t,r) and computation_for_reg(t,r).info;
+}
+
 bool reg_heap::reg_has_call(int t, int r) const
 {
-  return has_computation(t,r) and call_for_reg(t,r);
+  return has_computation(t,r) and reg_has_info(t,r) and call_for_reg(t,r);
 }
 
 int reg_heap::call_for_reg(int t, int r) const
 {
-  return computation_for_reg(t,r).call;
+  return computation_for_reg(t,r).info->call;
 }
 
 bool reg_heap::reg_has_result_(int t, int r) const
@@ -568,12 +565,17 @@ bool reg_heap::reg_has_computation_result_(int t, int r) const
 
 bool reg_heap::reg_has_call_(int t, int r) const
 {
-  return has_computation_(t,r) and call_for_reg_(t,r);
+  return has_computation_(t,r) and reg_has_info_(t,r) and call_for_reg_(t,r);
+}
+
+bool reg_heap::reg_has_info_(int t, int r) const
+{
+  return has_computation_(t,r) and computation_for_reg_(t,r).info;
 }
 
 int reg_heap::call_for_reg_(int t, int r) const
 {
-  return computation_for_reg_(t,r).call;
+  return computation_for_reg_(t,r).info->call;
 }
 
 template <typename T>
@@ -734,7 +736,7 @@ void reg_heap::set_used_input(int t, int R1, int R2)
   int rc1 = computation_index_for_reg(t,R1);
   int rc2 = computation_index_for_reg(t,R2);
 
-  computations[rc1].used_inputs.push_back(rc2);
+  computations[rc1].info->used_inputs.push_back(rc2);
   computations[rc2].used_by.push_back(computations.get_weak_ref(rc1));
 
   assert(computation_is_used_by(rc1,rc2));
@@ -772,7 +774,7 @@ void reg_heap::set_call(int t, int R1, int R2)
 
   // Set the call
   int rc1 = computation_index_for_reg_(t,R1);
-  computations[rc1].call = R2;
+  computations[rc1].info->call = R2;
 }
 
 void reg_heap::force_computation_by_use(int rc)
@@ -945,7 +947,7 @@ void reg_heap::destroy_all_computations_in_token(int t)
 
 void reg_heap::clear_call(int rc)
 {
-  computations.access_unused(rc).call = 0;
+  computations.access_unused(rc).info->call = 0;
 }
 
 void reg_heap::clear_call_for_reg(int t, int R)
@@ -1004,6 +1006,7 @@ void reg_heap::set_reduction_result(int t, int R, closure&& result)
     int R2 = allocate();
 
     set_C(R2, std::move( result ) );
+    computation_for_reg_(t, R).info = object_ptr<computation_info>(new computation_info);
     set_call(t, R, R2);
   }
 }
@@ -1161,6 +1164,9 @@ void reg_heap::set_shared_value(int r, int v)
 {
   // add a new computation
   add_shared_computation(root_token, r);
+
+  // add reduction step info
+  computation_for_reg(root_token, r).info = object_ptr<computation_info>(new computation_info);
 
   // set the value
   set_call(root_token, r, v);
@@ -1560,7 +1566,7 @@ std::vector<int> reg_heap::used_regs_for_reg(int t, int r) const
   vector<int> U;
   if (not has_computation(t,r)) return U;
 
-  for(int rc: computation_for_reg(t,r).used_inputs)
+  for(int rc: computation_for_reg(t,r).info->used_inputs)
     U.push_back(computations[rc].source_reg);
 
   return U;
@@ -1751,8 +1757,8 @@ void reg_heap::trace_and_reclaim_unreachable()
       scan1.push_back(RC.source_reg);
       
       // Count also the computation we call
-      if (RC.call) 
-	scan1.push_back(RC.call);
+      if (RC.info->call) 
+	scan1.push_back(RC.info->call);
     }
     std::swap(scan2,next_scan2);
     next_scan2.clear();
@@ -1975,7 +1981,11 @@ void reg_heap::check_used_reg(int index) const
 
     const computation& RC = computation_for_reg_(t,index);
 
-    for(int rc2: RC.used_inputs)
+    // info, but no call, implies that the the reduction step is in progress
+
+    // call but no info should never happen?
+
+    for(int rc2: RC.info->used_inputs)
     {
       // Used regs should have back-references to R
       assert( computation_is_used_by(index_c, rc2) );
@@ -2036,13 +2046,11 @@ int reg_heap::move_computation(int t1, int t2, int r)
 
 void reg_heap::duplicate_computation(int rc1, int rc2) const
 {
-  assert(not computations[rc2].call);
-  computations[rc2].call = computations[rc1].call;
-  computations[rc2].used_inputs = computations[rc1].used_inputs;
-  computations[rc2].info = computations[rc2].info;
+  assert(not computations[rc2].info);
+  computations[rc2].info = computations[rc1].info;
 
   // Set back-edges for used inputs
-  for(int rcu: computations[rc2].used_inputs)
+  for(int rcu: computations[rc2].info->used_inputs)
     computations[rcu].used_by.push_back(computations.get_weak_ref(rc2));
 
   // Because the result of rc2 is not set, we do not need to set a called-by edge.
