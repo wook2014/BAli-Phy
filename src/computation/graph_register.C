@@ -1981,10 +1981,6 @@ void reg_heap::check_used_reg(int index) const
 
     const computation& RC = computation_for_reg_(t,index);
 
-    // info, but no call, implies that the the reduction step is in progress
-
-    // call but no info should never happen?
-
     for(int rc2: RC.info->used_inputs)
     {
       // Used regs should have back-references to R
