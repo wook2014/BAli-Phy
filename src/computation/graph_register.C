@@ -1582,19 +1582,6 @@ void reg_heap::reclaim_used(int r)
   // Mark this reg as not used (but not free) so that we can stop worrying about upstream objects.
   remove_from_used_list(r);
 
-  for(int t=0;t<tokens.size();t++)
-  {
-    if (not token_is_used(t)) continue;
-
-    if (tokens[t].vm_relative[r])
-      tokens[t].vm_relative.erase_value(r);
-  }
-
-  for(int t=0;t<tokens.size();t++)
-  {
-    assert(not tokens[t].vm_relative[r]);
-  }
-
   clear_C(r);
 
   add_to_free_list(r);
