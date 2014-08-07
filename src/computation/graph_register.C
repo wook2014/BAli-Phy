@@ -893,7 +893,7 @@ void reg_heap::pre_destroy_computation(int rc)
   info.reset();
 }
 
-void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs)
+void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs, vector<int>& rs)
 {
   assert(rc > 0);
   unforce_computation_by_call(computations[rc].call_comp, rcs);
@@ -907,7 +907,7 @@ void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs)
   info.reset();
 }
 
-void reg_heap::destroy_computations(vector<int>& rcs)
+void reg_heap::destroy_computations(vector<int>& rcs, vector<int>& rs)
 {
   for(int i=0;i<rcs.size();i++)
   {
@@ -917,7 +917,7 @@ void reg_heap::destroy_computations(vector<int>& rcs)
     int t = computations[rc].source_token;
     int r = computations[rc].source_reg;
     assert(tokens[t].vm_relative[r] == rc);
-    pre_destroy_computation(rcs[i], rcs);
+    pre_destroy_computation(rcs[i], rcs, rs);
     remove_shared_computation(t,r);
 
     computations.set_mark(rc);
@@ -944,7 +944,9 @@ void reg_heap::destroy_all_computations_in_token(int t)
     if (rc > 0)
       dead_computations.push_back(rc);
   }
-  destroy_computations(dead_computations);
+  vector<int>& dead_regs = get_scratch_list();
+  destroy_computations(dead_computations, dead_regs);
+  release_scratch_list();
   release_scratch_list();
   tokens[t].vm_relative.clear();
 }
@@ -1139,7 +1141,9 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
     computation_for_reg_(token,P).temp = -1;
     push_computation(token, P, dead_computations);
   }
-  destroy_computations(dead_computations);
+  auto& dead_regs = get_scratch_list();
+  destroy_computations(dead_computations, dead_regs);
+  release_scratch_list();
   release_scratch_list();
 
   // Finally set the new value.
@@ -1536,7 +1540,9 @@ void reg_heap::invalidate_shared_regs(int t1, int t2)
     if (access(r).re_evaluate)
       regs_to_re_evaluate.push_back(r);
   }
-  destroy_computations(dead_computations);
+  auto& dead_regs = get_scratch_list();
+  destroy_computations(dead_computations, dead_regs);
+  release_scratch_list();
   release_scratch_list();
 
   // find all regs in t2 that are not shared from t1.  Nothing needs to be done to these - they are already split.
@@ -1774,7 +1780,9 @@ void reg_heap::trace_and_reclaim_unreachable()
     else
       computations.unmark(rc);
   }
-  destroy_computations(dead_computations);
+  auto& dead_regs = get_scratch_list();
+  destroy_computations(dead_computations, dead_regs);
+  release_scratch_list();
   release_scratch_list();
 
 #ifdef DEBUG_MACHINE
