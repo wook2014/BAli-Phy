@@ -90,7 +90,7 @@ public:
     :R(r),M(m),t(T), n_allocated(0)
   { 
     // I think these should already be cleared.
-    assert(M.computation_for_reg(t,R).info->used_inputs.empty());
+    assert(not t or M.computation_for_reg(t,R).info->used_inputs.empty());
   }
 
   ~RegOperationArgs()
@@ -322,11 +322,14 @@ int reg_heap::incremental_evaluate(int R, int t)
     // 3. Reduction: Operation (includes @, case, +, etc.)
     else
     {
-      if (not has_computation(t,R))
-	add_shared_computation(t,R);
+      if (t)
+      {
+	if (not has_computation(t,R))
+	  add_shared_computation(t,R);
 
-      // Add an empty set of computation effects
-      computation_for_reg(t,R).info = object_ptr<computation_info>(new computation_info);
+	// Add an empty set of computation effects
+	computation_for_reg(t,R).info = object_ptr<computation_info>(new computation_info);
+      }
 
       object_ptr<const Operation> O = assert_is_a<Operation>( access(R).C.exp );
 
@@ -351,10 +354,13 @@ int reg_heap::incremental_evaluate(int R, int t)
 	// If the reduction doesn't depend on modifiable, then replace E with the result.
 	if (not reg_is_changeable(R))
 	{
-	  // The old used_input slots are not invalid, which is OK since none of them are changeable.
-	  assert(not reg_has_call(t,R) );
-	  assert(not reg_has_result(t,R));
-	  assert(computation_for_reg(t,R).info->used_inputs.empty());
+	  if (t)
+	  {
+	    // The old used_input slots are not invalid, which is OK since none of them are changeable.
+	    assert(not reg_has_call(t,R) );
+	    assert(not reg_has_result(t,R));
+	    assert(computation_for_reg(t,R).info->used_inputs.empty());
+	  }
 	  set_C(R, std::move(result) );
 	}
 	// If the reg is changeable and this is token 0, then it is in normal form, and we are done.
