@@ -78,7 +78,8 @@ public:
 
     int r = M.push_temp_head();
     M.set_C(r, std::move(C) );
-    M.computation_for_reg(t,R).info->created_regs.push_back(M.get_weak_ref(r));
+    if (t)
+      M.computation_for_reg(t,R).info->created_regs.push_back(M.get_weak_ref(r));
     n_allocated++;
     return r;
   }
