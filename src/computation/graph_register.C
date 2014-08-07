@@ -2055,6 +2055,7 @@ void reg_heap::duplicate_computation(int rc1, int rc2) const
 /// Add a shared computation at (t,r) -- assuming there isn't one already
 int reg_heap::add_shared_computation(int t, int r)
 {
+  assert(t);
   assert(tokens[t].vm_relative[r] <= 0);
 
   // 1. Get a new computation
