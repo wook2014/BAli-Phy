@@ -780,12 +780,14 @@ void reg_heap::set_call(int t, int R1, int R2)
 void reg_heap::force_computation_by_use(int rc)
 {
   assert( computations[rc].use_force_count >= 0);
+  assert( computations[rc].call_force_count >= 0);
   computations[rc].use_force_count++;
 }
 
 void reg_heap::force_computation_by_call(int rc)
 {
   assert( computations[rc].use_force_count >= 0);
+  assert( computations[rc].call_force_count >= 0);
   computations[rc].call_force_count++;
 }
 
@@ -835,11 +837,13 @@ void reg_heap::unforce_computation_by_use(int rc)
 {
   computations[rc].use_force_count--;
   assert( computations[rc].use_force_count >= 0);
+  assert( computations[rc].call_force_count >= 0);
 }
 
 void reg_heap::unforce_computation_by_call(int rc)
 {
   computations[rc].call_force_count--;
+  assert( computations[rc].use_force_count >= 0);
   assert( computations[rc].call_force_count >= 0);
 }
 
