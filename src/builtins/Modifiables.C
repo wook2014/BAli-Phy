@@ -17,6 +17,7 @@ extern "C" closure builtin_function_new_modifiable(OperationArgs& Args)
   closure C{E,{D}};
   int R1 = Args.allocate(std::move(C));
   M.make_reg_changeable(R1);
+  M.inc_heads(R1);
 
   // Return a reference to the new modifiable.
   return {index_var(0),{R1}};
@@ -44,6 +45,7 @@ extern "C" closure builtin_function_new_random_modifiable(OperationArgs& Args)
   closure C{E,{R2,R1,rate}};
   int r = Args.allocate(std::move(C));
   M.make_reg_changeable(r);
+  M.inc_heads(r);
   M.set_shared_value(r,V);
 
   M.add_random_modifiable(r);
