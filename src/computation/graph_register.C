@@ -1585,6 +1585,9 @@ std::vector<int> reg_heap::used_regs_for_reg(int t, int r) const
 
 void reg_heap::reclaim_used(int r)
 {
+  for(int t = 0;t<tokens.size();t++)
+    assert(not has_computation_(t,r));
+
   // Mark this reg as not used (but not free) so that we can stop worrying about upstream objects.
   remove_from_used_list(r);
 
