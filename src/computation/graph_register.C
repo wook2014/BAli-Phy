@@ -944,6 +944,14 @@ void reg_heap::destroy_computations(vector<int>& rcs, vector<int>& rs)
       computations.reclaim_used(rc);
     }
   }
+
+  inc_version();
+  for(int r: rs)
+  {
+    if (is_marked(r))
+      unmark(r);
+    reclaim_used(r);
+  }
 }
 
 void reg_heap::destroy_all_computations_in_token(int t)
