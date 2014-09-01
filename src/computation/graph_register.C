@@ -1816,6 +1816,22 @@ void reg_heap::trace_and_reclaim_unreachable()
   check_used_regs();
 #endif
 
+  /*
+  for(auto p = computations.begin();p!=computations.end();p++)
+  {
+    int rc = p.addr();
+    assert(not computations.is_marked(rc));
+    auto& RC = computations[rc];
+    int R = RC.source_reg;
+    int t = RC.source_token;
+    int n_heads = 0;
+    if (not is_free(R))
+      n_heads = access(R).n_heads;
+    if (t and RC.use_force_count + RC.call_force_count + n_heads == 0)
+      std::cerr<<"keeping unforced computation "<<rc<<" for reg "<<R<<std::endl;
+  }
+  */
+
   //  release_scratch_list();
   release_scratch_list();
   release_scratch_list();
