@@ -1023,7 +1023,6 @@ void reg_heap::set_reduction_result(int t, int R, closure&& result)
     int R2 = allocate();
 
     set_C(R2, std::move( result ) );
-    computation_for_reg_(t, R).info = object_ptr<computation_info>(new computation_info);
     set_call(t, R, R2);
   }
 }
@@ -1159,6 +1158,7 @@ void reg_heap::set_reg_value(int P, closure&& C, int token)
 
   // Finally set the new value.
   add_shared_computation(token,P);
+  computation_for_reg_(token, P).info = object_ptr<computation_info>(new computation_info);
   assert(access(P).n_heads > 0);
   set_reduction_result(token, P, std::move(C) );
 
