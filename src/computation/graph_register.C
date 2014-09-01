@@ -906,6 +906,14 @@ void reg_heap::pre_destroy_computation(int rc, vector<int>& rcs, vector<int>& rs
   {
     for(int rc: info->forced_results)
       unforce_computation_by_use(rc, rcs);
+    // destroy created regs
+    for(auto& wr: clean_weak_refs(computations[rc].info->created_regs,*this))
+    {
+      int r = wr.get(*this);
+      assert(access(r).n_heads == 0);
+      assert(not is_modifiable(access(r).C.exp));
+      rs.push_back(r);
+    }
   }
   info.reset();
 }
