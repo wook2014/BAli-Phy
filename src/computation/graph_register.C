@@ -856,7 +856,10 @@ void reg_heap::unforce_computation_by_use(int rc, vector<int>& rcs)
   int call_count = computations[rc].call_force_count;
 
   int R = computations[rc].source_reg;
-  int head_count = access(R).n_heads;
+  int head_count = 0;
+  if (not is_free(R))
+    head_count = access(R).n_heads;
+
   assert(head_count >= 0);
 
   if (use_count + call_count + head_count == 0)
