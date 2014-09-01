@@ -2063,6 +2063,7 @@ int reg_heap::add_shared_computation(int t, int r)
 
   // 1. Get a new computation
   int rc = computations.allocate();
+  assert(not computations[rc].info);
 
   // 2. Set the source of the computation
   computations[rc].source_token = t;
