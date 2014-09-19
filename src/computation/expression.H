@@ -327,7 +327,15 @@ struct lambda2: public Object
 
 class expression_ref
 {
-  object_ptr<const Object> O;
+  union
+  {
+    char c;
+    int i;
+    double d;
+    log_double_t ld;
+    object_ptr<const Object> O;
+  };
+    
   int type = 0;
 public:
   /*
@@ -414,7 +422,7 @@ public:
   expression* clone_expression() const {return E().clone();}
 
   // Default
-  expression_ref() {}
+  expression_ref():O() {}
 
   // Expression arguments
   expression_ref(expression* e):O(e),type(1) { }
@@ -451,6 +459,10 @@ public:
   expression_ref(const char* s);
   expression_ref(const char& c):expression_ref(new Char(c)) {}
   expression_ref(const String& s):expression_ref(s.clone()) { }
+
+  expression_ref& operator=(const expression_ref& E) { O = E.O; type = E.type;return *this;}
+  expression_ref(const expression_ref& E):O(E.O),type(E.type) {}
+  ~expression_ref() {typedef object_ptr<const Object> otype; (&O)->~otype();}
 };
 
 inline std::ostream& operator<<(std::ostream& o,const expression_ref& E)
