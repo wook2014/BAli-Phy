@@ -388,7 +388,7 @@ public:
 
   const expression& E() const
   {
-    assert(not is_atomic());
+    assert(is_expression());
 #ifndef NDEBUG
     return *dynamic_cast<const expression*>(O.get());
 #else
