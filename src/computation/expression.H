@@ -433,9 +433,9 @@ public:
     return convert<const T>(head());
   }
 
-  bool is_exactly(const Object& O) const
+  bool is_exactly(const Object& O2) const
   {
-    return head()->compare(O);
+    return head()->compare(O2);
   }
 
   inline const object_ptr<const Object>& ptr() const {return O;}
