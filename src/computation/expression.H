@@ -356,6 +356,12 @@ private:
     (&O)->~otype();
   }
 
+  inline void destroy_ptr()
+  {
+    if (type >= expression_type)
+      destroy_ptr_();
+  }
+
 public:
   /*
   bool operator==(const expression_ref& E2) const
@@ -481,7 +487,7 @@ public:
 
   expression_ref& operator=(const expression_ref& E) { O = E.O; type = E.type;return *this;}
   expression_ref(const expression_ref& E):O(E.O),type(E.type) {}
-  inline ~expression_ref() {destroy_ptr_();}
+  inline ~expression_ref() {destroy_ptr();}
 };
 
 inline std::ostream& operator<<(std::ostream& o,const expression_ref& E)
