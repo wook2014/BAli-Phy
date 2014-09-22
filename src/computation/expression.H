@@ -325,8 +325,14 @@ struct lambda2: public Object
   std::string print() const;
 };
 
+
+
 class expression_ref
 {
+public:
+  enum tag_t {unknown_type = 0, expression_type = 1, object_type = 2};
+
+private:
   union
   {
     char c;
@@ -336,7 +342,7 @@ class expression_ref
     object_ptr<const Object> O;
   };
     
-  int type = 0;
+  tag_t type = unknown_type;
 public:
   /*
   bool operator==(const expression_ref& E2) const
@@ -344,16 +350,16 @@ public:
     return E->maybe_equals(*E2.E);
   }
   */
-  void clear() {O.reset();type=0;}
+  void clear() {O.reset(); type = unknown_type;}
 
   bool is_expression() const
   {
     assert(type > 0);
 #ifndef NDEBUG
     bool e = dynamic_cast<const expression*>(O.get());
-    assert(e == (type==1));
+    assert(e == (type==expression_type));
 #endif
-    return (type == 1);
+    return (type == expression_type);
   }
 
   bool is_atomic() const
@@ -425,9 +431,9 @@ public:
   expression_ref():O() {}
 
   // Expression arguments
-  expression_ref(expression* e):O(e),type(1) { }
+  expression_ref(expression* e):O(e),type(expression_type) { }
 
-  expression_ref(const expression* e):O(e),type(1) { }
+  expression_ref(const expression* e):O(e),type(expression_type) { }
 
   expression_ref(const object_ptr<const expression>& e):expression_ref(e.get()) { }
 
@@ -438,9 +444,9 @@ public:
   expression_ref(const object_ref& o, const std::vector<expression_ref>& v):expression_ref(new expression(o,v)) { }
 
   // Object arguments
-  expression_ref(Object* v):O(v),type(2) { }
+  expression_ref(Object* v):O(v),type(object_type) { }
 
-  expression_ref(const Object* v):O(v),type(2) { }
+  expression_ref(const Object* v):O(v),type(object_type) { }
 
   expression_ref(const object_ref& o):expression_ref(o.get()) { }
 
