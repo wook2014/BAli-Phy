@@ -343,6 +343,19 @@ private:
   };
     
   tag_t type = unknown_type;
+
+  typedef object_ptr<const Object> otype;
+
+  inline void create_ptr(const Object* O2) 
+  {
+    new (&O) otype(O2);
+  }
+
+  inline void destroy_ptr_()
+  {
+    (&O)->~otype();
+  }
+
 public:
   /*
   bool operator==(const expression_ref& E2) const
@@ -468,7 +481,7 @@ public:
 
   expression_ref& operator=(const expression_ref& E) { O = E.O; type = E.type;return *this;}
   expression_ref(const expression_ref& E):O(E.O),type(E.type) {}
-  ~expression_ref() {typedef object_ptr<const Object> otype; (&O)->~otype();}
+  inline ~expression_ref() {destroy_ptr_();}
 };
 
 inline std::ostream& operator<<(std::ostream& o,const expression_ref& E)
