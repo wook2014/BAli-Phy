@@ -371,13 +371,16 @@ public:
     return E->maybe_equals(*E2.E);
   }
   */
-  void clear() {O.reset(); type = unknown_type;}
+  inline const object_ptr<const Object>& ptr() const {assert(type >= expression_type);return O;}
+
+  inline explicit operator bool() const {return type > unknown_type and (bool)ptr();}
+
+  void clear() {destroy_ptr(); type = unknown_type;}
 
   bool is_expression() const
   {
-    assert(type > 0);
 #ifndef NDEBUG
-    bool e = dynamic_cast<const expression*>(O.get());
+    bool e = dynamic_cast<const expression*>(ptr().get());
     assert(e == (type==expression_type));
 #endif
     return (type == expression_type);
@@ -401,7 +404,7 @@ public:
   inline const object_ptr<const Object>& head() const 
   {
     if (is_atomic())
-      return O;
+      return ptr();
     else
       return E().head;
   }
@@ -440,16 +443,12 @@ public:
     return head()->compare(O2);
   }
 
-  inline const object_ptr<const Object>& ptr() const {return O;}
-
-  inline explicit operator bool() const {return (bool)O;}
-
-  std::string print() const {return O->print();}
+  std::string print() const {return ptr()->print();}
 
   expression* clone_expression() const {return E().clone();}
 
   // Default
-  expression_ref():O() {}
+  expression_ref() {}
 
   // Expression arguments
   expression_ref(expression* e):O(e),type(expression_type) { }
@@ -487,8 +486,19 @@ public:
   expression_ref(const char& c):expression_ref(new Char(c)) {}
   expression_ref(const String& s):expression_ref(s.clone()) { }
 
-  expression_ref& operator=(const expression_ref& E) { O = E.O; type = E.type;return *this;}
-  expression_ref(const expression_ref& E):O(E.O),type(E.type) {}
+  inline expression_ref& operator=(const expression_ref& E) 
+  {
+    destroy_ptr();
+    type = E.type;
+    if (type >= expression_type)
+      create_ptr(E.O.get()); 
+    return *this;
+  }
+  inline expression_ref(const expression_ref& E):type(E.type) 
+  {
+    if (type >= expression_type)
+      create_ptr(E.O.get());
+  }
   inline ~expression_ref() {destroy_ptr();}
 };
 
