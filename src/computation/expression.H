@@ -348,11 +348,13 @@ private:
 
   inline void create_ptr(const Object* O2) 
   {
+    assert(type >= expression_type);
     new (&O) otype(O2);
   }
 
   inline void destroy_ptr_()
   {
+    assert(type >= expression_type);
     (&O)->~otype();
   }
 
