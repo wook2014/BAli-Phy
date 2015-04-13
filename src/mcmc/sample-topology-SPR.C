@@ -1,3 +1,6 @@
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 /*
    Copyright (C) 2004-2009 Benjamin Redelings
 
@@ -834,7 +837,7 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branc
 /// After this routine, likelihood caches and subalignment indices for branches in the
 /// non-pruned subtree should reflect the situation where the subtree has been pruned.
 ///
-spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1, const spr_attachment_points& locations, int branch_to_move = -1)
+spr_attachment_probabilities SPR_search_attachment_points2(Parameters& P, int b1, const spr_attachment_points& locations, int branch_to_move = -1)
 {
   // The attachment node for the pruned subtree.
   // This node will move around, but we will always peel up to this node to calculate the likelihood.
@@ -923,6 +926,116 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   // We had better not let this get changed!
   for(int i=0;i<P.n_data_partitions();i++)
     assert(P[i].LC.root == root_node);
+
+  return Pr;
+}
+
+/// Compute the probability of pruning b1^t and regraftion at \a locations
+///
+/// After this routine, likelihood caches and subalignment indices for branches in the
+/// non-pruned subtree should reflect the situation where the subtree has been pruned.
+///
+spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1, const spr_attachment_points& locations, int branch_to_move = -1)
+{
+  auto P2 = P;
+  auto Pr2 = SPR_search_attachment_points2(P2,b1,locations, branch_to_move);
+
+  // The attachment node for the pruned subtree.
+  // This node will move around, but we will always peel up to this node to calculate the likelihood.
+  int root_node = P.T().directed_branch(b1).target(); 
+  // Because the attachment node keeps its name, this will stay in effect throughout the likelihood calculations.
+  P.set_root(root_node);
+
+  // Compute and cache conditional likelihoods up to the (likelihood) root node.
+  P.heated_likelihood();
+
+  const SequenceTree T0 = P.T();
+
+  /* MOVEABLE BRANCH */
+  //   One of the two branches (B1) that it (b1) points to will be considered the current attachment branch,
+  //    the other branch (BM) will move around to wherever we are currently attaching b1.
+  //   This is kind of a limitation of the current SPR routine, which chooses to move the 
+  //    branch with the larger name, and leave the other one in place.
+
+  spr_info I(T0, b1, branch_to_move);
+
+  if (I.n_attachment_branches() == 1) return spr_attachment_probabilities();
+
+  vector<double> L = I.attachment_branch_lengths();
+
+  // convert the const_branchview's to int names
+  vector<int> branch_names = directed_names(I.attachment_branches);
+
+  /*----------------------- Initialize likelihood for each attachment point ----------------------- */
+
+  // The probability of attaching to each branch, w/o the alignment probability
+  spr_attachment_probabilities Pr;
+  Pr[I.B0] = P.heated_likelihood() * P.prior_no_alignment();
+
+#ifdef DEBUG_SPR_ALL
+  Pr.LLL[I.B0] = P.heated_likelihood();
+
+  log_double_t PR1 = P.heated_likelihood();
+  log_double_t PR2 = heated_likelihood_unaligned_root(P);
+    
+  assert(std::abs(PR1.log() - PR2.log()) < 1.0e-8);
+#endif
+
+  /*----------- Begin invalidating caches and subA-indices to reflect the pruned state -------------*/
+
+  // At this point, caches for branches pointing to B1 and BM are accurate -- but everything after them
+  //  still assumes we haven't pruned and is therefore inaccurate.
+
+  P.LC_invalidate_branch(I.B1);          // invalidate caches       for B1, B1^t and ALL BRANCHES AFTER THEM.
+  P.invalidate_subA_index_branch(I.B1);  // invalidate subA-indices for B1, B1^t and ALL BRANCHES AFTER THEM.
+
+  P.LC_invalidate_branch(I.BM);          // invalidate caches       for BM, BM^t and ALL BRANCHES AFTER THEM.
+  P.invalidate_subA_index_branch(I.BM);  // invalidate subA-indices for BM, BM^t and ALL BRANCHES AFTER THEM.
+
+  // Temporarily stop checking subA indices of branches that point away from the cache root
+  P.subA_index_allow_invalid_branches(true);
+
+  // Compute the probability of each attachment point
+  // After this point, the LC root will now be the same node: the attachment point.
+  for(int i=1;i<branch_names.size();i++) 
+  {
+    // Define target branch b2 - pointing away from b1
+    int b2 = branch_names[i];
+    tree_edge B2 = I.get_tree_edge(b2);
+
+    // ** 1. SPR ** : alter the tree.
+    int BM2 = SPR_at_location(P, b1, b2, locations, I.BM);
+    assert(BM2 == I.BM); // Due to the way the current implementation of SPR works, BM (not B1) should be moved.
+
+    // The length of B1 should already be L0, but we need to reset the transition probabilities (MatCache)
+    assert(std::abs(P.T().branch(I.B1).length() - L[0]) < 1.0e-9);
+
+    // We want caches for each directed branch that is not in the PRUNED subtree to be accurate
+    //   for the situation that the PRUNED subtree is not behind them.
+
+
+    // **3. RECORD** the tree and likelihood
+    Pr[B2] = heated_likelihood_unaligned_root(P) * P.prior_no_alignment();
+#ifdef DEBUG_SPR_ALL
+    log_double_t PR2 = heated_likelihood_unaligned_root(P);
+    Pr.LLL[B2] = PR2;
+    //    log_double_t PR1 = P.heated_likelihood();
+    //    cerr<<"  PR1 = "<<PR1.log()<<"  PR2 = "<<PR2.log()<<"   diff = "<<PR2.log() - PR1.log()<<endl;
+#endif
+  }
+
+  // We had better not let this get changed!
+  for(int i=0;i<P.n_data_partitions();i++)
+    assert(P[i].LC.root == root_node);
+
+  for(const auto& i: Pr)
+  {
+    auto b = i.first;
+    auto p1 = i.second;
+    auto p2 = Pr2[b];
+    std::cerr<<"b = "<<b<<"    p1 = "<<p1<<"    p2 = "<<p2<<"\n";
+    assert(std::abs(p1 - p2) < 1.0e-9);
+  }
 
   return Pr;
 }
