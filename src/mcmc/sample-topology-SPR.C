@@ -834,11 +834,16 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branc
 
 
 /*
+ * Issue: in sample_SPR( ), we have to call recompute_pairwise_alignment( ) from the matrix: bad!
+ *
  * Issue: How do we handle the alignments when we do this?
  *        Currently, I think this is all based on a fixed alignment matrix.
  *          That is, subA indices are  calculated from the alignment matrix, not from the pairwise alignments.
  *        So, I guess we just need to change the tree, and invalidate subA_indices:
  *          they will be computed from the matrix.
+ *
+ * Note: in sample_SPR( ), we bi-directionally invalidate length, subA_index_branch, and also note_alignment_changed_on_branch.
+ *       on all all three branches.
  */
 
 /// Compute the probability of pruning b1^t and regraftion at \a locations
