@@ -832,6 +832,15 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branc
   return locations;
 }
 
+
+/*
+ * Issue: How do we handle the alignments when we do this?
+ *        Currently, I think this is all based on a fixed alignment matrix.
+ *          That is, subA indices are  calculated from the alignment matrix, not from the pairwise alignments.
+ *        So, I guess we just need to change the tree, and invalidate subA_indices:
+ *          they will be computed from the matrix.
+ */
+
 /// Compute the probability of pruning b1^t and regraftion at \a locations
 ///
 /// After this routine, likelihood caches and subalignment indices for branches in the
