@@ -700,6 +700,10 @@ int SPR_at_location2(Parameters& P, int b_subtree, int b_target, const spr_attac
   // node joining the subtree to the rest of the tree
   int n0 = P.T().directed_branch(b_subtree).target();
 
+  vector<int> branches;
+  for(const_edges_after_iterator i=P.T().directed_branch(b_subtree).branches_after();i;i++)
+    branches.push_back((*i).undirected_name());
+
   // Perform the SPR operation (specified by a branch TOWARD the pruned subtree)
   int BM = P.SPR(P.T().directed_branch(b_subtree).reverse(), b_target, branch_to_move);
 
@@ -710,6 +714,11 @@ int SPR_at_location2(Parameters& P, int b_subtree, int b_target, const spr_attac
   int b2 = P.T().directed_branch(n0, B_unbroken_target.node2);
   assert(P.T().directed_branch(b1).undirected_name() == BM or P.T().directed_branch(b2).undirected_name() == BM);
 
+  branches.push_back(P.T().directed_branch(b1).undirected_name());
+  branches.push_back(P.T().directed_branch(b2).undirected_name());
+  remove_duplicates(branches);
+  assert(branches.size() == 3);
+  
   // Set the lengths of the two branches
   double L1 = L*U;
   double L2 = L - L1;
