@@ -672,6 +672,77 @@ int SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attach
   return BM;
 }
 
+/// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
+///  and choose the point on the branch specified in \a locations.
+int SPR_at_location2(Parameters& P, int b_subtree, int b_target, const spr_attachment_points& locations, int branch_to_move = -1)
+{
+  double total_length_before = tree_length(P.T());
+
+  // If we are already at b_target, then its one of the branches after b_subtree.  Then do nothing.
+  if (P.T().directed_branch(b_subtree).target() == P.T().directed_branch(b_target).source() or
+      P.T().directed_branch(b_subtree).target() == P.T().directed_branch(b_target).target())
+    return -1;
+
+  // unbroken target branch
+  /// \todo Correctly handle moving to the same topology -- but allow branch lengths to change.
+  double L = P.T().directed_branch(b_target).length();
+  map<tree_edge, double>::const_iterator record = locations.find(get_tree_edge(P.T(),b_target));
+  if (record == locations.end())
+  {
+    std::cerr<<"Branch not found in spr location object!\n"<<std::endl;
+    std::abort();
+  }
+  tree_edge B_unbroken_target = record->first;
+  // U is the fraction of the way from B_unbroken_target.node1 
+  // toward B_unbroken_target.node2 to place the new node.
+  double U = record->second; 
+  
+  // node joining the subtree to the rest of the tree
+  int n0 = P.T().directed_branch(b_subtree).target();
+
+  // Perform the SPR operation (specified by a branch TOWARD the pruned subtree)
+  int BM = P.SPR(P.T().directed_branch(b_subtree).reverse(), b_target, branch_to_move);
+
+  // Find the names of the branches
+  assert(P.T().is_connected(B_unbroken_target.node1, n0));
+  assert(P.T().is_connected(n0, B_unbroken_target.node2));
+  int b1 = P.T().directed_branch(B_unbroken_target.node1, n0);
+  int b2 = P.T().directed_branch(n0, B_unbroken_target.node2);
+  assert(P.T().directed_branch(b1).undirected_name() == BM or P.T().directed_branch(b2).undirected_name() == BM);
+
+  // Set the lengths of the two branches
+  double L1 = L*U;
+  double L2 = L - L1;
+
+  // ** 2. INVALIDATE ** the branch that we just landed on and altered
+
+  /// \todo Do I really need to invalidate BOTH directions of b2?  Or, do I just not know WHICH direction to invalidate?
+  /// You'd think I'd just need to invalidate the direction pointing TOWARD the root.
+
+  /// \todo Can I temporarily associate the branch with a NEW token, or copy the info to a new location?
+  ///       This is basically what I'd get by copying the context to insert in the new location.
+  ///       However, if we copy the context, we have to do O(B) invalidations for each branch...
+
+  // We want to suppress the bidirectional propagation of invalidation for all branches after this branch.
+  // It would be nice to save the old exp(tB) and switch back to it later.
+  P.setlength_no_invalidate_LC(b1, L1);
+  P.LC_invalidate_one_branch(b1);                                          //  ... mark likelihood caches for recomputing.
+  P.LC_invalidate_one_branch(P.T().directed_branch(b1).reverse());         //  ... mark likelihood caches for recomputing.
+
+  P.setlength_no_invalidate_LC(b2, L2);
+  P.LC_invalidate_one_branch(b2);                                          //  ... mark likelihood caches for recomputing.
+  P.LC_invalidate_one_branch(P.T().directed_branch(b2).reverse());         //  ... mark likelihood caches for recomputing.
+
+  double total_length_after = tree_length(P.T());
+  assert(std::abs(total_length_after - total_length_before) < 1.0e-9);
+
+  // this is bidirectional, but does not propagate
+  P.invalidate_subA_index_one_branch(BM);
+
+  // Return the branch name that moved to the new attachment location.
+  return BM;
+}
+
 /// A struct to compute and store information about attachment points their branch names
 struct spr_info
 {
@@ -917,7 +988,7 @@ spr_attachment_probabilities SPR_search_attachment_points2(Parameters& P, int b1
     tree_edge B2 = I.get_tree_edge(b2);
 
     // ** 1. SPR ** : alter the tree.
-    int BM2 = SPR_at_location(P, b1, b2, locations, I.BM);
+    int BM2 = SPR_at_location2(P, b1, b2, locations, I.BM);
     assert(BM2 == I.BM); // Due to the way the current implementation of SPR works, BM (not B1) should be moved.
 
     // The length of B1 should already be L0, but we need to reset the transition probabilities (MatCache)
