@@ -973,15 +973,6 @@ spr_attachment_probabilities SPR_search_attachment_points2(Parameters& P, int b1
 
   /*----------- Begin invalidating caches and subA-indices to reflect the pruned state -------------*/
 
-  // At this point, caches for branches pointing to B1 and BM are accurate -- but everything after them
-  //  still assumes we haven't pruned and is therefore inaccurate.
-
-  P.LC_invalidate_branch(I.B1);          // invalidate caches       for B1, B1^t and ALL BRANCHES AFTER THEM.
-  P.invalidate_subA_index_branch(I.B1);  // invalidate subA-indices for B1, B1^t and ALL BRANCHES AFTER THEM.
-
-  P.LC_invalidate_branch(I.BM);          // invalidate caches       for BM, BM^t and ALL BRANCHES AFTER THEM.
-  P.invalidate_subA_index_branch(I.BM);  // invalidate subA-indices for BM, BM^t and ALL BRANCHES AFTER THEM.
-
   // Compute the probability of each attachment point
   // After this point, the LC root will now be the same node: the attachment point.
   for(int i=1;i<branch_names.size();i++) 
