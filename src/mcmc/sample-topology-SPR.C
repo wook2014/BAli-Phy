@@ -930,6 +930,9 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branc
 ///
 spr_attachment_probabilities SPR_search_attachment_points2(Parameters& P, int b1, const spr_attachment_points& locations, int branch_to_move = -1)
 {
+  auto calc_root1 = substitution::total_calc_root_prob;
+  auto peeled1 = substitution::total_peel_branches;
+
   // The attachment node for the pruned subtree.
   // This node will move around, but we will always peel up to this node to calculate the likelihood.
   int root_node = P.T().directed_branch(b1).target(); 
@@ -1006,6 +1009,10 @@ spr_attachment_probabilities SPR_search_attachment_points2(Parameters& P, int b1
   for(int i=0;i<P.n_data_partitions();i++)
     assert(P[i].LC.root == root_node);
 
+  auto calc_root2 = substitution::total_calc_root_prob;
+  auto peeled2 = substitution::total_peel_branches;
+  cerr<<"total calc root 2 = "<<(calc_root2 - calc_root1)<<endl;
+  cerr<<"total branches peeled 2 = "<<(peeled2 - peeled1)<<endl;
   return Pr;
 }
 
@@ -1019,6 +1026,8 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   auto P2 = P;
   auto Pr2 = SPR_search_attachment_points2(P2,b1,locations, branch_to_move);
 
+  auto calc_root1 = substitution::total_calc_root_prob;
+  auto peeled1 = substitution::total_peel_branches;
   // The attachment node for the pruned subtree.
   // This node will move around, but we will always peel up to this node to calculate the likelihood.
   int root_node = P.T().directed_branch(b1).target(); 
@@ -1116,6 +1125,10 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     assert(std::abs(p1.log() - p2.log()) < 1.0e-9);
   }
 
+  auto calc_root2 = substitution::total_calc_root_prob;
+  auto peeled2 = substitution::total_peel_branches;
+  cerr<<"total calc root 1 = "<<(calc_root2 - calc_root1)<<endl;
+  cerr<<"total branches peeled 1 = "<<(peeled2 - peeled1)<<endl;
   return Pr;
 }
 
