@@ -1128,7 +1128,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     auto p1 = i.second;
     auto p2 = Pr2[b];
     std::cerr<<"b = "<<b<<"    p1 = "<<p1<<"    p2 = "<<p2<<"\n";
-    assert(std::abs(p1 - p2) < 1.0e-9);
+    assert(std::abs(p1.log() - p2.log()) < 1.0e-9);
   }
 
   return Pr;
