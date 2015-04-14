@@ -723,30 +723,27 @@ int SPR_at_location2(Parameters& P, int b_subtree, int b_target, const spr_attac
   double L1 = L*U;
   double L2 = L - L1;
 
+  bool tree_changed = true;
+
+  P.setlength(b1, L1);
+  P.setlength(b2, L2);
+
+  //----------- invalidate caches for changed branches -----------//
+  assert(branches.size() <= 3);
+  for(int i=0;i<branches.size();i++) {
+    int bi = branches[i];
+    P.setlength(bi,P.T().directed_branch(bi).length());     // bidirectional effect
+    if (tree_changed)
+    {
+      P.invalidate_subA_index_branch(bi);              // bidirectional effect
+      if (P.variable_alignment()) 
+	P.note_alignment_changed_on_branch(bi); 
+    }
+  }
+
   // ** 2. INVALIDATE ** the branch that we just landed on and altered
-
-  /// \todo Do I really need to invalidate BOTH directions of b2?  Or, do I just not know WHICH direction to invalidate?
-  /// You'd think I'd just need to invalidate the direction pointing TOWARD the root.
-
-  /// \todo Can I temporarily associate the branch with a NEW token, or copy the info to a new location?
-  ///       This is basically what I'd get by copying the context to insert in the new location.
-  ///       However, if we copy the context, we have to do O(B) invalidations for each branch...
-
-  // We want to suppress the bidirectional propagation of invalidation for all branches after this branch.
-  // It would be nice to save the old exp(tB) and switch back to it later.
-  P.setlength_no_invalidate_LC(b1, L1);
-  P.LC_invalidate_one_branch(b1);                                          //  ... mark likelihood caches for recomputing.
-  P.LC_invalidate_one_branch(P.T().directed_branch(b1).reverse());         //  ... mark likelihood caches for recomputing.
-
-  P.setlength_no_invalidate_LC(b2, L2);
-  P.LC_invalidate_one_branch(b2);                                          //  ... mark likelihood caches for recomputing.
-  P.LC_invalidate_one_branch(P.T().directed_branch(b2).reverse());         //  ... mark likelihood caches for recomputing.
-
   double total_length_after = tree_length(P.T());
   assert(std::abs(total_length_after - total_length_before) < 1.0e-9);
-
-  // this is bidirectional, but does not propagate
-  P.invalidate_subA_index_one_branch(BM);
 
   // Return the branch name that moved to the new attachment location.
   return BM;
@@ -984,9 +981,6 @@ spr_attachment_probabilities SPR_search_attachment_points2(Parameters& P, int b1
 
   P.LC_invalidate_branch(I.BM);          // invalidate caches       for BM, BM^t and ALL BRANCHES AFTER THEM.
   P.invalidate_subA_index_branch(I.BM);  // invalidate subA-indices for BM, BM^t and ALL BRANCHES AFTER THEM.
-
-  // Temporarily stop checking subA indices of branches that point away from the cache root
-  P.subA_index_allow_invalid_branches(true);
 
   // Compute the probability of each attachment point
   // After this point, the LC root will now be the same node: the attachment point.
