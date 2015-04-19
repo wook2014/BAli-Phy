@@ -843,18 +843,6 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
 
   /*----------- Begin invalidating caches and subA-indices to reflect the pruned state -------------*/
 
-  // At this point, caches for branches pointing to B1 and BM are accurate -- but everything after them
-  //  still assumes we haven't pruned and is therefore inaccurate.
-
-  P.LC_invalidate_branch(I.B1);          // invalidate caches       for B1, B1^t and ALL BRANCHES AFTER THEM.
-  P.invalidate_subA_index_branch(I.B1);  // invalidate subA-indices for B1, B1^t and ALL BRANCHES AFTER THEM.
-
-  P.LC_invalidate_branch(I.BM);          // invalidate caches       for BM, BM^t and ALL BRANCHES AFTER THEM.
-  P.invalidate_subA_index_branch(I.BM);  // invalidate subA-indices for BM, BM^t and ALL BRANCHES AFTER THEM.
-
-  // Temporarily stop checking subA indices of branches that point away from the cache root
-  P.subA_index_allow_invalid_branches(true);
-
   // Compute the probability of each attachment point
   // After this point, the LC root will now be the same node: the attachment point.
   for(int i=1;i<branch_names.size();i++) 
@@ -864,7 +852,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     tree_edge B2 = I.get_tree_edge(b2);
 
     // ** 1. SPR ** : alter the tree.
-    int BM2 = SPR_at_location(P, b1, b2, locations, false, I.BM);
+    int BM2 = SPR_at_location(P, b1, b2, locations, true, I.BM);
     assert(BM2 == I.BM); // Due to the way the current implementation of SPR works, BM (not B1) should be moved.
 
     // The length of B1 should already be L0, but we need to reset the transition probabilities (MatCache)
