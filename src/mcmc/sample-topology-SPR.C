@@ -601,7 +601,7 @@ int SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attach
   assert(std::abs(total_length_after - total_length_before) < 1.0e-9);
 
   // this is bidirectional, but does not propagate
-  P.invalidate_subA_index_one_branch(BM);
+  P.invalidate_subA_index_branch(BM);
 
   // Return the branch name that moved to the new attachment location.
   return BM;
