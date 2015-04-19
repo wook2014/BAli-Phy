@@ -44,6 +44,7 @@ using boost::dynamic_bitset;
 using std::vector;
 using std::string;
 using std::map;
+using std::pair;
 
 using std::cout;
 using std::cerr;
@@ -632,6 +633,8 @@ public:
   /// A list of attachment branches, where the current branch is B1 at index 0
   vector<const_branchview> attachment_branches;
 
+  vector<pair<int,int>> attachment_branch_pairs;
+
   /// A mapping of directed branches to their index in attachment_branches
   vector<int> branch_to_index_;
 
@@ -700,6 +703,34 @@ public:
   spr_info(const Tree& T_, int b, int branch_to_move = -1);
 }; 
 
+void branch_pairs_after(const Tree& T, int b, vector<pair<int,int>>& branch_pairs)
+{
+  vector<const_branchview> branches;
+  append(T.directed_branch(b).branches_after(), branches);
+  for(const auto& B: branches)
+  {
+    branch_pairs.push_back({b,B});
+    branch_pairs_after(T, B, branch_pairs);
+  }
+}
+  
+
+vector<pair<int,int>> branch_pairs_after(const Tree& T, int B1, int BM)
+{
+  vector<pair<int,int>> branches;
+
+  branch_pairs_after(T, B1, branches);
+  branch_pairs_after(T, BM, branches);
+
+  for(auto& p: branches)
+  {
+    if (p.first == BM)
+      p.first = B1;
+  }
+
+  return branches;
+}
+
 spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
   :T(T_),b_parent(b),B1(-1),BM(-1), branch_to_index_(T.n_branches()*2, -1)
 {
@@ -728,6 +759,8 @@ spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
   // a randomized_all_branches_after, or a sorted_all_branches_after.
   attachment_branches = branches_after(T,b_parent);
 
+  attachment_branch_pairs = branch_pairs_after(T, B1, BM);
+  
   // remove the moving branch name (BM) from the list of attachment branches
   for(int i=attachment_branches.size()-1;i>=0;i--)
     if (attachment_branches[i].undirected_name() == BM)
@@ -774,6 +807,8 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branc
 ///
 spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1, const spr_attachment_points& locations, int branch_to_move = -1)
 {
+  auto initial_peels = substitution::total_peel_branches;
+
   // The attachment node for the pruned subtree.
   // This node will move around, but we will always peel up to this node to calculate the likelihood.
   int root_node = P.T().directed_branch(b1).target(); 
@@ -847,6 +882,8 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   // We had better not let this get changed!
   for(int i=0;i<P.n_data_partitions();i++)
     assert(P[i].LC.root == root_node);
+
+  std::cerr<<"total_peels = "<<substitution::total_peel_branches - initial_peels<<std::endl;
 
   return Pr;
 }
