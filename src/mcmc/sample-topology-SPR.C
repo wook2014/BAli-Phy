@@ -852,20 +852,25 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
 
   // Compute the probability of each attachment point
   // After this point, the LC root will now be the same node: the attachment point.
+  vector<owned_ptr<Parameters>> Ps;
+  Ps.reserve(I.attachment_branch_pairs.size());
+  Ps.push_back(P);
   for(int i=1;i<branch_names.size();i++) 
   {
     // Define target branch b2 - pointing away from b1
     int b2 = branch_names[i];
     tree_edge B2 = I.get_tree_edge(b2);
 
-    int BM2 = SPR_at_location(P, b1, b2, locations, I.BM);
+    Ps.push_back(Ps.back());
+    auto& p = *Ps.back();
+    int BM2 = SPR_at_location(p, b1, b2, locations, I.BM);
     assert(BM2 == I.BM); // Due to the way the current implementation of SPR works, BM (not B1) should be moved.
 
-    assert(std::abs(P.T().branch(I.B1).length() - L[0]) < 1.0e-9);
+    assert(std::abs(p.T().branch(I.B1).length() - L[0]) < 1.0e-9);
 
-    Pr[B2] = heated_likelihood_unaligned_root(P) * P.prior_no_alignment();
+    Pr[B2] = heated_likelihood_unaligned_root(p) * p.prior_no_alignment();
 #ifdef DEBUG_SPR_ALL
-    log_double_t PR2 = heated_likelihood_unaligned_root(P);
+    log_double_t PR2 = heated_likelihood_unaligned_root(p);
     Pr.LLL[B2] = PR2;
     //    log_double_t PR1 = P.heated_likelihood();
     //    cerr<<"  PR1 = "<<PR1.log()<<"  PR2 = "<<PR2.log()<<"   diff = "<<PR2.log() - PR1.log()<<endl;
