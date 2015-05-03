@@ -633,7 +633,7 @@ public:
   /// A list of attachment branches, where the current branch is B1 at index 0
   vector<const_branchview> attachment_branches;
 
-  vector<pair<int,int>> attachment_branch_pairs;
+  vector<pair<tree_edge,tree_edge>> attachment_branch_pairs;
 
   /// A mapping of directed branches to their index in attachment_branches
   vector<int> branch_to_index_;
@@ -703,32 +703,41 @@ public:
   spr_info(const Tree& T_, int b, int branch_to_move = -1);
 }; 
 
-void branch_pairs_after(const Tree& T, int b, vector<pair<int,int>>& branch_pairs)
+void branch_pairs_after(const Tree& T, const tree_edge& b, vector<pair<tree_edge,tree_edge>>& branch_pairs)
 {
   vector<const_branchview> branches;
   append(T.directed_branch(b).branches_after(), branches);
-  for(const auto& B: branches)
+  for(const auto& B2: branches)
   {
-    branch_pairs.push_back({b,B});
-    branch_pairs_after(T, B, branch_pairs);
+    tree_edge b2 { T.directed_branch(B2) };
+    branch_pairs.push_back({b,b2});
+    branch_pairs_after(T, b2, branch_pairs);
   }
 }
-  
 
-vector<pair<int,int>> branch_pairs_after(const Tree& T, int B1, int BM)
+
+vector<pair<tree_edge,tree_edge>> branch_pairs_after(const Tree& T, const tree_edge& b_parent)
 {
-  vector<pair<int,int>> branches;
+  auto child_branches = randomized_branches_after(T.directed_branch(b_parent));
+  int n0 = b_parent.node2;
+  tree_edge b1 { child_branches[0] };
+  tree_edge b2 { child_branches[1] };
+  vector<pair<tree_edge,tree_edge>> branch_pairs;
 
-  branch_pairs_after(T, B1, branches);
-  branch_pairs_after(T, BM, branches);
-
-  for(auto& p: branches)
+  branch_pairs_after(T, b1, branch_pairs);
+  branch_pairs_after(T, b2, branch_pairs);
+  int bm2 = T.directed_branch(b2).reverse().name();
+  
+  for(auto& p: branch_pairs)
   {
-    if (p.first == BM)
-      p.first = B1;
+    if (p.first.same_orientation(b1))
+      p.first.node1 = b2.node2;
+
+    if (p.first.same_orientation(b2))
+      p.first.node1 = b1.node2;
   }
 
-  return branches;
+  return branch_pairs;
 }
 
 spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
@@ -758,9 +767,8 @@ spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
   // FIXME - in order to make this independent of the circular order, we should make
   // a randomized_all_branches_after, or a sorted_all_branches_after.
   attachment_branches = branches_after(T,b_parent);
+  attachment_branch_pairs = branch_pairs_after(T, tree_edge(T.directed_branch(b_parent)));
 
-  attachment_branch_pairs = branch_pairs_after(T, B1, BM);
-  
   // remove the moving branch name (BM) from the list of attachment branches
   for(int i=attachment_branches.size()-1;i>=0;i--)
     if (attachment_branches[i].undirected_name() == BM)
