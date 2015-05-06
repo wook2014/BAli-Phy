@@ -555,7 +555,7 @@ struct spr_attachment_probabilities: public map<tree_edge,log_double_t>
 
 /// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
 ///  and choose the point on the branch specified in \a locations.
-void SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attachment_points& locations)
+void SPR_at_location(Parameters& P, int b_subtree, const tree_edge& b_target, const spr_attachment_points& locations)
 {
   double total_length_before = tree_length(P.T());
 
@@ -567,7 +567,7 @@ void SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attac
   // unbroken target branch
   /// \todo Correctly handle moving to the same topology -- but allow branch lengths to change.
   double L = P.T().directed_branch(b_target).length();
-  map<tree_edge, double>::const_iterator record = locations.find(get_tree_edge(P.T(),b_target));
+  map<tree_edge, double>::const_iterator record = locations.find(b_target);
   if (record == locations.end())
   {
     std::cerr<<"Branch not found in spr location object!\n"<<std::endl;
@@ -582,7 +582,7 @@ void SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attac
   int n0 = P.T().directed_branch(b_subtree).target();
 
   // Perform the SPR operation (specified by a branch TOWARD the pruned subtree)
-  P.SPR(P.T().directed_branch(b_subtree).reverse(), b_target);
+  P.SPR(tree_edge(P.T().directed_branch(b_subtree).reverse()), b_target);
 
   // Find the names of the branches
   assert(P.T().is_connected(B_unbroken_target.node1, n0));
@@ -847,8 +847,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     Ps.push_back(Ps[prev_i]);
     assert(Ps.size() == i+1);
     auto& p = *Ps.back();
-    int b2 = p.T().directed_branch(B2);
-    SPR_at_location(p, b1, b2, locations);
+    SPR_at_location(p, b1, B2, locations);
 
     Pr[B2] = heated_likelihood_unaligned_root(p) * p.prior_no_alignment();
 #ifdef DEBUG_SPR_ALL
@@ -857,6 +856,14 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     //    log_double_t PR1 = P.heated_likelihood();
     //    cerr<<"  PR1 = "<<PR1.log()<<"  PR2 = "<<PR2.log()<<"   diff = "<<PR2.log() - PR1.log()<<endl;
 #endif
+  }
+  for(const auto& p: I.attachment_branch_pairs)
+    std::cerr<<p.first<<" -> "<<p.second<<"\n";
+  
+  std::cerr<<"B0 = "<<I.B0<<"\n";
+  for(const auto& e: Pr)
+  {
+    std::cerr<<e.first<<": "<<e.second<<"\n";
   }
 
   // We had better not let this get changed!
@@ -1036,7 +1043,7 @@ bool sample_SPR_search_one(Parameters& P,MoveStats& Stats,int b1)
   }
 
   // Step N-1: ATTACH to that point
-  SPR_at_location(p[1], b1, branch_names[C], locations);
+  SPR_at_location(p[1], b1, tree_edge(p[1].T().directed_branch(branch_names[C])), locations);
 
   // enforce tree constraints
   if (not extends(p[1].T(), P.PC->TC))
