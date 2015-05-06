@@ -867,9 +867,13 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   {
     // Define target branch b2 - pointing away from b1
     const auto& BB = I.attachment_branch_pairs[i];
+    int prev_i = BB.first;
     tree_edge B2 = BB.second;
 
-    Ps.push_back(Ps[0]);
+    if (prev_i != 0) assert(I.attachment_branch_pairs[prev_i].second.node2 == B2.node1);
+
+    Ps.push_back(Ps[prev_i]);
+    assert(Ps.size() == i+1);
     auto& p = *Ps.back();
     int b2 = p.T().directed_branch(B2);
     int BM2 = SPR_at_location(p, b1, b2, locations, I.BM);
