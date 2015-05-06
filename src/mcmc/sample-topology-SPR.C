@@ -745,10 +745,6 @@ spr_info::spr_info(const Tree& T_, int b)
 {
   child_branches = randomized_branches_after(T.directed_branch(b_parent));
   assert(child_branches.size() == 2);
-  B1 = child_branches[0].undirected_name();
-  BM = child_branches[1].undirected_name();
-
-  if (BM < B1) std::swap(B1,BM);
 
   B1 = std::min(child_branches[0].undirected_name(), child_branches[1].undirected_name());
   BM = std::max(child_branches[0].undirected_name(), child_branches[1].undirected_name());
