@@ -560,8 +560,7 @@ void SPR_at_location(Parameters& P, const tree_edge& b_subtree, const tree_edge&
   double total_length_before = tree_length(P.T());
 
   // If we are already at b_target, then its one of the branches after b_subtree.  Then do nothing.
-  if (P.T().directed_branch(b_subtree).target() == P.T().directed_branch(b_target).source() or
-      P.T().directed_branch(b_subtree).target() == P.T().directed_branch(b_target).target())
+  if (b_subtree.node2 == b_target.node1 or b_subtree.node2 == b_target.node2)
     return;
 
   // unbroken target branch
@@ -579,7 +578,7 @@ void SPR_at_location(Parameters& P, const tree_edge& b_subtree, const tree_edge&
   double U = record->second; 
   
   // node joining the subtree to the rest of the tree
-  int n0 = P.T().directed_branch(b_subtree).target();
+  int n0 = b_subtree.node2;
 
   // Perform the SPR operation (specified by a branch TOWARD the pruned subtree)
   P.SPR(b_subtree.reverse(), b_target);
