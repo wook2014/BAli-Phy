@@ -555,14 +555,14 @@ struct spr_attachment_probabilities: public map<tree_edge,log_double_t>
 
 /// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
 ///  and choose the point on the branch specified in \a locations.
-int SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attachment_points& locations)
+void SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attachment_points& locations)
 {
   double total_length_before = tree_length(P.T());
 
   // If we are already at b_target, then its one of the branches after b_subtree.  Then do nothing.
   if (P.T().directed_branch(b_subtree).target() == P.T().directed_branch(b_target).source() or
       P.T().directed_branch(b_subtree).target() == P.T().directed_branch(b_target).target())
-    return -1;
+    return;
 
   // unbroken target branch
   /// \todo Correctly handle moving to the same topology -- but allow branch lengths to change.
@@ -582,14 +582,13 @@ int SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attach
   int n0 = P.T().directed_branch(b_subtree).target();
 
   // Perform the SPR operation (specified by a branch TOWARD the pruned subtree)
-  int BM = P.SPR(P.T().directed_branch(b_subtree).reverse(), b_target);
+  P.SPR(P.T().directed_branch(b_subtree).reverse(), b_target);
 
   // Find the names of the branches
   assert(P.T().is_connected(B_unbroken_target.node1, n0));
   assert(P.T().is_connected(n0, B_unbroken_target.node2));
   int b1 = P.T().directed_branch(B_unbroken_target.node1, n0);
   int b2 = P.T().directed_branch(n0, B_unbroken_target.node2);
-  assert(P.T().directed_branch(b1).undirected_name() == BM or P.T().directed_branch(b2).undirected_name() == BM);
 
   // Set the lengths of the two branches
   double L1 = L*U;
@@ -603,15 +602,10 @@ int SPR_at_location(Parameters& P, int b_subtree, int b_target, const spr_attach
 
   // this is bidirectional, but does not propagate
   // I think this was only ever needed to prepare for the last move -- to the chosen branch?
-  // P.invalidate_subA_index_branch(BM); 
 
-  //  FIXME - Eliminate BM
   //  FIXME - Switch to tree_edge for more things
   //  FIXME - Stop using branch_names[C] after choose_MH??
   //  FIXME - Iterate over attachment_branch_pairs instead of branch_names
-
-  // Return the branch name that moved to the new attachment location.
-  return BM;
 }
 
 /// A struct to compute and store information about attachment points their branch names
@@ -627,16 +621,10 @@ public:
   /// The two branches that make up the current attachment branch
   vector<const_branchview> child_branches;
 
-  /// The name of the first child branch -- which will remain here
-  int B1;
-
-  /// The name of the second child branch -- which will move to wherever we regraft
-  int BM;
-
   /// The current attachment branch, specified in terms of its endpoint nodes
   tree_edge B0;
 
-  /// A list of attachment branches, where the current branch is B1 at index 0
+  /// A list of attachment branches, where the current branch is at index 0
   vector<const_branchview> attachment_branches;
 
   vector<pair<int,tree_edge>> attachment_branch_pairs;
@@ -741,13 +729,13 @@ vector<pair<int,tree_edge>> branch_pairs_after(const Tree& T, const tree_edge& b
 }
 
 spr_info::spr_info(const Tree& T_, int b)
-  :T(T_),b_parent(b),B1(-1),BM(-1), branch_to_index_(T.n_branches()*2, -1)
+  :T(T_),b_parent(b), branch_to_index_(T.n_branches()*2, -1)
 {
   child_branches = randomized_branches_after(T.directed_branch(b_parent));
   assert(child_branches.size() == 2);
 
-  B1 = child_branches[0].name();
-  BM = child_branches[0].name();
+  int B1 = child_branches[0].name();
+  int B2 = child_branches[1].name();
   B0 = tree_edge(child_branches[0].target(), child_branches[1].target());
 
   /*----------- get the list of possible attachment points, with [0] being the current one.------- */
@@ -759,9 +747,9 @@ spr_info::spr_info(const Tree& T_, int b)
   attachment_branches = branches_after(T,b_parent);
   attachment_branch_pairs = branch_pairs_after(T, tree_edge(T.directed_branch(b_parent)));
 
-  // remove the moving branch name (BM) from the list of attachment branches
+  // remove the one branch name (B1) from the list of attachment branches
   for(int i=attachment_branches.size()-1;i>=0;i--)
-    if (attachment_branches[i].name() == BM or attachment_branches[i].reverse().name() == BM)
+    if (attachment_branches[i].name() == B1 or attachment_branches[i].reverse().name() == B1)
       attachment_branches.erase(attachment_branches.begin()+i);
 
   // convert the const_branchview's to int names
@@ -817,12 +805,6 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   P.heated_likelihood();
 
   const SequenceTree T0 = P.T();
-
-  /* MOVEABLE BRANCH */
-  //   One of the two branches (B1) that it (b1) points to will be considered the current attachment branch,
-  //    the other branch (BM) will move around to wherever we are currently attaching b1.
-  //   This is kind of a limitation of the current SPR routine, which chooses to move the 
-  //    branch with the larger name, and leave the other one in place.
 
   spr_info I(T0, b1);
 
