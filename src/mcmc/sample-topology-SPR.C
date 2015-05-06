@@ -217,6 +217,12 @@ double effective_length(const Tree& T, int b)
   return effective_lengths(T)[b];
 }
 
+double effective_length(const Tree& T, const tree_edge& E)
+{
+  int b = T.directed_branch(E);
+  return effective_length(T, b);
+}
+  
 vector<double> effective_lengths_min(const Tree& T)
 {
   vector<double> lengths(2*T.n_branches(),0);
@@ -330,6 +336,12 @@ MCMC::Result SPR_stats(const Tree& T1, const Tree& T2, bool success, int bins, i
   }
 
   return result;
+}
+
+MCMC::Result SPR_stats(const Tree& T1, const Tree& T2, bool success, int bins, const tree_edge& B1)
+{
+  int b1 = T1.directed_branch(B1);
+  return SPR_stats(T1,T2,success,bins,b1);
 }
 
 /* 
@@ -615,7 +627,7 @@ public:
   const Tree T;
 
   /// The branch pointing AWAY from the subtree to prune
-  int b_parent;
+  tree_edge b_parent;
 
   /// The two branches that make up the current attachment branch
   vector<const_branchview> child_branches;
@@ -648,7 +660,7 @@ public:
   /// Express a branch \a in attachment_branches in terms of its endpoint nodes
   tree_edge get_tree_edge(int b) const
   {
-    if (not T.subtree_contains_branch(b_parent,b))
+    if (not T.subtree_contains_branch(T.directed_branch(b_parent),b))
       throw myexception()<<"spr_info::get_tree_edge( ): Subtree does not contain branch "<<b;
 
     int n0 = T.directed_branch(b_parent).target();
@@ -693,7 +705,7 @@ public:
     return v;
   }
 
-  spr_info(const Tree& T_, int b);
+  spr_info(const Tree& T_, const tree_edge& b);
 }; 
 
 void branch_pairs_after(const Tree& T, int prev_i, const tree_edge& prev_b, vector<pair<int,tree_edge>>& branch_pairs)
@@ -727,7 +739,7 @@ vector<pair<int,tree_edge>> branch_pairs_after(const Tree& T, const tree_edge& b
   return branch_pairs;
 }
 
-spr_info::spr_info(const Tree& T_, int b)
+spr_info::spr_info(const Tree& T_, const tree_edge& b)
   :T(T_),b_parent(b), branch_to_index_(T.n_branches()*2, -1)
 {
   child_branches = randomized_branches_after(T.directed_branch(b_parent));
@@ -743,8 +755,8 @@ spr_info::spr_info(const Tree& T_, int b)
 
   // FIXME - in order to make this independent of the circular order, we should make
   // a randomized_all_branches_after, or a sorted_all_branches_after.
-  attachment_branches = branches_after(T,b_parent);
-  attachment_branch_pairs = branch_pairs_after(T, tree_edge(T.directed_branch(b_parent)));
+  attachment_branches = branches_after(T, T.directed_branch(b_parent));
+  attachment_branch_pairs = branch_pairs_after(T, b_parent);
 
   // remove the one branch name (B1) from the list of attachment branches
   for(int i=attachment_branches.size()-1;i>=0;i--)
@@ -766,7 +778,7 @@ spr_info::spr_info(const Tree& T_, int b)
 }
 
 /// Get a list of attachment branches, and a location for attachment on each branch
-spr_attachment_points get_spr_attachment_points(const Tree& T, int b1)
+spr_attachment_points get_spr_attachment_points(const Tree& T, const tree_edge& b1)
 {
   spr_info I(T, b1);
 
@@ -790,13 +802,13 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1)
 /// After this routine, likelihood caches and subalignment indices for branches in the
 /// non-pruned subtree should reflect the situation where the subtree has been pruned.
 ///
-spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1, const spr_attachment_points& locations)
+spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, const tree_edge& B1, const spr_attachment_points& locations)
 {
   auto initial_peels = substitution::total_peel_branches;
 
   // The attachment node for the pruned subtree.
   // This node will move around, but we will always peel up to this node to calculate the likelihood.
-  int root_node = P.T().directed_branch(b1).target(); 
+  int root_node = B1.node2;
   // Because the attachment node keeps its name, this will stay in effect throughout the likelihood calculations.
   P.set_root(root_node);
 
@@ -805,7 +817,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
 
   const SequenceTree T0 = P.T();
 
-  spr_info I(T0, b1);
+  spr_info I(T0, B1);
 
   if (I.n_attachment_branches() == 1) return spr_attachment_probabilities();
 
@@ -836,7 +848,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   Ps.push_back(P);
   for(int i=1;i<I.attachment_branch_pairs.size();i++)
   {
-    // Define target branch b2 - pointing away from b1
+    // Define target branch b2 - pointing away from B1
     const auto& BB = I.attachment_branch_pairs[i];
     int prev_i = BB.first;
     tree_edge B2 = BB.second;
@@ -846,7 +858,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     Ps.push_back(Ps[prev_i]);
     assert(Ps.size() == i+1);
     auto& p = *Ps.back();
-    SPR_at_location(p, tree_edge(p.T().directed_branch(b1)), B2, locations);
+    SPR_at_location(p, B1, B2, locations);
 
     Pr[B2] = heated_likelihood_unaligned_root(p) * p.prior_no_alignment();
 #ifdef DEBUG_SPR_ALL
@@ -882,9 +894,9 @@ bool SPR_accept_or_reject_proposed_tree(Parameters& P, vector<Parameters>& p,
 					const spr_attachment_points& locations
 					)
 {
-  int b1 = I.b_parent;
-  int n1 = P.T().directed_branch(b1).target();
-  int n2 = P.T().directed_branch(b1).source();
+  tree_edge E_parent = I.b_parent;
+  int n1 = E_parent.node2;
+  int n2 = E_parent.node1;
 
   assert(p.size() == 2);
   assert(p[0].variable_alignment() == p[1].variable_alignment());
@@ -905,7 +917,7 @@ bool SPR_accept_or_reject_proposed_tree(Parameters& P, vector<Parameters>& p,
 #endif
   {
     Parameters P_temp = p[1];
-    spr_attachment_probabilities PrB2 = SPR_search_attachment_points(P_temp, b1, locations);
+    spr_attachment_probabilities PrB2 = SPR_search_attachment_points(P_temp, E_parent, locations);
     vector<log_double_t> Pr2 = I.convert_to_vector(PrB2);
     
     if (not P.variable_alignment())
@@ -988,27 +1000,27 @@ bool SPR_accept_or_reject_proposed_tree(Parameters& P, vector<Parameters>& p,
   */
 
 
-bool sample_SPR_search_one(Parameters& P,MoveStats& Stats,int b1) 
+bool sample_SPR_search_one(Parameters& P,MoveStats& Stats, const tree_edge& B1) 
 {
   const int bins = 6;
 
-  if (P.T().directed_branch(b1).target().is_leaf_node()) return false;
+  if (P.T().node(B1.node2).is_leaf_node()) return false;
 
   // The attachment node for the pruned subtree.
   // This node will move around, but we will always peel up to this node to calculate the likelihood.
-  int root_node = P.T().directed_branch(b1).target(); 
+  int root_node = B1.node2;
   // Because the attachment node keeps its name, this will stay in effect throughout the likelihood calculations.
   P.set_root(root_node);
 
   // Compute and cache conditional likelihoods up to the (likelihood) root node.
   P.heated_likelihood();
 
-  spr_attachment_points locations = get_spr_attachment_points(P.T(), b1);
+  spr_attachment_points locations = get_spr_attachment_points(P.T(), B1);
 
   const SequenceTree T0 = P.T();
   vector<Parameters> p(2,P);
 
-  spr_info I(T0, b1);
+  spr_info I(T0, B1);
 
   // Compute total lengths for each of the possible attachment branches
   vector<double> L = I.attachment_branch_lengths();
@@ -1018,7 +1030,7 @@ bool sample_SPR_search_one(Parameters& P,MoveStats& Stats,int b1)
   // convert the const_branchview's to int names
   vector<int> branch_names = directed_names(I.attachment_branches);
 
-  spr_attachment_probabilities PrB = SPR_search_attachment_points(p[1], b1, locations);
+  spr_attachment_probabilities PrB = SPR_search_attachment_points(p[1], B1, locations);
 
   vector<log_double_t> Pr = I.convert_to_vector(PrB);
 #ifdef DEBUG_SPR_ALL
@@ -1042,7 +1054,7 @@ bool sample_SPR_search_one(Parameters& P,MoveStats& Stats,int b1)
   }
 
   // Step N-1: ATTACH to that point
-  SPR_at_location(p[1], tree_edge(p[1].T().directed_branch(b1)), tree_edge(p[1].T().directed_branch(branch_names[C])), locations);
+  SPR_at_location(p[1], B1, tree_edge(p[1].T().directed_branch(branch_names[C])), locations);
 
   // enforce tree constraints
   if (not extends(p[1].T(), P.PC->TC))
@@ -1079,8 +1091,8 @@ bool sample_SPR_search_one(Parameters& P,MoveStats& Stats,int b1)
   }
 
 
-  MCMC::Result result = SPR_stats(T0, p[1].T(), accepted, bins, b1);
-  double L_effective = effective_length(P.T(), b1);
+  MCMC::Result result = SPR_stats(T0, p[1].T(), accepted, bins, B1);
+  double L_effective = effective_length(P.T(), B1);
   SPR_inc(Stats, result, "SPR (all)", L_effective);
 
   return ((C != 0) and accepted);
@@ -1098,7 +1110,7 @@ void sample_SPR_all(owned_ptr<Model>& P,MoveStats& Stats)
     // Choose a directed branch to prune and regraft -- pointing away from the pruned subtree.
     int b1 = choose_subtree_branch_uniform2(PP.T());
 
-    sample_SPR_search_one(PP, Stats, b1);
+    sample_SPR_search_one(PP, Stats, tree_edge(PP.T().directed_branch(b1)));
   }
 
   if (P->load_value("SPR_longest", 1.0) > 0.5)
@@ -1106,7 +1118,7 @@ void sample_SPR_all(owned_ptr<Model>& P,MoveStats& Stats)
     // Try moving the longest or least-determined branch every time.
     int least_informed_branch = argmax(effective_lengths_min(PP.T()));
     sample_SPR_flat_one(P, Stats, least_informed_branch);
-    sample_SPR_search_one(PP, Stats, least_informed_branch);
+    sample_SPR_search_one(PP, Stats, tree_edge(PP.T().directed_branch(least_informed_branch)));
   }
 }
 
@@ -1116,7 +1128,8 @@ void sample_SPR_search_all(owned_ptr<Model>& P,MoveStats& Stats)
 
   for(int b=0;b<2*B;b++) {
     slice_sample_branch_length(P,Stats,b);
-    bool changed = sample_SPR_search_one(*P.as<Parameters>(),Stats,b);
+    auto& PP = *P.as<Parameters>();
+    bool changed = sample_SPR_search_one(PP,Stats,tree_edge(PP.T().directed_branch(b)));
     if (not changed) three_way_topology_sample(P,Stats,b);
     slice_sample_branch_length(P,Stats,b);
   }
@@ -1129,7 +1142,8 @@ void sample_SPR_A_search_all(owned_ptr<Model>& P,MoveStats& Stats)
   for(int b=0;b<2*B;b++) {
     slice_sample_branch_length(P,Stats,b);
     sample_SPR_flat_one(P, Stats, b);
-    bool changed = sample_SPR_search_one(*P.as<Parameters>(),Stats,b);
+    auto& PP = *P.as<Parameters>();
+    bool changed = sample_SPR_search_one(PP,Stats,tree_edge(PP.T().directed_branch(b)));
     if (not changed) three_way_topology_sample(P,Stats,b);
     slice_sample_branch_length(P,Stats,b);
     scale_means_only(P,Stats);
@@ -1254,7 +1268,7 @@ void sample_SPR_flat(owned_ptr<Model>& P,MoveStats& Stats)
     // Try moving the longest or least-determined branch every time.
     int least_informed_branch = argmax(effective_lengths_min(PP.T()));
     sample_SPR_flat_one(P, Stats, least_informed_branch);
-    sample_SPR_search_one(PP, Stats, least_informed_branch);
+    sample_SPR_search_one(PP, Stats, tree_edge(PP.T().directed_branch(least_informed_branch)));
   }
 }
 
@@ -1287,6 +1301,6 @@ void sample_SPR_nodes(owned_ptr<Model>& P,MoveStats& Stats)
     // Try moving the longest or least-determined branch every time.
     int least_informed_branch = argmax(effective_lengths_min(PP.T()));
     sample_SPR_flat_one(P, Stats, least_informed_branch);
-    sample_SPR_search_one(PP, Stats, least_informed_branch);
+    sample_SPR_search_one(PP, Stats, tree_edge(PP.T().directed_branch(least_informed_branch)));
   }
 }
