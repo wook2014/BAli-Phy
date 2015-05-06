@@ -706,7 +706,7 @@ public:
     return v;
   }
 
-  spr_info(const Tree& T_, int b, int branch_to_move = -1);
+  spr_info(const Tree& T_, int b);
 }; 
 
 void branch_pairs_after(const Tree& T, int prev_i, const tree_edge& prev_b, vector<pair<int,tree_edge>>& branch_pairs)
@@ -740,7 +740,7 @@ vector<pair<int,tree_edge>> branch_pairs_after(const Tree& T, const tree_edge& b
   return branch_pairs;
 }
 
-spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
+spr_info::spr_info(const Tree& T_, int b)
   :T(T_),b_parent(b),B1(-1),BM(-1), branch_to_index_(T.n_branches()*2, -1)
 {
   child_branches = randomized_branches_after(T.directed_branch(b_parent));
@@ -748,14 +748,8 @@ spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
   B1 = child_branches[0].undirected_name();
   BM = child_branches[1].undirected_name();
 
-  if (branch_to_move == -1) {
-    if (BM < B1) std::swap(B1,BM);
-  }
-  else {
-    if (branch_to_move != BM)
-      std::swap(B1,BM);
-    assert(branch_to_move == BM);
-  }
+  if (BM < B1) std::swap(B1,BM);
+
   B1 = std::min(child_branches[0].undirected_name(), child_branches[1].undirected_name());
   BM = std::max(child_branches[0].undirected_name(), child_branches[1].undirected_name());
   B0 = tree_edge(child_branches[0].target(), child_branches[1].target());
@@ -789,9 +783,9 @@ spr_info::spr_info(const Tree& T_, int b, int branch_to_move)
 }
 
 /// Get a list of attachment branches, and a location for attachment on each branch
-spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branch_to_move = -1)
+spr_attachment_points get_spr_attachment_points(const Tree& T, int b1)
 {
-  spr_info I(T, b1, branch_to_move);
+  spr_info I(T, b1);
 
   tree_edge B0(I.child_branches[0].target(), I.child_branches[1].target());
   double L0a = I.child_branches[0].length();
@@ -813,7 +807,7 @@ spr_attachment_points get_spr_attachment_points(const Tree& T, int b1, int branc
 /// After this routine, likelihood caches and subalignment indices for branches in the
 /// non-pruned subtree should reflect the situation where the subtree has been pruned.
 ///
-spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1, const spr_attachment_points& locations, int branch_to_move = -1)
+spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1, const spr_attachment_points& locations)
 {
   auto initial_peels = substitution::total_peel_branches;
 
@@ -834,7 +828,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   //   This is kind of a limitation of the current SPR routine, which chooses to move the 
   //    branch with the larger name, and leave the other one in place.
 
-  spr_info I(T0, b1, branch_to_move);
+  spr_info I(T0, b1);
 
   if (I.n_attachment_branches() == 1) return spr_attachment_probabilities();
 
