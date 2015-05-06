@@ -876,8 +876,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
     assert(Ps.size() == i+1);
     auto& p = *Ps.back();
     int b2 = p.T().directed_branch(B2);
-    int BM2 = SPR_at_location(p, b1, b2, locations, I.BM);
-    assert(BM2 == I.BM); // Due to the way the current implementation of SPR works, BM (not B1) should be moved.
+    int BM2 = SPR_at_location(p, b1, b2, locations);
 
     assert(std::abs(p.T().branch(I.B1).length() - L[0]) < 1.0e-9);
 
