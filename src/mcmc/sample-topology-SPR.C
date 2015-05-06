@@ -639,7 +639,7 @@ public:
   /// A list of attachment branches, where the current branch is B1 at index 0
   vector<const_branchview> attachment_branches;
 
-  vector<pair<tree_edge,tree_edge>> attachment_branch_pairs;
+  vector<pair<int,tree_edge>> attachment_branch_pairs;
 
   /// A mapping of directed branches to their index in attachment_branches
   vector<int> branch_to_index_;
@@ -709,40 +709,34 @@ public:
   spr_info(const Tree& T_, int b, int branch_to_move = -1);
 }; 
 
-void branch_pairs_after(const Tree& T, const tree_edge& b, vector<pair<tree_edge,tree_edge>>& branch_pairs)
+void branch_pairs_after(const Tree& T, int prev_i, const tree_edge& prev_b, vector<pair<int,tree_edge>>& branch_pairs)
 {
   vector<const_branchview> branches;
-  append(T.directed_branch(b).branches_after(), branches);
+  append(T.directed_branch(prev_b).branches_after(), branches);
   for(const auto& B2: branches)
   {
-    tree_edge b2 { T.directed_branch(B2) };
-    branch_pairs.push_back({b,b2});
-    branch_pairs_after(T, b2, branch_pairs);
+    tree_edge curr_b { T.directed_branch(B2) };
+    branch_pairs.push_back({prev_i,curr_b});
+    int curr_i = branch_pairs.size()-1;
+    branch_pairs_after(T, curr_i, curr_b, branch_pairs);
   }
 }
 
 
-vector<pair<tree_edge,tree_edge>> branch_pairs_after(const Tree& T, const tree_edge& b_parent)
+vector<pair<int,tree_edge>> branch_pairs_after(const Tree& T, const tree_edge& b_parent)
 {
   auto child_branches = randomized_branches_after(T.directed_branch(b_parent));
   int n0 = b_parent.node2;
   tree_edge b1 { child_branches[0] };
   tree_edge b2 { child_branches[1] };
-  vector<pair<tree_edge,tree_edge>> branch_pairs;
+  tree_edge b0 { b1.node2, b2.node2 };
+  vector<pair<int,tree_edge>> branch_pairs;
+  branch_pairs.push_back({-1,b0});
 
-  branch_pairs_after(T, b1, branch_pairs);
-  branch_pairs_after(T, b2, branch_pairs);
+  branch_pairs_after(T, 0, b1, branch_pairs);
+  branch_pairs_after(T, 0, b2, branch_pairs);
   int bm2 = T.directed_branch(b2).reverse().name();
   
-  for(auto& p: branch_pairs)
-  {
-    if (p.first.same_orientation(b1))
-      p.first.node1 = b2.node2;
-
-    if (p.first.same_orientation(b2))
-      p.first.node1 = b1.node2;
-  }
-
   return branch_pairs;
 }
 
@@ -869,9 +863,10 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, int b1,
   vector<owned_ptr<Parameters>> Ps;
   Ps.reserve(I.attachment_branch_pairs.size());
   Ps.push_back(P);
-  for(const auto& BB: I.attachment_branch_pairs)
+  for(int i=1;i<I.attachment_branch_pairs.size();i++)
   {
     // Define target branch b2 - pointing away from b1
+    const auto& BB = I.attachment_branch_pairs[i];
     tree_edge B2 = BB.second;
 
     Ps.push_back(Ps[0]);
