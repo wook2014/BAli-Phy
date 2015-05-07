@@ -565,6 +565,43 @@ struct spr_attachment_probabilities: public map<tree_edge,log_double_t>
   map<tree_edge,log_double_t> LLL;
 };
 
+void SPR_by_NNI(Parameters& P, const tree_edge& E1, tree_edge E2)
+{
+  const Tree& T = P.T();
+
+  int b1 = T.directed_branch(E1);
+  vector<const_branchview> connected;
+  append(T.directed_branch(b1).reverse().branches_after(),connected);
+  assert(connected.size() == 2);
+  tree_edge E3 {connected[0]};
+  tree_edge E5 {connected[1]};
+  if (E3.node2 == E2.node1 or E3.node2 == E2.node2)
+    std::swap(E3,E5);
+
+  if (E5.node2 == E2.node2)
+    E2 = E2.reverse();
+
+  if (E5.node2 != E2.node1)
+  {
+    P.SPR(E1, E2);
+    return;
+  }
+
+  connected.clear();
+  append(T.directed_branch(E5).branches_after(),connected);
+  tree_edge E4a {connected[0]};
+  tree_edge E4b {connected[1]};
+  tree_edge E4;
+  if (E2.same_orientation(E4a))
+    E4 = E4b;
+  else {
+    assert(E2.same_orientation(E4b));
+    E4 = E4a;
+  }
+
+  P.SPR(E1, E2);
+}
+
 /// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
 ///  and choose the point on the branch specified in \a locations.
 void SPR_at_location(Parameters& P, const tree_edge& b_subtree, const tree_edge& b_target, const spr_attachment_points& locations)
