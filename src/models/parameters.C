@@ -1061,11 +1061,11 @@ void Parameters::NNI(int br1, int br2)
     if (get_data_partition(i).variable_alignment())
     {
       const alignment& A = get_data_partition(i).A();
-      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[0],nodes[4]), A2::get_pairwise_alignment(A, 0, 4), false);
-      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[1],nodes[4]), A2::get_pairwise_alignment(A, 1, 4), false);
-      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[2],nodes[5]), A2::get_pairwise_alignment(A, 2, 5), false);
-      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[3],nodes[5]), A2::get_pairwise_alignment(A, 3, 5), false);
-      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[4],nodes[5]), A2::get_pairwise_alignment(A, 4, 5), false);
+      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[0],nodes[4]), A2::get_pairwise_alignment(A, nodes[0], nodes[4]), false);
+      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[1],nodes[4]), A2::get_pairwise_alignment(A, nodes[1], nodes[4]), false);
+      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[2],nodes[5]), A2::get_pairwise_alignment(A, nodes[2], nodes[5]), false);
+      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[3],nodes[5]), A2::get_pairwise_alignment(A, nodes[3], nodes[5]), false);
+      get_data_partition(i).set_pairwise_alignment(T().directed_branch(nodes[4],nodes[5]), A2::get_pairwise_alignment(A, nodes[4], nodes[5]), false);
     }
 }
 
