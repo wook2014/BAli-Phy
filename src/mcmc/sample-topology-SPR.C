@@ -606,7 +606,7 @@ void SPR_by_NNI(Parameters& P, const tree_edge& E1, tree_edge E2)
 
 /// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
 ///  and choose the point on the branch specified in \a locations.
-void SPR_at_location(Parameters& P, const tree_edge& b_subtree, const tree_edge& b_target, const spr_attachment_points& locations)
+void SPR_at_location(Parameters& P, const tree_edge& b_subtree, const tree_edge& b_target, const spr_attachment_points& locations, bool NNI)
 {
   double total_length_before = tree_length(P.T());
 
@@ -632,7 +632,10 @@ void SPR_at_location(Parameters& P, const tree_edge& b_subtree, const tree_edge&
   int n0 = b_subtree.node2;
 
   // Perform the SPR operation (specified by a branch TOWARD the pruned subtree)
-  P.SPR(b_subtree.reverse(), b_target);
+  if (NNI)
+    SPR_by_NNI(P, b_subtree.reverse(), b_target);
+  else
+    P.SPR(b_subtree.reverse(), b_target);
 
   // Find the names of the branches
   assert(P.T().is_connected(B_unbroken_target.node1, n0));
@@ -897,7 +900,7 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, const t
     Ps.push_back(Ps[prev_i]);
     assert(Ps.size() == i+1);
     auto& p = *Ps.back();
-    SPR_at_location(p, B1, B2, locations);
+    SPR_at_location(p, B1, B2, locations, false);
 
     Pr[B2] = heated_likelihood_unaligned_root(p) * p.prior_no_alignment();
 #ifdef DEBUG_SPR_ALL
@@ -1093,7 +1096,7 @@ bool sample_SPR_search_one(Parameters& P,MoveStats& Stats, const tree_edge& B1)
   }
 
   // Step N-1: ATTACH to that point
-  SPR_at_location(p[1], B1, tree_edge(p[1].T().directed_branch(branch_names[C])), locations);
+  SPR_at_location(p[1], B1, tree_edge(p[1].T().directed_branch(branch_names[C])), locations, false);
 
   // enforce tree constraints
   if (not extends(p[1].T(), P.PC->TC))
