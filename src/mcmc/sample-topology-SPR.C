@@ -581,11 +581,7 @@ void SPR_by_NNI(Parameters& P, const tree_edge& E1, tree_edge E2)
   if (E5.node2 == E2.node2)
     E2 = E2.reverse();
 
-  if (E5.node2 != E2.node1)
-  {
-    P.SPR(E1, E2);
-    return;
-  }
+  assert(E5.node2 == E2.node1);
 
   connected.clear();
   append(T.directed_branch(E5).branches_after(),connected);
@@ -599,7 +595,13 @@ void SPR_by_NNI(Parameters& P, const tree_edge& E1, tree_edge E2)
     E4 = E4a;
   }
 
-  P.SPR(E1, E2);
+  double L3 = T.directed_branch(E3).length();
+  double L2 = T.directed_branch(E2).length();
+  double L5 = T.directed_branch(E5).length();
+  P.NNI(E2, E3);
+  std::swap(E2.node1, E3.node1);
+  P.setlength(P.T().directed_branch(E3), L3 + L5);
+  P.setlength(P.T().directed_branch(E5), 0.0);
 }
 
 /// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
