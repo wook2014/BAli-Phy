@@ -939,7 +939,7 @@ void minimally_connect(vector<HMM::bitmask_t>& a123456)
   }
 }
 
-int Parameters::NNI(const tree_edge& B1, const tree_edge& B2)
+void Parameters::NNI(const tree_edge& B1, const tree_edge& B2)
 {
   int b1 = T().directed_branch(B1).name();
   int b2 = T().directed_branch(B2).name();
