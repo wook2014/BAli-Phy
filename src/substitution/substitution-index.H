@@ -213,7 +213,7 @@ protected:
      root to be valid, but we don't want to discard the other ones, because
      they will be valid for a different root/SPR-attachment-point.
    */
-  bool allow_invalid_branches_;
+
   void set_row(int r, const std::vector<std::pair<int,int>>& index);
   void set_row(int r,       std::vector<std::pair<int,int>>&& index);
   
@@ -281,9 +281,6 @@ public:
 
   void update_branch(const alignment& A,const Tree& T,int b);
   void recompute_all_branches(const alignment& A, const Tree& T);
-
-  bool may_have_invalid_branches() const;
-  void allow_invalid_branches(bool allowed);
 
   virtual void check_footprint_for_branch(const alignment& A1,const Tree& T,int b) const=0;
   void check_footprint(const alignment& A1,const Tree& T) const;

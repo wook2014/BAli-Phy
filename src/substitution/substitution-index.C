@@ -649,8 +649,7 @@ void subA_index_t::update_branch(const alignment& A,const Tree& T,int b)
   // don't know the root, so just disable the checking here.
   // FIXME - this could actually be very expensive to check every branch,
   //         probably it would be O(b^2)
-  if (not may_have_invalid_branches())
-    check_regenerate(*this,A,T);
+  check_regenerate(*this,A,T);
 #endif
 }
 
@@ -662,16 +661,6 @@ void subA_index_t::recompute_all_branches(const alignment& A,const Tree& T)
 
   for(int i=0;i<branches.size();i++) 
     update_one_branch(A,T, branches[i]);
-}
-
-bool subA_index_t::may_have_invalid_branches() const
-{
-  return allow_invalid_branches_;
-}
-
-void subA_index_t::allow_invalid_branches(bool allowed)
-{
-  allow_invalid_branches_ = allowed;
 }
 
 void check_consistent(const subA_index_t& I1, const subA_index_t& IF_DEBUG(I2), const vector<int>& branch_names)
@@ -706,9 +695,6 @@ void check_regenerate(const subA_index_t& I1, const alignment& A,const Tree& T,i
 {
   vector<int> branch_names = iota<int>(T.n_branches()*2);
 
-  if (I1.may_have_invalid_branches())
-    branch_names = directed_names(branches_toward_node(T,root));
-
   // compare against calculation from scratch
   owned_ptr<subA_index_t> I2 = I1;
   I2->recompute_all_branches(A, T);
@@ -725,9 +711,6 @@ void check_regenerate(const subA_index_t& I1, const alignment& A,const Tree& T,i
 
 void subA_index_t::check_footprint(const alignment& A,const Tree& T) const
 {
-  if (may_have_invalid_branches())
-    return;
-
   for(int b=0;b<T.n_branches()*2;b++)
     check_footprint_for_branch(A,T,b);
 }
@@ -765,8 +748,7 @@ subA_index_t::subA_index_t(const Parameters* p, subA_index_kind k, int s2)
   :P(p),
    kind_(k),
    indices(s2),
-   up_to_date(s2),
-   allow_invalid_branches_(false)
+   up_to_date(s2)
 {
   invalidate_all_branches();
 }
