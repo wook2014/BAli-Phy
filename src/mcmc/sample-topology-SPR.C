@@ -886,20 +886,6 @@ spr_attachment_probabilities SPR_search_attachment_points(Parameters& P, const t
     //    cerr<<"  PR1 = "<<PR1.log()<<"  PR2 = "<<PR2.log()<<"   diff = "<<PR2.log() - PR1.log()<<endl;
 #endif
   }
-  for(const auto& p: I.attachment_branch_pairs)
-    std::cerr<<p.first<<" -> "<<p.second<<"\n";
-  
-  std::cerr<<"B0 = "<<I.B0<<"\n";
-  for(const auto& e: Pr)
-  {
-    std::cerr<<e.first<<": "<<e.second<<"\n";
-  }
-
-  // We had better not let this get changed!
-  for(int i=0;i<P.n_data_partitions();i++)
-    assert(P[i].LC.root == root_node);
-
-  std::cerr<<"total_peels = "<<substitution::total_peel_branches - initial_peels<<std::endl;
 
   return Pr;
 }
