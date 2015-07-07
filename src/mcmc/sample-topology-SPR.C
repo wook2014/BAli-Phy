@@ -149,6 +149,84 @@ int topology_sample_SPR_slice_slide_node(vector<Parameters>& p,int b)
   return choice.first;
 }
 
+bool points_to(const tree_edge& E1, const tree_edge& E2)
+{
+  return (E1.node2 == E2.node1 or E1.node2 == E2.node2);
+}
+
+bool behind_edge(const Tree& T, const tree_edge& E1, const tree_edge& E2, bool close=false)
+{
+  if (points_to(E1, E2)) return true;
+  if (not close)
+    return T.partition(E1.node1, E1.node2)[E2.node1] and T.partition(E1.node1, E1.node2)[E2.node2];
+  else
+    return false;
+}
+
+/* We need to NNI to ONE of the 4 grandchild edges */
+// E1, E3, and E5 all point away from E1.node1.
+void SPR_by_NNI(Parameters& P, const tree_edge& E1, const tree_edge& E2, bool close)
+{
+  const Tree& T = P.T();
+
+  assert(behind_edge(T, E1.reverse(), E2));
+
+  if (points_to(E1.reverse(),E2))
+    return; //already attached to edge E2!
+
+  // 1. Get edges E3 and E5 behind E1.reverse(), and decide which one points to E2.
+  vector<const_branchview> connected;
+  append(T.directed_branch(E1).reverse().branches_after(),connected);
+  assert(connected.size() == 2);
+  tree_edge E3 {connected[0]};
+  tree_edge E5 {connected[1]};
+
+  if (behind_edge(T, E3, E2, close))
+    std::swap(E3,E5);
+  else if (behind_edge(T, E5, E2, close))
+    ; // OK
+  else
+  {
+    std::abort();
+  }
+
+  assert(behind_edge(T, E5, E2, close));
+
+  // 2. Get edges E4a and E4b in front of E5, and decide which one points to E2.
+  connected.clear();
+  append(T.directed_branch(E5).branches_after(),connected);
+  tree_edge E4a {connected[0]};
+  tree_edge E4b {connected[1]};
+
+  if (E2 == E4a or behind_edge(T,E4a,E2,close))
+    std::swap(E4a,E4b);
+  else if (E2 == E4b or behind_edge(T,E4b,E2,close))
+    ; // OK
+  else
+    std::abort();
+
+  if (close)
+    assert(E2 == E4b);
+  else
+    assert(E2 == E4b or behind_edge(T,E4b,E2));
+
+  // 3. Record lengths for branches before NNI.
+  double L3 = T.directed_branch(E3).length();
+  double L2 = T.directed_branch(E4b).length();
+  double L5 = T.directed_branch(E5).length();
+
+  // 4. Do NNI.
+  P.NNI(E4b, E3); // Source nodes for E4b/E2 and E3 are not moved, but branch names are moved.
+  std::swap(E4b.node1, E3.node1);
+
+  // 5. Fix up branch lengths and source nodes for E4b/E2 and E3.
+  P.setlength(P.T().directed_branch(E3), L3 + L5);
+  P.setlength(P.T().directed_branch(E5), 0.0);
+
+  if (not close)
+    SPR_by_NNI(P,E1,E2,false);
+}
+
 /// Do a SPR move on T1, moving the subtree behind b1_ to branch b2
 double do_SPR(Parameters& P, int b1_,int b2)
 {
@@ -547,80 +625,6 @@ struct spr_attachment_probabilities: public map<tree_edge,log_double_t>
   map<tree_edge,log_double_t> LLL;
 };
 
-bool points_to(const tree_edge& E1, const tree_edge& E2)
-{
-  return (E1.node2 == E2.node1 or E1.node2 == E2.node2);
-}
-
-bool behind_edge(const Tree& T, const tree_edge& E1, const tree_edge& E2, bool close=false)
-{
-  if (points_to(E1, E2)) return true;
-  if (not close)
-    return T.partition(E1.node1, E1.node2)[E2.node1] and T.partition(E1.node1, E1.node2)[E2.node2];
-  else
-    return false;
-}
-
-/* We need to NNI to ONE of the 4 grandchild edges */
-// E1, E3, and E5 all point away from E1.node1.
-void SPR_by_NNI(Parameters& P, const tree_edge& E1, const tree_edge& E2, bool close)
-{
-  const Tree& T = P.T();
-
-  assert(behind_edge(T, E1.reverse(), E2));
-
-  if (points_to(E1.reverse(),E2))
-    return; //already attached to edge E2!
-
-  // 1. Get edges E3 and E5 behind E1.reverse(), and decide which one points to E2.
-  vector<const_branchview> connected;
-  append(T.directed_branch(E1).reverse().branches_after(),connected);
-  assert(connected.size() == 2);
-  tree_edge E3 {connected[0]};
-  tree_edge E5 {connected[1]};
-
-  if (behind_edge(T, E3, E2, close))
-    std::swap(E3,E5);
-  else if (behind_edge(T, E5, E2, close))
-    ; // OK
-  else
-  {
-    std::abort();
-  }
-
-  assert(behind_edge(T, E5, E2, close));
-
-  // 2. Get edges E4a and E4b in front of E5, and decide which one points to E2.
-  connected.clear();
-  append(T.directed_branch(E5).branches_after(),connected);
-  tree_edge E4a {connected[0]};
-  tree_edge E4b {connected[1]};
-
-  if (E2 == E4a or behind_edge(T,E4a,E2,close))
-    std::swap(E4a,E4b);
-  else if (E2 == E4b or behind_edge(T,E4b,E2,close))
-    ; // OK
-  else
-    std::abort();
-
-  if (close)
-    assert(E2 == E4b);
-  else
-    assert(E2 == E4b or behind_edge(T,E4b,E2));
-
-  // 3. Record lengths for branches before NNI.
-  double L3 = T.directed_branch(E3).length();
-  double L2 = T.directed_branch(E4b).length();
-  double L5 = T.directed_branch(E5).length();
-
-  // 4. Do NNI.
-  P.NNI(E4b, E3); // Source nodes for E4b/E2 and E3 are not moved, but branch names are moved.
-  std::swap(E4b.node1, E3.node1);
-
-  // 5. Fix up branch lengths and source nodes for E4b/E2 and E3.
-  P.setlength(P.T().directed_branch(E3), L3 + L5);
-  P.setlength(P.T().directed_branch(E5), 0.0);
-}
 
 /// Perform an SPR move: move the subtree BEHIND \a b1 to the branch indicated by \a b2,
 ///  and choose the point on the branch specified in \a locations.
