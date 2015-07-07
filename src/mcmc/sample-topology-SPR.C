@@ -550,9 +550,8 @@ void SPR_by_NNI(Parameters& P, const tree_edge& E1, tree_edge E2)
 {
   const Tree& T = P.T();
 
-  int b1 = T.directed_branch(E1);
   vector<const_branchview> connected;
-  append(T.directed_branch(b1).reverse().branches_after(),connected);
+  append(T.directed_branch(E1).reverse().branches_after(),connected);
   assert(connected.size() == 2);
   tree_edge E3 {connected[0]};
   tree_edge E5 {connected[1]};
