@@ -241,7 +241,36 @@ double do_SPR(Parameters& P, int b1_,int b2)
       P.T().directed_branch(b2).source() == b1.target()) 
     ;
   else
+  {
+    // So, this is going to CONNECT everything all the way to the attachment point.
+    // Is that really what we want?
+    // I guess we want that for fixed alignments: always.
+    // I guess we want that for variable alignments: sometimes?
+    // I guess we want that for variable alignments: not in this case?
+    // I guess for variable alignments, it becomes tricky to see this as NNI, since only one of the 4 subtrees is pruned.
+    // One question would be the extent to which we actually need to realign when we do SPR.
+    // If we stop realigning, handling long sequences becomes plausible.
+    //
+    // So, we want to keep connected all the partitions with fixed alignment, but not the partitions with variable alignment?
+    // How would we do something like that?
+    //
+    //    SPR_by_NNI(P, E1, E2); // only fix up fixed-alignment partitions..., disconnect
+    //
+    // Also, can we keep around the traditional approach, for the purposes of comparing timing?
+    // Maybe keep, not the traditional approach, but one that actually relies on alignment columns?
+    // It could start diverging quite a bit, though...
+    // - 
+
+
+    // So, it would seem that, logically, we want to do a kind of
+    // (a) disconnect b1, and reconnect to new branch b2, invalidating the alignment along b1, but actually preserving the alignment along b2
+    //     actually, I suppose there IS a kind of joint alignment of b1, b2a, and b2b.  Its just that, while its homologies are
+    //     specified, the order of unordered columns is completely unspecified.
+    // (b) minimally connect leaf characters for fixed-alignment partitions.
+    //    (b.1) But note that only certain branches are modified!
+    // Question: should we think of this as a sequence of NNIs?
     P.SPR(b1.reverse(),b2);
+  }
 
   //------ Find the two new branches ------//
   vector<const_branchview> connected2;
