@@ -1539,6 +1539,7 @@ namespace substitution {
 
 
 
+  /*
   log_double_t Pr_from_scratch_leaf(data_partition P)
   {
     subA_index_leaf subA(P.P, P.T().n_branches()*2);
@@ -1564,7 +1565,7 @@ namespace substitution {
 
     return Pr(*P.sequences, P.A(), subA, P, P.T(), LC);
   }
-
+  */
   log_double_t Pr(const data_partition& P) {
     log_double_t result = Pr(P, P.LC);
 
@@ -1583,6 +1584,7 @@ namespace substitution {
     }
 #endif
 
+    /*
 #ifdef DEBUG_INDEXING
     log_double_t result3 = Pr_from_scratch_leaf(P);
 
@@ -1596,7 +1598,8 @@ namespace substitution {
 
     assert(std::abs(log(result) - log(result3)) < 1.0e-9);
 #endif
-
+    */
+    
     return result;
   }
 
