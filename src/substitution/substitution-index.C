@@ -110,14 +110,14 @@ const Tree& subA_index_t::T() const
 {
   return DP->T();
 }
-  
-void subA_index_t::set_row(int r, const Vector<pair<int,int>>& index)
+
+void subA_index_t::set_row(int r, const Vector<pair<int,int>>& index) const
 {
   const context* C = &P();
   const_cast<context*>(C)->set_parameter_value(row_indices[r], index );
 }
 
-void subA_index_t::set_row(int r, const expression_ref& index)
+void subA_index_t::set_row(int r, const expression_ref& index) const
 {
   const context* C = &P();
   const_cast<context*>(C)->set_parameter_value(row_indices[r], index );
@@ -207,6 +207,15 @@ int next_column(const vector< expression_ref >& indices, const vector< vector<in
 /// Select rows for branches \a branches, removing columns with all entries == -1
 matrix<int> subA_index_t::get_subA_index(const vector<int>& branches, bool with_columns) const
 {
+  // copy sub-A indices for each branch
+  for(int j=0;j<branches.size();j++) 
+  {
+    IF_DEBUG_I( check_footprint_for_branch(A(),T(),branches[j]) );
+
+    if (not branch_index_valid(branches[j]))
+      update_branch(A(),T(),branches[j]);
+  }
+
   // Compute the total length of branch indices.
   // Also check that the indices are up-to-date.
 
@@ -264,15 +273,6 @@ matrix<int> subA_index_t::get_subA_index(const vector<int>& branches, bool with_
 /// Select rows for branches \a branches, removing columns with all entries == -1
 matrix<int> subA_index_t::get_subA_index(const vector<int>& branches, const alignment& A,const Tree& T, bool with_columns)
 {
-  // copy sub-A indices for each branch
-  for(int j=0;j<branches.size();j++) 
-  {
-    IF_DEBUG_I( check_footprint_for_branch(A,T,branches[j]) );
-
-    if (not branch_index_valid(branches[j]))
-      update_branch(A,T,branches[j]);
-  }
-
   return get_subA_index(branches, with_columns);
 }
 
@@ -618,7 +618,7 @@ bool subA_index_t::branch_index_valid(int b) const
   return P().get_parameter_value(up_to_date[b]).as_int();
 }
 
-void subA_index_t::validate_one_branch(int b) 
+void subA_index_t::validate_one_branch(int b) const
 {
   if (not branch_index_valid(b))
   {
@@ -671,7 +671,7 @@ int rank(const Tree& T,int b) {
 }
 
 
-void subA_index_t::update_branch(const alignment& A,const Tree& T,int b) 
+void subA_index_t::update_branch(const alignment& A,const Tree& T,int b) const
 {
 #ifdef DEBUG_INDEXING
   check_footprint(A,T);
@@ -706,7 +706,7 @@ void subA_index_t::update_branch(const alignment& A,const Tree& T,int b)
 #endif
 }
 
-void subA_index_t::recompute_all_branches(const alignment& A,const Tree& T) 
+void subA_index_t::recompute_all_branches(const alignment& A,const Tree& T)
 {
   invalidate_all_branches();
 
@@ -889,7 +889,7 @@ Vector<pair<int,int> > combine_columns(const vector<pair<int,int> >& p1, const v
   return p3;
 }
 
-void subA_index_leaf::update_one_branch(const alignment& A,const Tree& T,int b) 
+void subA_index_leaf::update_one_branch(const alignment& A,const Tree& T,int b) const
 {
   total_subA_index_branch++;
   assert(not branch_index_valid(b));
@@ -961,7 +961,7 @@ subA_index_leaf::subA_index_leaf(const data_partition* dp, const vector<int>& r,
 }
 
 
-void subA_index_internal::update_one_branch(const alignment& A, const Tree& T, int b) 
+void subA_index_internal::update_one_branch(const alignment& A, const Tree& T, int b) const
 {
   total_subA_index_branch++;
   assert(not branch_index_valid(b));
