@@ -191,14 +191,17 @@ along with BAli-Phy; see the file COPYING.  If not see
  * augmented alignments, we could define update_one_branch( ) in terms of the pairwise
  * alignments for the previous branches...*/
 
+class data_partition;
 class Parameters;
 
 struct subA_index_t: public Object
 {
   friend class Parameters;
 
-  const Parameters* P;
+  const data_partition* DP;
 
+  const Parameters& P() const;
+  
   enum subA_index_kind {leaf_index=1, internal_index=2};
 
 protected:
@@ -220,7 +223,7 @@ protected:
 public:
   virtual subA_index_t* clone() const=0;
   
-  subA_index_t(const Parameters* P, subA_index_kind k, const std::vector<int>& r, const std::vector<int>& u, int s2);
+  subA_index_t(const data_partition* P, subA_index_kind k, const std::vector<int>& r, const std::vector<int>& u, int s2);
 
   int n_rows() const;
 
@@ -303,7 +306,7 @@ public:
 
   void check_footprint_for_branch(const alignment& A1,const Tree& T,int b) const;
 
-  subA_index_leaf(const Parameters* P, const std::vector<int>&, const std::vector<int>&, int s2);
+  subA_index_leaf(const data_partition*, const std::vector<int>&, const std::vector<int>&, int s2);
 };
 
 struct subA_index_internal: public subA_index_t
@@ -316,7 +319,7 @@ public:
 
   void check_footprint_for_branch(const alignment& A1,const Tree& T,int b) const;
 
-  subA_index_internal(const Parameters* P, const std::vector<int>&, const std::vector<int>&, int s2);
+  subA_index_internal(const data_partition*, const std::vector<int>&, const std::vector<int>&, int s2);
 };
 
 void check_regenerate(const subA_index_t& I, const alignment& A1,const Tree& T);
