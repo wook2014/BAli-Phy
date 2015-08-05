@@ -416,26 +416,14 @@ int data_partition::seqlength(int n) const
   return l;
 }
 
-void data_partition::uniquify_subA_index()
-{
-  if (subA_->ref_count() > 1)
-    subA_ = subA_->clone();
-
-  assert(subA_->ref_count() == 1);
-}
-
 void data_partition::invalidate_subA_index_branch(int b)
 {
-  uniquify_subA_index();
-
   // propagates outward in both directions
   subA().invalidate_branch(b);
 }
 
 void data_partition::invalidate_subA_index_one_branch(int b)
 {
-  uniquify_subA_index();
-
   int b2 = T().directed_branch(b).reverse();
   subA().invalidate_one_branch(b);
   subA().invalidate_one_branch(b2);
@@ -443,8 +431,6 @@ void data_partition::invalidate_subA_index_one_branch(int b)
 
 void data_partition::invalidate_subA_index_all()
 {
-  uniquify_subA_index();
-
   subA().invalidate_all_branches();
 }
 
@@ -815,8 +801,6 @@ void Parameters::set_tree(const SequenceTree& T2)
 
 void Parameters::reconnect_branch(int s1, int t1, int t2, bool safe)
 {
-  uniquify_subA_indices();
-
 
   int b1 = T().directed_branch(s1,t1);
   int b2 = T().directed_branch(t1,s1);
@@ -1312,13 +1296,6 @@ void Parameters::LC_invalidate_all()
   for(int i=0;i<n_data_partitions();i++)
     get_data_partition(i).LC.invalidate_all();
 }
-
-void Parameters::uniquify_subA_indices()
-{
-  for(int i=0;i<n_data_partitions();i++)
-    get_data_partition(i).uniquify_subA_index();
-}
-
 
 void Parameters::invalidate_subA_index_branch(int b)
 {
