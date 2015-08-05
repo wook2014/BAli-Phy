@@ -247,6 +247,9 @@ public:
   const Vector<std::pair<int,int> >& row(int r) const;
 
   /// align sub-alignments corresponding to branches in b
+  matrix<int> get_subA_index(const std::vector<int>& b,bool=false) const;
+
+  /// align sub-alignments corresponding to branches in b
   matrix<int> get_subA_index(const std::vector<int>& b,const alignment& A,const Tree& T,bool=false);
 
   /// align sub-alignments corresponding to branches in b
@@ -255,11 +258,8 @@ public:
   /// align sub-alignments corresponding to branches in b
   matrix<int> get_subA_index_with_nodes(const std::vector<int>& b,const std::vector<int>& n, const alignment& A,const Tree& T,bool=false);
 
-  /// align sub-alignments corresponding to branches in b
-  matrix<int> get_subA_index(const std::vector<int>& b,bool=false) const;
-
   /// align sub-alignments corresponding to branches pointing to node
-  matrix<int> get_subA_index(int node,const alignment& A,const Tree& T); 
+  matrix<int> get_subA_index_around_node(int node,const alignment& A,const Tree& T); 
 
   /// align sub-alignments corresponding to branches in b
   matrix<int> get_subA_index_select(const std::vector<int>& b,const alignment& A,const Tree& T);
