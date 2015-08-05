@@ -429,7 +429,7 @@ void data_partition::invalidate_subA_index_branch(int b)
   uniquify_subA_index();
 
   // propagates outward in both directions
-  subA().invalidate_branch(T(),b);
+  subA().invalidate_branch(b);
 }
 
 void data_partition::invalidate_subA_index_one_branch(int b)
