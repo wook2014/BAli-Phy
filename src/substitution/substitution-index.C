@@ -528,9 +528,6 @@ void check_subA(const subA_index_t& I1_, const alignment& A1,const subA_index_t&
 {
   for(int b=T.n_leaves();b<2*T.n_branches();b++) 
   {
-    if (not I1_.branch_index_valid(b)) continue;
-    if (not I2_.branch_index_valid(b)) continue;
-
     // compute branches-in
     vector<int> branches;
     for(const_in_edges_iterator e = T.directed_branch(b).branches_before();e;e++)
@@ -852,9 +849,6 @@ void subA_index_leaf::check_footprint_for_branch(int b) const
 
   const alignment& AA = A();
   
-  // Don't check here if we're temporarily messing with things, and allowing a funny state.
-  if (not branch_index_valid(b)) return;
-
   for(int c=0,i=0;c<AA.length();c++) 
   {
     // Determine if there are any leaf characters behind branch b in column c
@@ -902,9 +896,6 @@ void subA_index_internal::check_footprint_for_branch(int b) const
   const alignment& AA = A();
   
   assert(AA.n_sequences() == TT.n_nodes());
-
-  // Don't check here if we're temporarily messing with things, and allowing a funny state.
-  if (not branch_index_valid(b)) return;
 
   int node = TT.directed_branch(b).source();
 
