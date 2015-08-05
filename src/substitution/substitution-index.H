@@ -201,6 +201,10 @@ struct subA_index_t: public Object
   const data_partition* DP;
 
   const Parameters& P() const;
+
+  const alignment& A() const;
+
+  const Tree& T() const;
   
   enum subA_index_kind {leaf_index=1, internal_index=2};
 

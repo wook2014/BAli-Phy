@@ -101,6 +101,16 @@ const Parameters& subA_index_t::P() const
   return *DP->P;
 }
 
+const alignment& subA_index_t::A() const
+{
+  return DP->A();
+}
+
+const Tree& subA_index_t::T() const
+{
+  return DP->T();
+}
+  
 void subA_index_t::set_row(int r, const Vector<pair<int,int>>& index)
 {
   const context* C = &P();
