@@ -221,7 +221,6 @@ void data_partition::set_alignment(const expression_ref& A2)
 {
   const context* C = P;
   const_cast<context*>(C)->set_parameter_value(alignment_matrix_index, A2 );
-  invalidate_subA_index_all();
 }
 
 void data_partition::recompute_alignment_matrix_from_pairwise_alignments()
@@ -269,8 +268,6 @@ void data_partition::variable_alignment(bool b)
   {
     subA_ = subA_leaf;
 
-    subA().invalidate_all_branches();
-
     // We just changed the subA index type
     LC.invalidate_all();
 
@@ -285,8 +282,6 @@ void data_partition::variable_alignment(bool b)
       subA_ = subA_internal;
     else
       subA_ = subA_leaf;
-
-    subA().invalidate_all_branches();
 
     assert(has_IModel() and A().n_sequences() == T().n_nodes());
     {
@@ -420,24 +415,6 @@ int data_partition::seqlength(int n) const
   return l;
 }
 
-void data_partition::invalidate_subA_index_branch(int b)
-{
-  // propagates outward in both directions
-  subA().invalidate_branch(b);
-}
-
-void data_partition::invalidate_subA_index_one_branch(int b)
-{
-  int b2 = T().directed_branch(b).reverse();
-  subA().invalidate_one_branch(b);
-  subA().invalidate_one_branch(b2);
-}
-
-void data_partition::invalidate_subA_index_all()
-{
-  subA().invalidate_all_branches();
-}
-
 /// Set the pairwise alignment value, but don't mark the alignment & sequence lengths as changed.
 void data_partition::set_pairwise_alignment_(int b, const pairwise_alignment_t& pi,bool require_match_A) const
 {
@@ -529,9 +506,6 @@ void data_partition::note_alignment_changed_on_branch(int b)
   int B = T().directed_branch(b).reverse();
   invalidate_pairwise_alignment_for_branch(b);
   invalidate_pairwise_alignment_for_branch(B);
-
-  // If the alignment changes AT ALL, then the mapping from subA columns to alignment columns is broken.
-  // Therefore we always mark it as out-of-date and needing to be recomputed.
 
   // However, LC depends only on the alignment of subA indices from different branches.
   // 
@@ -819,7 +793,6 @@ void Parameters::reconnect_branch(int s1, int t1, int t2, bool safe)
   if (safe)
   {
     LC_invalidate_branch(b1);
-    invalidate_subA_index_branch(b1);
     note_alignment_changed_on_branch(T_->directed_branch(s1,t1));
   }
   
@@ -833,7 +806,6 @@ void Parameters::reconnect_branch(int s1, int t1, int t2, bool safe)
   if (safe)
   {
     LC_invalidate_branch(b1);
-    invalidate_subA_index_branch(b1);
     note_alignment_changed_on_branch(T_->directed_branch(s1,t2));
   }
   
@@ -1306,24 +1278,6 @@ void Parameters::LC_invalidate_all()
 {
   for(int i=0;i<n_data_partitions();i++)
     get_data_partition(i).LC.invalidate_all();
-}
-
-void Parameters::invalidate_subA_index_branch(int b)
-{
-  for(int i=0;i<n_data_partitions();i++)
-    get_data_partition(i).invalidate_subA_index_branch(b);
-}
-
-void Parameters::invalidate_subA_index_one_branch(int b)
-{
-  for(int i=0;i<n_data_partitions();i++)
-    get_data_partition(i).invalidate_subA_index_one_branch(b);
-}
-
-void Parameters::invalidate_subA_index_all()
-{
-  for(int i=0;i<n_data_partitions();i++)
-    get_data_partition(i).invalidate_subA_index_all();
 }
 
 void Parameters::note_alignment_changed_on_branch(int b)
