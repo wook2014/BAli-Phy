@@ -17,16 +17,7 @@ extern "C" closure builtin_function_get_column_index_list_for_characters(Operati
 extern "C" closure builtin_function_merge_suba_indices(OperationArgs& Args)
 {
   auto i1 = Args.evaluate(0);
-  int r1 = Args.evaluate(1).as_int();
-  auto i2 = Args.evaluate(2);
-  int r2 = Args.evaluate(3).as_int();
-
-  // sort branches by rank
-  if (r1 > r2)
-  {
-    std::swap(i1,i2);
-    std::swap(r1,r2);
-  }
+  auto i2 = Args.evaluate(1);
 
   // get the sorted list of present columns
   const Vector<pair<int,int>>& I1 = i1.as_<Vector<pair<int,int>>>();
