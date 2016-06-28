@@ -462,6 +462,7 @@ data_partition::data_partition(Parameters* p, int i, const alignment& AA)
    DPC(new data_partition_constants),
    partition_index(i),
    pairwise_alignment_for_branch(2*t().n_branches()),
+   conditional_likelihoods_for_branch(2*t().n_branches()),
    sequence_length_indices(AA.n_sequences(),-1),
    transition_p_method_indices(t().n_branches(),-1),
    variable_alignment_( has_IModel() ),
@@ -491,6 +492,10 @@ data_partition::data_partition(Parameters* p, int i, const alignment& AA)
   }
   //  for(int b=0;b<2*t().n_branches();b++)
   //    assert(pairwise_alignment_for_branch_is_valid(b));
+
+  // Create and set conditional likelihoods for each branch
+  for(int b=0;b<conditional_likelihoods_for_branch.size();b++)
+    conditional_likelihoods_for_branch[b] = p->add_parameter(prefix+"CL"+convertToString(b), 0);
 
   const int n_base_smodels = n_base_models();
   //  const int n_states = state_letters().size();

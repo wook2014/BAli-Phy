@@ -67,6 +67,8 @@ private:
   /// The pairwise alignment for each branch
   std::vector<int> pairwise_alignment_for_branch;
 
+  std::vector<int> conditional_likelihoods_for_branch;
+
   bool pairwise_alignment_for_branch_is_valid(int) const;
 
   void invalidate_pairwise_alignment_for_branch(int b) const;
