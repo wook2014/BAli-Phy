@@ -599,7 +599,7 @@ namespace substitution {
 	}
       }
       else
-	element_assign(R, 1, matrix_size);
+	element_assign(R, matrix_size, 1);
     }
 
     LCB->other_subst = 1;
@@ -676,7 +676,7 @@ namespace substitution {
 	}
       }
       else
-	element_assign(R,1,matrix_size);
+	element_assign(R, matrix_size, 1);
     }
 
     LCB->other_subst = 1;
@@ -722,7 +722,7 @@ namespace substitution {
 	}
       }
       else
-	element_assign(R,1,matrix_size);
+	element_assign(R, matrix_size, 1);
     }
 
     LCB->other_subst = 1;
