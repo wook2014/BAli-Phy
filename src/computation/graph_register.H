@@ -529,6 +529,8 @@ public:
 
   std::pair<int,int> incremental_evaluate(int R);
 
+  std::pair<int,int> incremental_evaluate_from_call(int P, int R);
+  
   int incremental_evaluate_unchangeable(int R);
 
   const closure& lazy_evaluate(int& R);
