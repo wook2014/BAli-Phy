@@ -2356,40 +2356,14 @@ void reg_heap::try_release_token(int t)
 
   int parent = parent_token(t);
 
-  // Check invariant that any context must be either referenced or have more than 1 child context.
-  if (parent != -1)
-    assert(tokens[parent].referenced or tokens[parent].children.size() > 1);
-
   int n_children = tokens[t].children.size();
-  if (n_children > 1 or tokens[t].referenced)
+  if (n_children > 0 or tokens[t].referenced)
     return;
-
-  if (n_children)
-  {
-    int child_token = tokens[t].children[0];
-
-    // handle the case when we are trying to release the root
-    if (is_root_token(t))
-    {
-      reroot_at(child_token);
-      return;
-    }
-
-    if (merge_split_mapping(t, child_token))
-    {
-      swap_tokens(t, child_token);
-      std::swap(t, child_token);
-    }
-
-    capture_parent_token(child_token);
-
-    invalidate_shared_regs(t, child_token);
-  }
 
   // clear only the mappings that were actually updated here.
   release_child_token(t);
 
-  // If we just released a terminal token, maybe it's parent is not terminal also.
+  // If we just released a terminal token, maybe it's parent is now terminal also.
   if (parent != -1)
     try_release_token(parent);
 
