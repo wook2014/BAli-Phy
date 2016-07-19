@@ -848,10 +848,19 @@ void reg_heap::set_used_input(int s1, int R2)
   // So, we may as well forbid using an index_var as an input.
   assert(access(R2).C.exp.head().type() != index_var_type);
 
+  auto& used_inputs = steps[s1].used_inputs;
+  
   int rc2 = result_index_for_reg(R2);
 
+  int sz = used_inputs.size();
+  if (sz > 0 and used_inputs.back().first == rc2)
+    return;
+
+  if (sz > 1 and used_inputs[sz-2].first == rc2)
+    return;
+
   auto back_edge = results[rc2].used_by.push_back(s1);
-  steps[s1].used_inputs.push_back({rc2,back_edge});
+  used_inputs.push_back({rc2,back_edge});
 
   assert(result_is_used_by(s1,rc2));
 }
