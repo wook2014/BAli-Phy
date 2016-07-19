@@ -348,9 +348,7 @@ std::pair<int,int> reg_heap::incremental_evaluate(int R)
 	  make_reg_changeable(R);
 	  int r2 = Args.allocate(std::move(value));
 
-	  auto p = (steps[S].used_inputs.size()==1)
-	    ?incremental_evaluate_from_call(R,r2)
-	    :incremental_evaluate(r2);
+	  auto p = incremental_evaluate_from_call(R,r2);
 	  int r3 = p.first;
 	  int value = p.second;
 
@@ -514,7 +512,6 @@ std::pair<int,int> reg_heap::incremental_evaluate_from_call(int P, int R)
 	  // The old used_input slots are not invalid, which is OK since none of them are changeable.
 	  assert(not has_step(R) );
 	  set_C(R, std::move(value) );
-	  return incremental_evaluate(R);
 	}
       }
       catch (myexception& e)
