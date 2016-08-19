@@ -1518,7 +1518,7 @@ void reg_heap::reroot_at(int t)
   tokens[t].regs_to_re_evaluate.clear();
 
   // 6. Now, try to remove the parent if its unreferenced.
-  try_release_token(parent);
+  try_release_token(parent,true);
 }
 
 /*
@@ -2382,7 +2382,7 @@ void reg_heap::capture_parent_token(int t2)
   assert(index != -1);
 }
 
-void reg_heap::try_release_token(int t)
+void reg_heap::try_release_token(int t, bool remove_knuckle)
 {
   assert(token_is_used(t));
 
@@ -2400,11 +2400,14 @@ void reg_heap::try_release_token(int t)
     assert(tokens[parent].referenced or tokens[parent].children.size() > 1);
 
   int n_children = tokens[t].children.size();
-  if (n_children > 1 or tokens[t].referenced)
-    return;
+
+  if (tokens[t].referenced) return;
+  if (remove_knuckle and n_children > 1) return;
+  if ((not remove_knuckle) and n_children > 0) return;
 
   if (n_children)
   {
+    assert(remove_knuckle);
     int child_token = tokens[t].children[0];
 
     // handle the case when we are trying to release the root
@@ -2424,13 +2427,13 @@ void reg_heap::try_release_token(int t)
 
     invalidate_shared_regs(t, child_token);
   }
-
+  
   // clear only the mappings that were actually updated here.
   release_child_token(t);
 
   // If we just released a terminal token, maybe it's parent is not terminal also.
   if (parent != -1)
-    try_release_token(parent);
+    try_release_token(parent,false);
 
   // The -1 accounts for the unused token 0.
   if (tokens.size() - unused_tokens.size() -1 > 0)
@@ -2687,7 +2690,7 @@ void reg_heap::release_context(int c)
 
   int t = unset_token_for_context(c);
 
-  try_release_token(t);
+  try_release_token(t,false);
 
   // Mark the context as unused
   token_for_context_[c] = -1;

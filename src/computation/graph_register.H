@@ -342,7 +342,7 @@ public:
   int get_unused_token();
 
   /// Release the token if its unreferenced and has no children.
-  void try_release_token(int);
+  void try_release_token(int, bool remove_knuckle);
 
   void release_child_token(int);
 
