@@ -335,13 +335,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	    try
 	    {
 		closure_stack.push_back (access(R).C );
-		RegOperationArgs Args(S, *this);
-		auto O = access(R).C.exp.head().assert_is_a<Operation>()->op;
-		closure value = (*O)(Args);
-		closure_stack.pop_back();
-		total_reductions++;
-		if (not steps[S].used_inputs.empty())
-		    total_changeable_reductions++;
+		incremental_evaluate_from_call_(S);
 
 		// If the reduction doesn't depend on modifiable, then replace E with the value.
 		if (steps[S].used_inputs.empty())
@@ -350,13 +344,12 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		    assert(not reg_has_call(R) );
 		    assert(not reg_has_value(R));
 		    assert(step_for_reg(R).used_inputs.empty());
-		    set_C(R, std::move(value) );
+		    access(R).C = closure_stack.back();
+		    closure_stack.pop_back();
 		}
 		else
 		{
 		    make_reg_changeable(R);
-
-		    incremental_evaluate_from_call(S,value);
 
 		    pair<int,int> p;
 		    if (closure_stack.back().exp.head().is_index_var())
