@@ -55,18 +55,39 @@ expression_ref graph_normalize(const expression_ref& E)
 	for(int i=0;i<L;i++)
 	    bodies[i] = graph_normalize(bodies[i]);
     
-	if (is_reglike(object))
-	    return make_case_expression(object, patterns, bodies);
-	else
-	{
-	    int var_index = get_safe_binder_index(E);
-	    auto x = dummy(var_index);
 
-	    return let_expression({{x,object}},make_case_expression(x, patterns, bodies));
-	}
+	return make_case_expression(object, patterns, bodies);
     }
 
-    // 4. Constructor
+    // 3. Apply
+    if (E.head().is_a<Apply>())
+    {
+	int var_index = get_safe_binder_index(E);
+
+	object_ptr<expression> E2 = E.as_expression().clone();
+
+	// Actually we probably just need x[i] not to be free in E.sub()[i]
+	vector<pair<dummy, expression_ref>> decls;
+	for(int i=0;i<E2->size();i++)
+	{
+	    E2->sub[i] = graph_normalize(E.sub()[i]);
+
+	    if (i > 0 and not is_reglike(E2->sub[i]))
+	    {
+		auto x = dummy( var_index++ );
+
+		// 1. Let-bind the argument expression
+		decls.push_back( {x, E2->sub[i]} );
+
+		// 2. Replace the argument expression with the let var.
+		E2->sub[i] = x;
+	    }
+	}
+
+	return let_expression(decls, object_ptr<const expression>(E2));
+    }
+
+    // 4. Constructor or Operation
     if (E.head().is_a<constructor>() or E.head().is_a<Operation>())
     {
 	int var_index = get_safe_binder_index(E);
