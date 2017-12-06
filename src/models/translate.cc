@@ -177,6 +177,137 @@ vector<pair<string, ptree>> extend_scope(const ptree& rule, int skip, const vect
     return scope2;
 }
 
+
+typedef pair<vector<type_t>, type_t> instance_def;
+typedef pair<vector<type_t>, type_t> class_def;
+typedef pair<vector<type_t>, type_t> data_def;
+
+vector<instance_def> get_instances()
+{
+    vector<instance_def> instances;
+    instances.push_back( {{}, parse_type("Alphabet[Numeric]")}     );
+    instances.push_back( {{}, parse_type("Alphabet[DNA]")}         );
+    instances.push_back( {{}, parse_type("Alphabet[RNA]")}         );
+    instances.push_back( {{}, parse_type("Alphabet[AA]")}          );
+    instances.push_back( {{}, parse_type("Alphabet[Triplets[a]]")} );
+    instances.push_back( {{}, parse_type("Alphabet[Codons[a]]")}   );
+
+    instances.push_back( {{}, parse_type("Nucleotides[DNA]")} );
+    instances.push_back( {{}, parse_type("Nucleotides[RNA]")} );
+
+    instances.push_back( {{}, parse_type("Triplets[Codons[a],a]")} );
+    instances.push_back( {{}, parse_type("Triplets[Triplets[a],a]")} );
+
+    instances.push_back( {{}, parse_type("Num[Int]")}    );
+    instances.push_back( {{}, parse_type("Num[Double]")} );
+
+    return instances;
+}
+
+vector<class_def> get_classes()
+{
+    vector<class_def> classes;
+    classes.push_back({{parse_type("Alphabet[a]"),parse_type("Alphabet[b]")},  parse_type("Triplets[a,b]")});
+    classes.push_back({{},  parse_type("Alphabet[a]")});
+    classes.push_back({{parse_type("Alphabet[a]")},  parse_type("Nucleotides[a]")});
+    classes.push_back({{},  parse_type("Num[a]")});
+    return classes;
+}
+
+vector<class_def> get_data()
+{
+    vector<class_def> data;
+    data.push_back({{parse_type("Nucleotides[a]")},parse_type("Codons[a]")});
+    data.push_back({{parse_type("Alphabet[a]")},parse_type("Triplets[a]")});
+    data.push_back({{parse_type("Alphabet[a]")},parse_type("ExchangeModel[a]")});
+    data.push_back({{parse_type("Alphabet[a]")},parse_type("RA[a]")});
+    data.push_back({{parse_type("Alphabet[a]")},parse_type("FrequencyModel[a]")});
+    data.push_back({{parse_type("Alphabet[a]")},parse_type("MixtureModel[a]")});
+    data.push_back({{parse_type("Alphabet[a]")},parse_type("MultiMixtureModel[a]")});
+    data.push_back({{},parse_type("IndelModel")});
+    data.push_back({{},parse_type("AA")});
+    data.push_back({{},parse_type("DNA")});
+    data.push_back({{},parse_type("RNA")});
+    return data;
+}
+
+auto instances = get_instances();
+auto classes = get_classes();
+auto data = get_data();
+
+pair<vector<type_t>,type_t> freshen_vars(const pair<vector<type_t>,type_t>& x, const set<string>& bound_vars)
+{
+    set<string> type_vars;
+    for(auto& y: x.first)
+	add(type_vars, find_variables_in_type(y));
+    add(type_vars, find_variables_in_type(x.second));
+    auto renaming = alpha_rename(type_vars, bound_vars);
+
+    auto x2 = x;
+    for(auto& y: x2.first)
+	substitute(renaming, y);
+    substitute(renaming, x2.second);
+
+    return x2;
+}
+
+
+bool is_pure_constraint(const type_t& t)
+{
+    for(auto& arg: t)
+	if (not is_variable(arg.second)) return false;
+
+    return true;
+}
+
+equations simplify_constraint(type_t constraint, const Rules& R)
+{
+//    std::cerr<<"Simplifying constraint: "<<unparse_type(constraint)<<std::endl;
+
+    if (is_pure_constraint(constraint))
+    {
+	equations E;
+	E.add_constraint(constraint);
+	return E;
+    }
+
+    for(auto& instance: instances)
+    {
+	equations E;
+	instance = freshen_vars(instance, find_variables_in_type(constraint));
+//	std::cerr<<"   instance = "<<unparse_type(instance.second)<<std::endl;
+	for(auto& sub_constraint: instance.first)
+	    E.add_constraint(sub_constraint);
+//	std::cerr<<"   proposed E: "<<show(E)<<std::endl;
+	E = E && unify(constraint, instance.second);
+	if (E)
+	{
+	    E.eliminate_except(find_variables_in_type(constraint));
+//	    std::cerr<<"   successful E: "<<show(E)<<std::endl;
+	    return E;
+	}
+    }
+    throw myexception()<<"No instance for constraint '"<<unparse_type(constraint)<<"'!";
+    return equations(false);
+}
+
+equations simplify_constraints(const equations& E, const Rules& R)
+{
+    equations E2 = E;
+    E2.get_constraints().clear();
+
+//    std::cerr<<"Simplifying constraints: "<<show(E2)<<std::endl;
+
+    for(auto& constraint: E.get_constraints())
+    {
+	auto constraint2 = constraint;
+	substitute(E, constraint2);
+
+	E2 = E2 && simplify_constraint(constraint2, R);
+    }
+    return E2;
+}
+
 // OK, so 'model' is going to have arg=value pairs set, but not necessarily in the right order.
 equations pass2(const Rules& R, const ptree& required_type, ptree& model, set<string> bound_vars, const vector<pair<string, ptree>>& scope)
 {
@@ -213,6 +344,8 @@ equations pass2(const Rules& R, const ptree& required_type, ptree& model, set<st
     if (rule)
 	for(const auto& constraint: rule->get_child("constraints"))
 	    E.add_constraint(constraint.second);
+
+//    std::cerr<<show(E)<<std::endl;
     
     // 3. Attempt a conversion if the result_type and the required_type don't match.
     if (not E)
@@ -231,6 +364,19 @@ equations pass2(const Rules& R, const ptree& required_type, ptree& model, set<st
 	    throw myexception()<<"Term '"<<model.get_value<string>()<<"' of type '"<<unparse_type(result_type)
 			       <<"' should not have arguments!";
 	return E;
+    }
+
+    // We need to be able to check constraints here, but we might have Num[a] => a=ExchangeModel[a]
+    try
+    {
+	E = E && simplify_constraints(E, R);
+    }
+    catch (myexception& e)
+    {
+	std::ostringstream o;
+	o<<"Parsing: '"<<unparse(model)<<"':\n  ";
+	e.prepend(o.str());
+	throw e;
     }
 
     // 5.1 Update required type and rules with discovered constraints
@@ -253,6 +399,7 @@ equations pass2(const Rules& R, const ptree& required_type, ptree& model, set<st
 		substitute(E,x);
 		throw myexception()<<"Expression '"<<unparse(child.second)<<"' is not of required type "<<unparse_type(x)<<"!";
 	    }
+	    E = E && simplify_constraints(E, R);
 	    add(bound_vars, E.referenced_vars());
 	}
 	E.eliminate_except(find_variables_in_type(required_type));
@@ -286,6 +433,7 @@ equations pass2(const Rules& R, const ptree& required_type, ptree& model, set<st
 	    E = E && pass2(R, arg_required_type, arg_value, bound_vars, extend_scope(*rule,skip,scope));
 	    if (not E)
 		throw myexception()<<"Expression '"<<unparse(arg_value)<<"' is not of required type "<<unparse_type(arg_required_type)<<"!";
+	    E = E && simplify_constraints(E, R);
 	    model2.push_back({arg_name, arg_value});
 	    add(bound_vars, E.referenced_vars());
 	}
@@ -304,6 +452,7 @@ equations pass2(const Rules& R, const ptree& required_type, ptree& model, set<st
 	    E = E && pass2(R, arg_required_type, default_arg, bound_vars, extend_scope(*rule, skip, scope));
 	    if (not E)
 		throw myexception()<<"Expression '"<<unparse(default_arg)<<"' is not of required type "<<unparse_type(arg_required_type)<<"!";
+	    E = E && simplify_constraints(E, R);
 	    add(bound_vars, E.referenced_vars());
 
 	    model2.push_back({arg_name, default_arg});

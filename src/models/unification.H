@@ -46,6 +46,8 @@ public:
 
     const std::set<term_t>& get_constraints() const;
 
+    std::set<term_t>& get_constraints();
+
     void add_constraint(const term_t&);
 
     void eliminate_variable(const std::string&);
@@ -63,6 +65,8 @@ public:
 
 // given two terms, what equations do we need to unify them?
 equations unify(const term_t& T1, const term_t& T2);
+
+bool is_variable(const term_t& p);
 
 std::set<std::string> find_variables_in_type(const term_t& p);
 

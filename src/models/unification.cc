@@ -82,6 +82,11 @@ const set<term_t>& equations::get_constraints() const
     return constraints;
 }
 
+set<term_t>& equations::get_constraints()
+{
+    return constraints;
+}
+
 void equations::add_constraint(const term_t& constraint)
 {
     constraints.insert(constraint);
