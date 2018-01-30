@@ -164,34 +164,37 @@ variables_map parse_cmd_line(int argc,char* argv[])
 { 
     using namespace po;
 
+    options_description invisible("Invisible options");
+    invisible.add_options()
+	("files",value<vector<string> >()->composing(),"tree samples to examine");
+
     // named options
-    options_description all("Allowed options");
-    all.add_options()
+    options_description visible("Allowed options");
+    visible.add_options()
 	("help,h", "produce help message")
 	("tree", value<string>(),"tree to re-root")
-	("skip,s",value<int>()->default_value(0),"number of tree samples to skip")
+	("skip,s",value<string>()->default_value("10%"),"number of tree samples to skip")
 	("until,u",value<int>(),"Read until this number of trees.")
-	("prune",value<string>(),"Comma-separated taxa to remove")
-	("simple","Ignore all branches not in the query tree")
+	("max,m",value<int>(),"Thin tree samples down to this number of trees.")
 	("subsample,x",value<int>()->default_value(1),"factor by which to sub-sample")
-	("var","report standard deviation of branch lengths instead of mean")
-	("no-node-lengths","ignore branches not in the specified topology")
-	("safe","Don't die if no trees match the topology")
-	("show-node-lengths","Output special format")
+	("ignore",value<string>(),"Comma-separated taxa to remove")
 	("verbose,v","Output more log messages on stderr.")
 	;
+
+    options_description all("All options");
+    all.add(visible).add(invisible);
 
     // positional options
     positional_options_description p;
     p.add("tree", 1);
+    p.add("files", -1);
   
     variables_map args;     
-    store(command_line_parser(argc, argv).
-	  options(all).positional(p).run(), args);
+    store(command_line_parser(argc, argv).options(all).positional(p).run(), args);
     notify(args);    
 
     if (args.count("help")) {
-	cout<<"Usage: tree-mean-lengths <tree-file> < in-file\n";
+	cout<<"Usage: tree-mean-lengths [OPTIONS] <consensus-tree> <sampled-trees> [<sampled-trees> ... <sampled-trees>]\n";
 	cout<<"Compute the mean lengths for branches in the given topology.\n\n";
 	cout<<all<<"\n";
 	exit(0);
@@ -336,90 +339,17 @@ int main(int argc,char* argv[])
 	//----------- Parse command line  ----------//
 	variables_map args = parse_cmd_line(argc,argv);
 
-	int skip = args["skip"].as<int>();
-
-	optional<int> last;
-	if (args.count("until"))
-	    last = args["until"].as<int>();
-
-	int subsample = args["subsample"].as<int>();
-
-	vector<string> prune;
-	if (args.count("prune")) {
-	    string p = args["prune"].as<string>();
-	    prune = split(p,',');
-	}
-      
-
-	//----------- Read the topology -----------//
+	//----------- Read the consensus topology -----------//
 	SequenceTree Q = load_T(args);
 	standardize(Q);
 	const int B = Q.n_branches();
 	const int N = Q.n_nodes();
-	vector<double> bf(B);
-	for(int b=0;b<bf.size();b++)
-	    bf[b] = Q.branch(b).length();
 
 	//-------- Read in the tree samples --------//
-	if ( args.count("simple") ) {
-	    accum_branch_lengths_ignore_topology A(Q);
-	    scan_trees(std::cin,skip,last,subsample,prune,Q.get_leaf_labels(), A);
-	    for(int b=0;b<B;b++)
-		Q.branch(b).set_length(A.m1[b]);
-	    cout<<Q<<endl;
-	    exit(0);
-	}
+	auto tree_dist = read_trees(args, Q.get_leaf_labels());
 
-	accum_branch_lengths_same_topology A(Q);
-
-	try {
-	    scan_trees(std::cin,skip,last,subsample,prune,Q.get_leaf_labels(), A);
-	}
-	catch (std::exception& e) 
-	{
-	    if (args.count("safe"))
-		cout<<Q.write(false)<<endl;
-	    std::cerr<<"tree-mean-lengths: Error! "<<e.what()<<endl;
-	    exit(0);
-	}
-
-	if (log_verbose) std::cerr<<A.n_matches<<" out of "<<A.n_samples<<" trees matched the topology";
-	if (log_verbose) std::cerr<<" ("<<double(A.n_matches)/A.n_samples*100<<"%)"<<std::endl;
-
-	//------- Merge lengths and topology -------//
-	if (args.count("var")) {
-	    for(int b=0;b<B;b++)
-		Q.branch(b).set_length(A.m2[b]);
-	    cout<<Q;
-	    exit(0);
-	}
-	else {
-	    for(int b=0;b<B;b++)
-		Q.branch(b).set_length(A.m1[b]);
-
-	    if (not args.count("no-node-lengths") and 
-		not args.count("show-node-lengths")) {
-		for(int n=0;n<N;n++) {
-		    int degree = Q.node(n).neighbors().size();
-		    for(out_edges_iterator b = Q.node(n).branches_out();b;b++)
-			(*b).set_length((*b).length() + A.n1[n]/degree);
-		}
-	    }
-
-	    //------- Print Tree and branch lengths -------//
-	    cout<<Q<<endl;
-
-	    //------------ Print node lengths -------------//
-	    if (args.count("show-node-lengths"))
-		for(int n=0;n<Q.n_nodes();n++) {
-		    if (A.n1[n] > 0) {
-			cout<<"node "<<A.n1[n]<<endl;
-			int b = (*Q.node(n).branches_in()).name();
-			cout<<partition_from_branch(Q,b)<<endl;
-		    }
-		}
-
-	}
+	//------- Print Tree and branch lengths -------//
+	cout<<Q<<endl;
     }
     catch (std::exception& e) {
 	std::cerr<<"tree-mean-lengths: Error! "<<e.what()<<endl;
