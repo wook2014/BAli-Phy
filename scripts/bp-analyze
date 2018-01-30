@@ -252,10 +252,10 @@ print "\nComputing mean branch lengths ... ";
 	my $filename2 = "Results/$tree.mtree";
 	
         # Generate trees w/ node lengths.
-	if (! more_recent_than("Results/$tree.ltree",$tree_files[0])) 
+	if (! more_recent_than_all_of("Results/$tree.ltree",[@tree_files]))
 	{
-	    $prune_arg2 = "--prune $prune" if (defined($prune));
-	    exec_show("tree-mean-lengths Results/$tree.tree --safe --show-node-lengths $max_arg $skip $subsample_string $prune_arg2 < $tree_files[0] > Results/$tree.ltree");
+	    $prune_arg2 = "--ignore $prune" if (defined($prune));
+	    exec_show("tree-mean-lengths Results/$tree.tree $max_arg $skip $subsample_string $prune_arg2 @tree_files > Results/$tree.ltree");
  	}
     }
 print "done.\n";
