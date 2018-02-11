@@ -1,5 +1,5 @@
 {
-    "name": "Dirichlet",
+    "name": "dirichlet",
     "result_type": "Distribution[List[Double]]",
     "call": "Distributions.dirichlet'[n,x]",
     "args": [

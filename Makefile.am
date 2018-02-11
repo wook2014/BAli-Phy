@@ -61,13 +61,14 @@ nobase_help_DATA = help/commands/alphabet.txt \
 
 functionsdir = $(libdir)/@PACKAGE@/
 nobase_functions_DATA = functions/AA.json \
-	functions/Add.json \
-	functions/Bernoulli.json \
-	functions/Beta.json \
-	functions/Binomial.json \
+	functions/add.json \
+	functions/bernoulli.json \
+	functions/beta.json \
+	functions/binomial.json \
 	functions/branch-site.json \
 	functions/Codons.json \
-	functions/Dirichlet.json \
+	functions/dirichlet.json \
+	functions/dirichlet_on.json \
 	functions/Div.json \
 	functions/DNA.json \
 	functions/DP.json \
@@ -134,7 +135,6 @@ nobase_functions_DATA = functions/AA.json \
 	functions/UnitMixture.json \
 	functions/WAG.json \
 	functions/x3.json \
-	functions/DirichletOn.json \
 	functions/letters.json \
 	functions/getNucleotides.json \
 	functions/getAlphabet.json \

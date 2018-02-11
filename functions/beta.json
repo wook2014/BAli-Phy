@@ -1,5 +1,5 @@
 {
-    "name": "Beta",
+    "name": "beta",
     "result_type": "Distribution[Double]",
     "call": "Distributions.beta[a,b]",
     "args": [

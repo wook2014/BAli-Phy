@@ -1,1 +1,1 @@
---test <DATA>/dna.fasta --smodel=Add[HKY,HKY]
+--test <DATA>/dna.fasta --smodel=add[HKY,HKY]

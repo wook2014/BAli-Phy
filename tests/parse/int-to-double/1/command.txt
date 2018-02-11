@@ -1,1 +1,1 @@
---test <DATA>/dna.fasta --smodel=HKY[kappa=Add[2,2]]
+--test <DATA>/dna.fasta --smodel=HKY[kappa=add[2,2]]

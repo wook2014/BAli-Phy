@@ -1,5 +1,5 @@
 {
-    "name": "DirichletOn",
+    "name": "dirichlet_on",
     "result_type": "Distribution[List[Pair[a,Double]]]",
     "call": "Distributions.dirichlet_on'[items,n]",
     "args": [
