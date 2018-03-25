@@ -150,11 +150,11 @@ bernoulli2 p q = ProbDensity (bernoulli_density2 p q) (no_quantile "bernoulli") 
 bernoulli p = bernoulli2 p (1.0-p);
 rbernoulli q = bernoulli2 (1.0-q) q;
 
-builtin builtin_sample_exponential 1 "sample_exponential" "Distribution";
-builtin exponential_density 2 "exponential_density" "Distribution";
-exponential_quantile mu p = gamma_quantile 1.0 mu p;
-sample_exponential mu = Random (IOAction1 builtin_sample_exponential mu);
-exponential mu = ProbDensity (exponential_density mu) (exponential_quantile mu) (sample_exponential mu) (above 0.0);
+builtin builtin_sample_exponential 2 "sample_exponential" "Distribution";
+builtin exponential_density 3 "exponential_density" "Distribution";
+exponential_quantile mu shift p = shift + (gamma_quantile 1.0 mu p);
+sample_exponential mu shift = Random (IOAction2 builtin_sample_exponential mu shift);
+exponential mu shift = ProbDensity (exponential_density mu shift) (exponential_quantile mu shift) (sample_exponential mu shift) (above shift);
 
 normalize v = map (/total) v where {total=sum v};
 

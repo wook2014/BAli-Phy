@@ -1,11 +1,16 @@
 {
     "name": "Exponential",
     "result_type": "Distribution[Double]",
-    "call": "Distributions.exponential[mean]",
+    "call": "Distributions.exponential[mean,shift]",
     "args": [
         {
             "arg_name": "mean",
             "arg_type": "Double"
+        },
+        {
+            "arg_name": "shift",
+            "arg_type": "Double",
+	    "default_value": "1.0"
         }
     ]
 }

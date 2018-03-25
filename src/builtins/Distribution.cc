@@ -19,16 +19,18 @@ using std::valarray;
 extern "C" closure builtin_function_exponential_density(OperationArgs& Args)
 {
     double mu = Args.evaluate(0).as_double();
-    double x = Args.evaluate(1).as_double();
+    double shift = Args.evaluate(1).as_double();
+    double x = Args.evaluate(2).as_double();
   
-    return { exponential_pdf(x,mu) };
+    return { exponential_pdf(x - shift, mu) };
 }
 
 extern "C" closure builtin_function_sample_exponential(OperationArgs& Args)
 {
     double mu = Args.evaluate_(0).as_double();
+    double shift = Args.evaluate_(1).as_double();
   
-    return { exponential(mu) };
+    return { shift + exponential(mu) };
 }
 
 extern "C" closure builtin_function_gamma_density(OperationArgs& Args)
