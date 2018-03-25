@@ -284,20 +284,17 @@ MCMC::MoveAll get_parameter_MH_moves(Model& M)
     // Resample logLambda and alignment
     if (auto index = M.maybe_find_parameter(model_path({"I1","RS07:logLambda"})))
     {
-	auto proposal = [index](Model& P){ return realign_and_propose_parameter(P, *index, shift_cauchy, {0.25}) ;};
+	auto proposal = [index](Model& P){ return realign_and_propose_parameter(P, *index, shift_cauchy, {0.5}) ;};
 
 	MH_moves.add(1.0, MCMC::MH_Move(Generic_Proposal(proposal),"realign_and_sample_logLambda"));
     }
 
     // Resample meanIndelLengthMinus1 and alignment
-    if (false)
+    if (auto index = M.maybe_find_parameter(model_path({"I1","RS07:meanIndelLength"})))
     {
-	if (auto index = M.maybe_find_parameter(model_path({"I1","RS07:meanIndelLength"})))
-	{
-	    auto proposal = [index](Model& P){ return realign_and_propose_parameter(P, *index, more_than(0.0, shift_cauchy), {0.1}) ;};
+	auto proposal = [index](Model& P){ return realign_and_propose_parameter(P, *index, more_than(1.0, shift_cauchy), {1.0}) ;};
 
-	    MH_moves.add(1.0, MCMC::MH_Move(Generic_Proposal(proposal),"realign_and_sample_meanIndelLengthMinus1"));
-	}
+	MH_moves.add(1.0, MCMC::MH_Move(Generic_Proposal(proposal),"realign_and_sample_meanIndelLength"));
     }
 
     return MH_moves;
