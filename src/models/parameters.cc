@@ -312,6 +312,14 @@ const Likelihood_Cache_Branch& data_partition::cache(int b) const
     return P->evaluate(DPC().conditional_likelihoods_for_branch[b]).as_<Likelihood_Cache_Branch>();
 }
 
+object_ptr<const alignment_constraints> data_partition::get_branch_alignment_constraints(int b) const
+{
+    assert(variable_alignment());
+
+    auto con = P->evaluate( DPC().alignment_constraints_for_branch[b] );
+    return convert<const alignment_constraints>(con.ptr());
+}
+
 log_double_t data_partition::likelihood() const 
 {
     substitution::total_likelihood++;
@@ -396,6 +404,7 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
     :conditional_likelihoods_for_branch(2*p->t().n_branches()),
      sequence_length_indices(AA.n_sequences()),
      sequence_length_pr_indices(AA.n_sequences()),
+     alignment_constraints_for_branch(2*p->t().n_branches(),-1),
      seqs(AA.seqs()),
      sequences( alignment_letters(AA, p->t().n_leaves()) ),
      a(AA.get_alphabet().clone()),
@@ -419,6 +428,12 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
     // merging columns.
 
     expression_ref partition = {var("Data.List.!!"), {var("BAliPhy.ATModel.partitions"), p->my_atmodel()}, i};
+
+    {
+	int empty_constraints_index = p->add_compute_expression(alignment_constraints());
+	for(int b=0;b<alignment_constraints_for_branch.size();b++)
+	    alignment_constraints_for_branch[b] = empty_constraints_index;
+    }
 
     //  const int n_states = state_letters().size();
     int smodel_index = *p->smodel_index_for_partition(i);
@@ -485,6 +500,17 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
         for(int i=0; i<leaf_sequence_indices.size(); i++)
             counts_.push_back( EVector(seq_counts[i]) );
         auto counts_array = p->get_expression( p->add_compute_expression({var("Data.Array.listArray'"),get_list(counts_)}) );
+
+	if (p->contains_key("constraint_width"))
+	{
+	    Box<matrix<int>> m = M(AA);
+	    int delta = p->lookup_key("constraint_width");
+            // Create and set alignment constraints for each branch
+	    alignment_constraints_index = p->add_compute_expression({dummy("Alignment.alignment_constraints"),t,m,delta,as,seqs_array});
+	    auto alignment_constraints = p->get_expression(alignment_constraints_index);
+	    for(int b=0;b<alignment_constraints_for_branch.size();b++)
+		alignment_constraints_for_branch[b] = p->add_compute_expression({dummy("Prelude.!"),alignment_constraints,b});
+	}
 
         // R8. Register conditional likelihoods
         // Create and set conditional likelihoods for each branch

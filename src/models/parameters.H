@@ -48,6 +48,7 @@
 #include "util/math/log-double.H"                   // for log_double_t
 #include "util/matrix.H"                            // for Matrix, matrix
 #include "imodel/imodel.H"
+#include "alignment/alignment-constraint.H"
 class Likelihood_Cache_Branch;
 class Parameters;
 class alphabet;
@@ -67,9 +68,13 @@ struct data_partition_constants
 
     param cl_index;
 
+    int alignment_constraints_index;
+
     std::vector<int> conditional_likelihoods_for_branch;
 
     std::vector<param> leaf_sequence_indices;
+
+    std::vector<int> alignment_constraints_for_branch;
 
     std::vector<param> sequence_length_indices;
 
@@ -149,6 +154,8 @@ public:
     /// cached branch HMMs
     const indel::PairHMM& get_branch_HMM(int b) const;
     std::vector<indel::PairHMM> get_branch_HMMs(const std::vector<int>&) const;
+
+    object_ptr<const alignment_constraints> get_branch_alignment_constraints(int b) const;
 
     double sequence_length_pr(int i) const;
 
