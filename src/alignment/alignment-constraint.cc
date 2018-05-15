@@ -46,6 +46,58 @@ using std::pair;
 
 using boost::program_options::variables_map;
 using boost::dynamic_bitset;
+using std::vector;
+using std::optional;
+
+vector<optional<int>> get_max_y_le_x(const pairwise_alignment_t& a_xy)
+{
+    vector<optional<int>> max_y_le_x;
+
+    int y = 0;
+    optional<int> last_matched_y;
+    for(int i=0;i<a_xy.size();i++)
+    {
+	if (a_xy.is_match(i)) last_matched_y = y;
+
+	if (a_xy.has_character1(i))
+	    max_y_le_x.push_back(last_matched_y);
+
+	if (a_xy.has_character2(i)) y++;
+    }
+
+    assert(max_y_le_x.size() == a_xy.length1());
+
+    return max_y_le_x;
+}
+
+vector<optional<int>> get_min_y_ge_x(const pairwise_alignment_t& a_xy)
+{
+    vector<optional<int>> min_y_ge_x;
+
+    int y = 0;
+    optional<int> last_matched_y;
+    for(int i=int(a_xy.size())-1; i>=0; i--)
+    {
+	if (a_xy.is_match(i)) last_matched_y = y;
+
+	if (a_xy.has_character1(i))
+	    min_y_ge_x.push_back(last_matched_y);
+
+	if (a_xy.has_character2(i)) y--;
+    }
+
+    assert(min_y_ge_x.size() == a_xy.length1());
+
+    return min_y_ge_x;
+}
+
+optional<int> lookup(const vector<optional<int>>& array, const optional<int>& index)
+{
+    if (index)
+	return array[*index];
+    else
+	return index;
+}
 
 string clean(const string& in) {
     string out;

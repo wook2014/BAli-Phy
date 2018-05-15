@@ -23,9 +23,18 @@ along with BAli-Phy; see the file COPYING.  If not see
 #include <string>                                   // for string
 #include <utility>                                  // for pair
 #include <vector>                                   // for vector
+#include <optional>                                 // for optional<T>
 #include "util/matrix.H"                            // for matrix
 class SequenceTree;
 class alignment;
+#include "dp/2way.H"
+
+typedef std::tuple<int, std::optional<int>, std::optional<int>> alignment_constraint;
+typedef Vector<alignment_constraint> alignment_constraints;
+
+std::vector<std::optional<int>> get_max_y_le_x(const pairwise_alignment_t& a_xy);
+std::vector<std::optional<int>> get_min_y_ge_x(const pairwise_alignment_t& a_xy);
+std::optional<int> lookup(const std::vector<std::optional<int>>& array, const std::optional<int>& index);
 
 matrix<int> load_alignment_constraint(const std::string& filename,SequenceTree& T);
 

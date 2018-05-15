@@ -9,6 +9,7 @@
 #include <optional>
 #include <tuple>
 #include "dp/2way.H"
+
 using std::tuple;
 using std::optional;
 
@@ -340,6 +341,8 @@ extern "C" closure builtin_function_sequences_from_alignment(OperationArgs& Args
     return sequences;
 }
 
+#include "alignment/alignment-constraint.H"
+
 extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Args)
 {
     // 1. Read the arguments
@@ -357,9 +360,8 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
     // 1d: sequence length
     int L = Args.evaluate(3).as_<Vector<int>>().size();
 
-    // 2. Create the constraint vector
-
-    object_ptr<Vector<tuple<int,optional<int>,optional<int>>>> leaf_con( new Vector<tuple<int,optional<int>,optional<int>>>() );
+    // 2. Construct the constraint object to return
+    object_ptr<alignment_constraints> leaf_con( new alignment_constraints );
 
     for(int i=0;i<M.size1();i++)
     {
@@ -369,59 +371,17 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
 	optional<int> j_minus_delta = j - delta;
 	optional<int> j_plus_delta = j + delta;
 
-	if (*j_minus_delta < 0) j_minus_delta = boost::none;
-	if (*j_plus_delta >= L) j_plus_delta  = boost::none;
+	if (*j_minus_delta < 0) j_minus_delta = {};
+	if (*j_plus_delta >= L) j_plus_delta  = {};
 
-	leaf_con->push_back({i,j_minus_delta,j_plus_delta});
+	leaf_con->push_back(alignment_constraint{i,j_minus_delta,j_plus_delta});
     }
 
     return leaf_con;
 }
 
-vector<optional<int>> get_max_y_le_x(const pairwise_alignment_t& a_xy)
-{
-    vector<optional<int>> max_y_le_x;
-
-    int y = 0;
-    optional<int> last_matched_y;
-    for(int i=0;i<a_xy.size();i++)
-    {
-	if (a_xy.is_match(i)) last_matched_y = y;
-
-	if (a_xy.has_character1(i))
-	    max_y_le_x.push_back(last_matched_y);
-
-	if (a_xy.has_character2(i)) y++;
-    }
-
-    assert(max_y_le_x.size() == a_xy.length1());
-
-    return max_y_le_x;
-}
-
-vector<optional<int>> get_min_y_ge_x(const pairwise_alignment_t& a_xy)
-{
-    vector<optional<int>> min_y_ge_x;
-
-    int y = 0;
-    optional<int> last_matched_y;
-    for(int i=int(a_xy.size())-1; i>=0; i--)
-    {
-	if (a_xy.is_match(i)) last_matched_y = y;
-
-	if (a_xy.has_character1(i))
-	    min_y_ge_x.push_back(last_matched_y);
-
-	if (a_xy.has_character2(i)) y--;
-    }
-
-    assert(min_y_ge_x.size() == a_xy.length1());
-
-    return min_y_ge_x;
-}
-
 template<typename T>
-optional<T> std::max(const optional<T>& x, const optional<T>& y)
+optional<T> max(const optional<T>& x, const optional<T>& y)
 {
     if (not x) return y;
     if (not y) return x;
@@ -429,19 +389,11 @@ optional<T> std::max(const optional<T>& x, const optional<T>& y)
 }
 
 template<typename T>
-optional<T> std::min(const optional<T>& x, const optional<T>& y)
+optional<T> min(const optional<T>& x, const optional<T>& y)
 {
     if (not x) return y;
     if (not y) return x;
     return std::min(*x,*y);
-}
-
-inline optional<int> lookup(const vector<optional<int>>& array, const optional<int>& index)
-{
-    if (index)
-	return array[*index];
-    else
-	return index;
 }
 
 extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& Args)
@@ -450,19 +402,19 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 
     // 1. Read the arguments
     auto con_x_ = Args.evaluate(0);
-    auto& con_x = con_x_.as_<Vector<tuple<int,optional<int>,optional<int>>>>();
+    auto& con_x = con_x_.as_<alignment_constraints>();
 
     auto a_xz_ = Args.evaluate(1);
     auto& a_xz = a_xz_.as_<pairwise_alignment_t>();
 
     auto con_y_ = Args.evaluate(2);
-    auto& con_y = con_y_.as_<Vector<tuple<int,optional<int>,optional<int>>>>();
+    auto& con_y = con_y_.as_<alignment_constraints>();
 
     auto a_yz_ = Args.evaluate(3);
     auto& a_yz = a_yz_.as_<pairwise_alignment_t>();
 
     // 2. Construct the object to return
-    object_ptr<Vector<tuple<int,optional<int>,optional<int>>>> con_z( new Vector<tuple<int,optional<int>,optional<int>>>() );
+    object_ptr<alignment_constraints> con_z( new alignment_constraints );
 
     auto max_z_le_x = get_max_y_le_x(a_xz);
     auto max_z_le_y = get_max_y_le_x(a_yz);
@@ -510,7 +462,7 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 	// min_{xy in (X U Y)+Delta} min {z >= xy}
 	auto zmin = std::min(zmin_x, zmin_y);
 
-	con_z->push_back({id, zmax, zmin});
+	con_z->push_back(alignment_constraint{id, zmax, zmin});
     }
 
     return con_z;
