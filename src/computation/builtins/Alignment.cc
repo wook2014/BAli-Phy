@@ -377,3 +377,141 @@ extern "C" closure builtin_function_get_leaf_constraint(OperationArgs& Args)
 
     return leaf_con;
 }
+
+vector<optional<int>> get_max_y_le_x(const pairwise_alignment_t& a_xy)
+{
+    vector<optional<int>> max_y_le_x;
+
+    int y = 0;
+    optional<int> last_matched_y;
+    for(int i=0;i<a_xy.size();i++)
+    {
+	if (a_xy.is_match(i)) last_matched_y = y;
+
+	if (a_xy.has_character1(i))
+	    max_y_le_x.push_back(last_matched_y);
+
+	if (a_xy.has_character2(i)) y++;
+    }
+
+    assert(max_y_le_x.size() == a_xy.length1());
+
+    return max_y_le_x;
+}
+
+vector<optional<int>> get_min_y_ge_x(const pairwise_alignment_t& a_xy)
+{
+    vector<optional<int>> min_y_ge_x;
+
+    int y = 0;
+    optional<int> last_matched_y;
+    for(int i=int(a_xy.size())-1; i>=0; i--)
+    {
+	if (a_xy.is_match(i)) last_matched_y = y;
+
+	if (a_xy.has_character1(i))
+	    min_y_ge_x.push_back(last_matched_y);
+
+	if (a_xy.has_character2(i)) y--;
+    }
+
+    assert(min_y_ge_x.size() == a_xy.length1());
+
+    return min_y_ge_x;
+}
+
+template<typename T>
+optional<T> std::max(const optional<T>& x, const optional<T>& y)
+{
+    if (not x) return y;
+    if (not y) return x;
+    return std::max(*x,*y);
+}
+
+template<typename T>
+optional<T> std::min(const optional<T>& x, const optional<T>& y)
+{
+    if (not x) return y;
+    if (not y) return x;
+    return std::min(*x,*y);
+}
+
+inline optional<int> lookup(const vector<optional<int>>& array, const optional<int>& index)
+{
+    if (index)
+	return array[*index];
+    else
+	return index;
+}
+
+extern "C" closure builtin_function_merge_leaf_constraints(OperationArgs& Args)
+{
+    using boost::get;
+
+    // 1. Read the arguments
+    auto con_x_ = Args.evaluate(0);
+    auto& con_x = con_x_.as_<Vector<tuple<int,optional<int>,optional<int>>>>();
+
+    auto a_xz_ = Args.evaluate(1);
+    auto& a_xz = a_xz_.as_<pairwise_alignment_t>();
+
+    auto con_y_ = Args.evaluate(2);
+    auto& con_y = con_y_.as_<Vector<tuple<int,optional<int>,optional<int>>>>();
+
+    auto a_yz_ = Args.evaluate(3);
+    auto& a_yz = a_yz_.as_<pairwise_alignment_t>();
+
+    // 2. Construct the object to return
+    object_ptr<Vector<tuple<int,optional<int>,optional<int>>>> con_z( new Vector<tuple<int,optional<int>,optional<int>>>() );
+
+    auto max_z_le_x = get_max_y_le_x(a_xz);
+    auto max_z_le_y = get_max_y_le_x(a_yz);
+
+    auto min_z_ge_x = get_min_y_ge_x(a_xz);
+    auto min_z_ge_y = get_min_y_ge_x(a_yz);
+
+    con_z->reserve(con_x.size()+con_y.size());
+
+    for(int i=0,j=0;i<con_x.size() or j<con_y.size();)
+    {
+	int id = std::min(get<0>(con_x[i]), get<0>(con_y[j]) );
+
+	optional<int> zmax_x;
+	optional<int> zmax_y;
+
+	optional<int> zmin_x;
+	optional<int> zmin_y;
+
+	bool have_x_con = i < con_x.size() and get<0>(con_x[i]) == id;
+	bool have_y_con = j < con_y.size() and get<0>(con_y[j]) == id;
+
+        // 3a. Get the zmax(X-Delta) and zmax(X+Delta)
+	if (have_x_con)
+	{
+	    auto zmax_x = lookup(max_z_le_x, get<1>(con_x[i]));
+	    auto zmin_x = lookup(min_z_ge_x, get<2>(con_x[i]));
+	    i++;
+	}
+
+	// 3b. Get the zmax(X-Delta) and zmax(X+Delta)
+	if (have_y_con)
+	{
+	    auto zmax_y = lookup(max_z_le_y, get<1>(con_y[j]));
+	    auto zmin_y = lookup(min_z_ge_y, get<2>(con_y[j]));
+	    j++;
+	}
+
+	// 3c. Check that the constraint is met on the X and Y sequences.
+	if (zmax_x and zmin_y and not (*zmax_x < *zmin_y) ) throw myexception()<<"X-D !>= Y+D constraints failed!";
+	if (zmax_y and zmin_x and not (*zmax_y < *zmin_x) ) throw myexception()<<"Y-D !>= X+D constraints failed!";
+
+	// max_{xy in (X U Y)-Delta} max {z <= xy}
+	auto zmax = std::max(zmax_x, zmax_y);
+	// min_{xy in (X U Y)+Delta} min {z >= xy}
+	auto zmin = std::min(zmin_x, zmin_y);
+
+	con_z->push_back({id, zmax, zmin});
+    }
+
+    return con_z;
+}
