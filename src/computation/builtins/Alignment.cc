@@ -6,7 +6,11 @@
 #include "computation/expression/constructor.H"
 #include <boost/dynamic_bitset.hpp>
 #include "alignment/alignment.H"
+#include <optional>
+#include <tuple>
 #include "dp/2way.H"
+using std::tuple;
+using std::optional;
 
 extern "C" closure builtin_function_flip_alignment(OperationArgs& Args)
 {
@@ -334,4 +338,42 @@ extern "C" closure builtin_function_sequences_from_alignment(OperationArgs& Args
     }
 
     return sequences;
+}
+
+extern "C" closure builtin_function_get_leaf_constraint(OperationArgs& Args)
+{
+    // 1. Read the arguments
+
+    // 1a. Matrix of all columns to constrain
+    auto M_ = Args.evaluate(0);
+    auto& M = M_.as_<Box<matrix<int>>>();
+
+    // 1b: width of constraint
+    int delta = Args.evaluate(1).as_int();
+
+    // 1c: which sequence to get the constraint for
+    int s = Args.evaluate(2).as_int();
+
+    // 1d: sequence length
+    int L = Args.evaluate(3).as_int();
+
+    // 2. Create the constraint vector
+
+    object_ptr<Vector<tuple<int,optional<int>,optional<int>>>> leaf_con( new Vector<tuple<int,optional<int>,optional<int>>>() );
+
+    for(int i=0;i<M.size1();i++)
+    {
+	int j = M(i,s);
+	if (j < 0) continue;
+
+	optional<int> j_minus_delta = j - delta;
+	optional<int> j_plus_delta = j + delta;
+
+	if (*j_minus_delta < 0) j_minus_delta = boost::none;
+	if (*j_plus_delta >= L) j_plus_delta  = boost::none;
+
+	leaf_con->push_back({i,j_minus_delta,j_plus_delta});
+    }
+
+    return leaf_con;
 }
