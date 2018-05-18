@@ -99,6 +99,23 @@ optional<int> lookup(const vector<optional<int>>& array, const optional<int>& in
 	return index;
 }
 
+vector<int> count_constrained_characters(const matrix<int>& m)
+{
+    vector<int> counts(m.size1());
+    for(int i=0;i<m.size1();i++)
+    {
+	int count = 0;
+	for(int j = 0; j < m.size2(); j++)
+	    if (m(i,j) >= 0)
+		count++;
+	counts[i] = count;
+    }
+    return counts;
+}
+
+
+//// --- The old constraints --- ///
+
 string clean(const string& in) {
     string out;
     char c=' ';

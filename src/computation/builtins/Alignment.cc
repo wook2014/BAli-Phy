@@ -348,8 +348,10 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
     // 1. Read the arguments
 
     // 1a. Matrix of all columns to constrain
-    auto M_ = Args.evaluate(0);
-    auto& M = M_.as_<Box<matrix<int>>>();
+    auto con_ = Args.evaluate(0);
+    auto& con = con_.as_<Pair<matrix<int>,vector<int>>>();
+    auto& M = con.first;
+    auto& totals = con.second;
 
     // 1b: width of constraint
     int delta = Args.evaluate(1).as_int();
@@ -367,6 +369,8 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
     {
 	int j = M(i,s);
 	if (j < 0) continue;
+	if (totals[i] == 1) continue;
+	assert(totals[i] > 1);
 
 	optional<int> j_minus_delta = j - delta;
 	optional<int> j_plus_delta = j + delta;
@@ -412,6 +416,10 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 
     auto a_yz_ = Args.evaluate(3);
     auto& a_yz = a_yz_.as_<pairwise_alignment_t>();
+
+    auto con_ = Args.evaluate(4);
+    auto& con = con_.as_<Pair<matrix<int>,vector<int>>>();
+    auto& totals = con.second;
 
     // 2. Construct the object to return
     object_ptr<alignment_constraints> con_z( new alignment_constraints );
@@ -468,7 +476,8 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 	auto zmin = std::min(zmin_x, zmin_y);
 	int znum = xnum + ynum;
 
-	con_z->push_back(alignment_constraint{id, zmax, zmin, znum});
+	if (znum < totals[id])
+	    con_z->push_back(alignment_constraint{id, zmax, zmin, znum});
     }
 
     return con_z;

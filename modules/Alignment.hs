@@ -18,7 +18,7 @@ builtin builtin_pairwise_alignment_from_bits 2 "pairwise_alignment_from_bits" "B
 builtin unaligned_pairwise_alignment 2 "unaligned_pairwise_alignment" "Alignment"
 builtin flip_alignment 1 "flip_alignment" "Alignment"
 
-builtin merge_alignment_constraints  4 "merge_alignment_constraints" "Alignment"
+builtin merge_alignment_constraints  5 "merge_alignment_constraints" "Alignment"
 builtin leaf_alignment_constraint    4 "leaf_alignment_constraint"   "Alignment"
 
 branch_hmms (model,_) distances n_branches = listArray' $ map (model distances) [0..n_branches-1]
@@ -109,8 +109,8 @@ random_alignment tree hmms model tip_lengths var_a = Distribution (\a -> [alignm
 compute_sequence_lengths seqs tree as = [ if node < n_leaves then vector_size (seqs!node) else seqlength as tree node | node <- [0..numNodes tree-1] ]
     where n_leaves = numElements seqs
 
-alignment_constraints t m delta as seqs= let constraints = mkArray (2*numBranches t) con_func
-                                             con_func b = case edgesBeforeEdge t b of [] -> let n=sourceNode t b
-                                                                                            in leaf_alignment_constraint m delta n (seqs!n);
-                                                                                      [b1,b2] -> merge_alignment_constraints (constraints!b1) (as!b1) (constraints!b2) (as!b2)
-                                         in constraints
+alignment_constraints t con delta as seqs = let constraints = mkArray (2*numBranches t) con_func
+                                                con_func b = case edgesBeforeEdge t b of [] -> let n=sourceNode t b
+                                                                                               in leaf_alignment_constraint m delta n (seqs!n);
+                                                                                         [b1,b2] -> merge_alignment_constraints (constraints!b1) (as!b1) (constraints!b2) (as!b2) con
+                                            in constraints

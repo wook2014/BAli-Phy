@@ -35,6 +35,7 @@ typedef Vector<alignment_constraint> alignment_constraints;
 std::vector<std::optional<int>> get_max_y_le_x(const pairwise_alignment_t& a_xy);
 std::vector<std::optional<int>> get_min_y_ge_x(const pairwise_alignment_t& a_xy);
 std::optional<int> lookup(const std::vector<std::optional<int>>& array, const std::optional<int>& index);
+std::vector<int> count_constrained_characters(const matrix<int>& m);
 
 matrix<int> load_alignment_constraint(const std::string& filename,SequenceTree& T);
 
