@@ -29,7 +29,7 @@ class SequenceTree;
 class alignment;
 #include "dp/2way.H"
 
-typedef std::tuple<int, std::optional<int>, std::optional<int>> alignment_constraint;
+typedef std::tuple<int, std::optional<int>, std::optional<int>, int> alignment_constraint;
 typedef Vector<alignment_constraint> alignment_constraints;
 
 std::vector<std::optional<int>> get_max_y_le_x(const pairwise_alignment_t& a_xy);

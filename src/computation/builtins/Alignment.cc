@@ -374,7 +374,7 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
 	if (*j_minus_delta < 0) j_minus_delta = {};
 	if (*j_plus_delta >= L) j_plus_delta  = {};
 
-	leaf_con->push_back(alignment_constraint{i,j_minus_delta,j_plus_delta});
+	leaf_con->push_back(alignment_constraint{i, j_minus_delta, j_plus_delta, 1});
     }
 
     return leaf_con;
@@ -437,11 +437,15 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 	bool have_x_con = i < con_x.size() and get<0>(con_x[i]) == id;
 	bool have_y_con = j < con_y.size() and get<0>(con_y[j]) == id;
 
+	int xnum = 0;
+	int ynum = 0;
+
         // 3a. Get the zmax(X-Delta) and zmax(X+Delta)
 	if (have_x_con)
 	{
 	    auto zmax_x = lookup(max_z_le_x, get<1>(con_x[i]));
 	    auto zmin_x = lookup(min_z_ge_x, get<2>(con_x[i]));
+	    xnum = get<3>(con_x[i]);
 	    i++;
 	}
 
@@ -450,6 +454,7 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 	{
 	    auto zmax_y = lookup(max_z_le_y, get<1>(con_y[j]));
 	    auto zmin_y = lookup(min_z_ge_y, get<2>(con_y[j]));
+	    ynum = get<3>(con_y[i]);
 	    j++;
 	}
 
@@ -461,8 +466,9 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 	auto zmax = std::max(zmax_x, zmax_y);
 	// min_{xy in (X U Y)+Delta} min {z >= xy}
 	auto zmin = std::min(zmin_x, zmin_y);
+	int znum = xnum + ynum;
 
-	con_z->push_back(alignment_constraint{id, zmax, zmin});
+	con_z->push_back(alignment_constraint{id, zmax, zmin, znum});
     }
 
     return con_z;
