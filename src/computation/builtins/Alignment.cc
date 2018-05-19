@@ -434,16 +434,20 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 
     for(int i=0,j=0;i<con_x.size() or j<con_y.size();)
     {
-	int id = std::min(get<0>(con_x[i]), get<0>(con_y[j]) );
+	auto x_id = (i < con_x.size()) ? optional<int>(get<0>(con_x[i])) : boost::none;
+	auto y_id = (j < con_y.size()) ? optional<int>(get<0>(con_y[i])) : boost::none;
+	int id = *min(x_id, y_id);
+
+	bool have_x_con = x_id and (*x_id == id);
+	bool have_y_con = y_id and (*y_id == id);
+
+	assert(have_x_con or have_y_con);
 
 	optional<int> zmax_x;
 	optional<int> zmax_y;
 
 	optional<int> zmin_x;
 	optional<int> zmin_y;
-
-	bool have_x_con = i < con_x.size() and get<0>(con_x[i]) == id;
-	bool have_y_con = j < con_y.size() and get<0>(con_y[j]) == id;
 
 	int xnum = 0;
 	int ynum = 0;
