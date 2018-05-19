@@ -432,14 +432,14 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
 
     con_z->reserve(con_x.size()+con_y.size());
 
-    for(int i=0,j=0;i<con_x.size() or j<con_y.size();)
+    for(auto xi = con_x.begin(), yi = con_y.begin(); xi != con_x.end() or yi != con_y.end();)
     {
-	auto x_id = (i < con_x.size()) ? optional<int>(get<0>(con_x[i])) : boost::none;
-	auto y_id = (j < con_y.size()) ? optional<int>(get<0>(con_y[i])) : boost::none;
+	auto x_id = (xi != con_x.end()) ? optional<int>(get<0>(*xi)) : boost::none;
+	auto y_id = (yi != con_y.end()) ? optional<int>(get<0>(*yi)) : boost::none;
 	int id = *min(x_id, y_id);
 
-	bool have_x_con = x_id and (*x_id == id);
-	bool have_y_con = y_id and (*y_id == id);
+	bool have_x_con = (x_id == id);
+	bool have_y_con = (y_id == id);
 
 	assert(have_x_con or have_y_con);
 
@@ -455,19 +455,19 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
         // 3a. Get the zmax(X-Delta) and zmax(X+Delta)
 	if (have_x_con)
 	{
-	    auto zmax_x = lookup(max_z_le_x, get<1>(con_x[i]));
-	    auto zmin_x = lookup(min_z_ge_x, get<2>(con_x[i]));
-	    xnum = get<3>(con_x[i]);
-	    i++;
+	    auto zmax_x = lookup(max_z_le_x, get<1>(*xi));
+	    auto zmin_x = lookup(min_z_ge_x, get<2>(*xi));
+	    xnum = get<3>(*xi);
+	    xi++;
 	}
 
 	// 3b. Get the zmax(X-Delta) and zmax(X+Delta)
 	if (have_y_con)
 	{
-	    auto zmax_y = lookup(max_z_le_y, get<1>(con_y[j]));
-	    auto zmin_y = lookup(min_z_ge_y, get<2>(con_y[j]));
-	    ynum = get<3>(con_y[i]);
-	    j++;
+	    auto zmax_y = lookup(max_z_le_y, get<1>(*yi));
+	    auto zmin_y = lookup(min_z_ge_y, get<2>(*yi));
+	    ynum = get<3>(*yi);
+	    yi++;
 	}
 
 	// 3c. Check that the constraint is met on the X and Y sequences.
