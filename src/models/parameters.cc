@@ -62,6 +62,7 @@ using std::endl;
 using std::ostream;
 using std::map;
 using std::tuple;
+using std::pair;
 
 using std::optional;
 
@@ -501,14 +502,13 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
             counts_.push_back( EVector(seq_counts[i]) );
         auto counts_array = p->get_expression( p->add_compute_expression({var("Data.Array.listArray'"),get_list(counts_)}) );
 
-	if (p->contains_key("constraint_width"))
+	if (p->contains_key("constraint-width"))
 	{
+	    int delta = p->lookup_key("constraint-width");
 	    object_ptr<Pair<matrix<int>,vector<int>>> con ( new Pair<matrix<int>,vector<int>> );
-	    con->first = M(AA);
-	    con->second = count_constrained_characters(con->first);
+	    *con = constraint_matrix_from_alignment(AA, p->t().n_leaves());
 
-	    int delta = p->lookup_key("constraint_width");
-            // Create and set alignment constraints for each branch
+	    // Create and set alignment constraints for each branch
 	    alignment_constraints_index = p->add_compute_expression({dummy("Alignment.alignment_constraints"),t,con,delta,as,seqs_array});
 	    auto alignment_constraints = p->get_expression(alignment_constraints_index);
 	    for(int b=0;b<alignment_constraints_for_branch.size();b++)

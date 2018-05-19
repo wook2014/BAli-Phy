@@ -113,6 +113,17 @@ vector<int> count_constrained_characters(const matrix<int>& m)
     return counts;
 }
 
+pair<matrix<int>,vector<int>> constraint_matrix_from_alignment(const alignment& A, int n)
+{
+    auto m1 = M(A);
+    matrix<int> m2(m1.size1(), n);
+    for(int i=0;i<m2.size1();i++)
+	for(int j=0;j<m2.size2();j++)
+	    m2(i,j) = m1(i,j);
+    auto totals = count_constrained_characters(m2);
+    return pair<matrix<int>,vector<int>>{m2,totals};
+}
+
 
 //// --- The old constraints --- ///
 
