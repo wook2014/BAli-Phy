@@ -38,6 +38,7 @@ std::optional<int> lookup(const std::vector<std::optional<int>>& array, const st
 std::vector<int> count_constrained_characters(const matrix<int>& m);
 std::pair<matrix<int>,std::vector<int>> constraint_matrix_from_alignment(const alignment& A, int n);
 
+std::vector<std::pair<int,int>> get_yboundaries_from_cons(int I, int J, const alignment_constraints& x_con, const alignment_constraints& y_con);
 
 matrix<int> load_alignment_constraint(const std::string& filename,SequenceTree& T);
 

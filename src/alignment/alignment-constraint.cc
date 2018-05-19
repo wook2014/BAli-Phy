@@ -43,6 +43,7 @@ using std::ifstream;
 using std::vector;
 using std::valarray;
 using std::pair;
+using boost::get;
 
 using boost::program_options::variables_map;
 using boost::dynamic_bitset;
@@ -124,6 +125,33 @@ pair<matrix<int>,vector<int>> constraint_matrix_from_alignment(const alignment& 
     return pair<matrix<int>,vector<int>>{m2,totals};
 }
 
+vector<pair<int,int>> get_yboundaries_from_cons(int I, int J, const alignment_constraints& x_con, const alignment_constraints& y_con)
+{
+    vector<pair<int,int>> yboundaries(I+1,pair<int,int>{0,J});
+    assert(x_con.size() == y_con.size());
+    for(int i=0;i<x_con.size();i++)
+    {
+	assert(get<0>(x_con[i]) == get<0>(y_con[i]));
+	auto& xmax = get<1>(x_con[i]);
+	auto& xmin = get<2>(x_con[i]);
+
+	auto& ymax = get<1>(y_con[i]);
+	auto& ymin = get<2>(y_con[i]);
+
+	if (xmax and ymin)
+	    yboundaries[*xmax].second = std::min(*ymin, yboundaries[*xmax].second);
+	if (xmin and ymax)
+	    yboundaries[*xmin+1].first = std::max(*ymax+1, yboundaries[*xmin+1].first);
+    }
+
+    for(int i=1; i<=I; i++)
+	yboundaries[i].first = std::max(yboundaries[i-1].first, yboundaries[i].first);
+
+    for(int i=I-1; i>=0; i--)
+	yboundaries[i].second = std::min(yboundaries[i+1].second, yboundaries[i].second);
+
+    return yboundaries;
+}
 
 //// --- The old constraints --- ///
 
