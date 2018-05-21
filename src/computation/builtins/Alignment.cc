@@ -384,22 +384,6 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
     return leaf_con;
 }
 
-template<typename T>
-optional<T> max(const optional<T>& x, const optional<T>& y)
-{
-    if (not x) return y;
-    if (not y) return x;
-    return std::max(*x,*y);
-}
-
-template<typename T>
-optional<T> min(const optional<T>& x, const optional<T>& y)
-{
-    if (not x) return y;
-    if (not y) return x;
-    return std::min(*x,*y);
-}
-
 extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& Args)
 {
     using boost::get;
@@ -424,65 +408,7 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
     // 2. Construct the object to return
     object_ptr<alignment_constraints> con_z( new alignment_constraints );
 
-    auto max_z_le_x = get_max_y_le_x(a_xz);
-    auto max_z_le_y = get_max_y_le_x(a_yz);
-
-    auto min_z_ge_x = get_min_y_ge_x(a_xz);
-    auto min_z_ge_y = get_min_y_ge_x(a_yz);
-
-    con_z->reserve(con_x.size()+con_y.size());
-
-    for(auto xi = con_x.begin(), yi = con_y.begin(); xi != con_x.end() or yi != con_y.end();)
-    {
-	auto x_id = (xi != con_x.end()) ? optional<int>(get<0>(*xi)) : boost::none;
-	auto y_id = (yi != con_y.end()) ? optional<int>(get<0>(*yi)) : boost::none;
-	int id = *min(x_id, y_id);
-
-	bool have_x_con = (x_id == id);
-	bool have_y_con = (y_id == id);
-
-	assert(have_x_con or have_y_con);
-
-	optional<int> zmax_x;
-	optional<int> zmax_y;
-
-	optional<int> zmin_x;
-	optional<int> zmin_y;
-
-	int xnum = 0;
-	int ynum = 0;
-
-        // 3a. Get the zmax(X-Delta) and zmax(X+Delta)
-	if (have_x_con)
-	{
-	    auto zmax_x = lookup(max_z_le_x, get<1>(*xi));
-	    auto zmin_x = lookup(min_z_ge_x, get<2>(*xi));
-	    xnum = get<3>(*xi);
-	    xi++;
-	}
-
-	// 3b. Get the zmax(X-Delta) and zmax(X+Delta)
-	if (have_y_con)
-	{
-	    auto zmax_y = lookup(max_z_le_y, get<1>(*yi));
-	    auto zmin_y = lookup(min_z_ge_y, get<2>(*yi));
-	    ynum = get<3>(*yi);
-	    yi++;
-	}
-
-	// 3c. Check that the constraint is met on the X and Y sequences.
-	if (zmax_x and zmin_y and not (*zmax_x < *zmin_y) ) throw myexception()<<"X-D !>= Y+D constraints failed!";
-	if (zmax_y and zmin_x and not (*zmax_y < *zmin_x) ) throw myexception()<<"Y-D !>= X+D constraints failed!";
-
-	// max_{xy in (X U Y)-Delta} max {z <= xy}
-	auto zmax = std::max(zmax_x, zmax_y);
-	// min_{xy in (X U Y)+Delta} min {z >= xy}
-	auto zmin = std::min(zmin_x, zmin_y);
-	int znum = xnum + ynum;
-
-	if (znum < totals[id])
-	    con_z->push_back(alignment_constraint{id, zmax, zmin, znum});
-    }
+    *con_z = merge_alignment_constraints(con_x, a_xz, con_y, a_yz, totals);
 
     return con_z;
 }
