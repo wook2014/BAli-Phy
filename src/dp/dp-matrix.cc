@@ -54,13 +54,6 @@ state_matrix::~state_matrix()
     clear();
 }
 
-inline void DPmatrix::clear_cell(int i2,int j2) 
-{
-    scale(i2,j2) = INT_MIN;
-    for(int S=0;S<n_dp_states();S++)
-	(*this)(i2,j2,S) = 0;
-}
-
 // 1. dp_order( ) must be considered here, because the 3-way HMM has
 //     a silent state at 7.  
 // 2. Alternatively, we could just ignore S1==S2, since both the
@@ -133,21 +126,11 @@ void DPmatrix::forward_band(const vector< pair<int,int> >& yboundaries)
     // Since we are using M(0,0) instead of S(0,0), we need to run only the silent states at (0,0)
     // We can only use non-silent states at (0,0) to simulate S
 
-    // clear left border: x = -1 (what is adjacent to the first row?)
-    {
-	int y1 = 1 + yboundaries[0].first;
-	int y2 = 1 + yboundaries[0].second;
-	assert(y1 <= y2);
-	for(int y=y1;y<=y2;y++)
-	    clear_cell(x1-1,y);
-    }
-
     // forward first row, with exception for S(0,0): x = 0
     {
 	int y1 = 1 + yboundaries[0].first;
 	int y2 = 1 + yboundaries[0].second;
 	assert(y1 <= y2);
-	clear_cell(x1,y1-1);
 	forward_first_cell(x1,y1);
 	for(int y=y1+1;y<=y2;y++)
 	    forward_cell_only_2(x1,y);
@@ -166,19 +149,13 @@ void DPmatrix::forward_band(const vector< pair<int,int> >& yboundaries)
 	int z2 = 1 + yboundaries[x-2].second;
 	assert(z2 >= y1-1);
 
-	// clear the untouched empty cell below us
-	clear_cell(x,y1-1);
-
 	// compute the untouched cells in this row
 	forward_cell_only_1(x,y1);
 	for(int y=y1+1;y<=z2;y++)
 	    forward_cell(x,y);
 
 	for(int y=z2+1;y<=y2;y++)
-	{
-	    clear_cell(x-1,y);
 	    forward_cell_only_2(x,y);
-	}
     }
 
     compute_Pr_sum_all_paths();
@@ -592,15 +569,6 @@ void DPmatrixSimple::forward_cell_only_2(int i2,int j2)
 }
 
 //DPmatrixSimple::~DPmatrixSimple() {}
-
-
-// Make this no longer virtual?
-inline void DPmatrixConstrained::clear_cell(int i2,int j2) 
-{
-    scale(i2,j2) = INT_MIN;
-    for(int S=0;S<n_dp_states();S++)
-	(*this)(i2,j2,S) = 0;
-}
 
 inline void DPmatrixConstrained::forward_cell(int i2,int j2) 
 {
