@@ -363,7 +363,10 @@ log_double_t DPmatrixEmit::path_Q_subst(const vector<int>& path) const
 	    j++;
 
 	if (di(state2) and dj(state2))
+	{
+	    assert(emitMM(i,j) > 0);
 	    P_sub *= emitMM(i,j);
+	}
     }
     assert(i == size1()-1 and j == size2()-1);
     return P_sub * Pr_extra_subst;
@@ -666,10 +669,8 @@ inline void DPmatrixConstrained::forward_cell_only_1(int i2,int j2)
     assert(0 < i2 and i2 < size1());
     assert(0 < j2 and j2 < size2());
 
-    prepare_cell(i2,j2);
-
     // determine initial scale for this cell
-    scale(i2,j2) = max(scale(i2-1,j2), max( scale(i2-1,j2-1), scale(i2,j2-1) ) );
+    scale(i2,j2) = scale(i2-1,j2);
 
     double maximum = 0;
 
@@ -682,29 +683,23 @@ inline void DPmatrixConstrained::forward_cell_only_1(int i2,int j2)
 	if (di(S2)) i1--;
 
 	int j1 = j2;
-	if (dj(S2)) j1--;
 
 	//--- Compute Arrival Probability ----
-	unsigned MAX = states(j1).size();
-	if (not di(S2) and not dj(S2)) MAX = s2;
-
 	double temp = 0.0;
-	for(int s1=0;s1<MAX;s1++) {
-	    int S1 = states(j1)[s1];
+	if (not dj(S2))
+	{
+	    unsigned MAX = states(j1).size();
+	    if (not di(S2) and not dj(S2)) MAX = s2;
 
-	    temp +=  (*this)(i1,j1,S1) * GQ(S1,S2);
+	    for(int s1=0;s1<MAX;s1++) {
+		int S1 = states(j1)[s1];
+
+		temp +=  (*this)(i1,j1,S1) * GQ(S1,S2);
+	    }
+
+	    // record maximum
+	    if (temp > maximum) maximum = temp;
 	}
-
-	//--- Include Emission Probability----
-	if (i1 != i2 and j1 != j2)
-	    temp *= emitMM(i2,j2);
-
-	// rescale result to scale of this cell
-	if (scale(i1,j1) != scale(i2,j2))
-	    temp *= pow2(scale(i1,j1)-scale(i2,j2));
-
-	// record maximum
-	if (temp > maximum) maximum = temp;
 
 	// store the result
 	(*this)(i2,j2,S2) = temp;
@@ -728,10 +723,8 @@ inline void DPmatrixConstrained::forward_cell_only_2(int i2,int j2)
     assert(0 < i2 and i2 < size1());
     assert(0 < j2 and j2 < size2());
 
-    prepare_cell(i2,j2);
-
     // determine initial scale for this cell
-    scale(i2,j2) = max(scale(i2-1,j2), max( scale(i2-1,j2-1), scale(i2,j2-1) ) );
+    scale(i2,j2) = scale(i2,j2-1);
 
     double maximum = 0;
 
@@ -741,32 +734,26 @@ inline void DPmatrixConstrained::forward_cell_only_2(int i2,int j2)
 
 	//--- Get (i1,j1) from (i2,j2) and S2
 	int i1 = i2;
-	if (di(S2)) i1--;
 
 	int j1 = j2;
 	if (dj(S2)) j1--;
 
 	//--- Compute Arrival Probability ----
-	unsigned MAX = states(j1).size();
-	if (not di(S2) and not dj(S2)) MAX = s2;
-
 	double temp = 0.0;
-	for(int s1=0;s1<MAX;s1++) {
-	    int S1 = states(j1)[s1];
+	if (not di(S2))
+	{
+	    unsigned MAX = states(j1).size();
+	    if (not di(S2) and not dj(S2)) MAX = s2;
 
-	    temp +=  (*this)(i1,j1,S1) * GQ(S1,S2);
+	    for(int s1=0;s1<MAX;s1++) {
+		int S1 = states(j1)[s1];
+
+		temp +=  (*this)(i1,j1,S1) * GQ(S1,S2);
+	    }
+
+	    // record maximum
+	    if (temp > maximum) maximum = temp;
 	}
-
-	//--- Include Emission Probability----
-	if (i1 != i2 and j1 != j2)
-	    temp *= emitMM(i2,j2);
-
-	// rescale result to scale of this cell
-	if (scale(i1,j1) != scale(i2,j2))
-	    temp *= pow2(scale(i1,j1)-scale(i2,j2));
-
-	// record maximum
-	if (temp > maximum) maximum = temp;
 
 	// store the result
 	(*this)(i2,j2,S2) = temp;
