@@ -210,8 +210,8 @@ alignment_constraints merge_alignment_constraints(const alignment_constraints& c
         // 3a. Get the zmax(X-Delta) and zmax(X+Delta)
 	if (have_x_con)
 	{
-	    auto zmax_x = lookup(max_z_le_x, get<1>(*xi));
-	    auto zmin_x = lookup(min_z_ge_x, get<2>(*xi));
+	    zmax_x = lookup(max_z_le_x, get<1>(*xi));
+	    zmin_x = lookup(min_z_ge_x, get<2>(*xi));
 	    xnum = get<3>(*xi);
 	    xi++;
 	}
@@ -219,8 +219,8 @@ alignment_constraints merge_alignment_constraints(const alignment_constraints& c
 	// 3b. Get the zmax(X-Delta) and zmax(X+Delta)
 	if (have_y_con)
 	{
-	    auto zmax_y = lookup(max_z_le_y, get<1>(*yi));
-	    auto zmin_y = lookup(min_z_ge_y, get<2>(*yi));
+	    zmax_y = lookup(max_z_le_y, get<1>(*yi));
+	    zmin_y = lookup(min_z_ge_y, get<2>(*yi));
 	    ynum = get<3>(*yi);
 	    yi++;
 	}
