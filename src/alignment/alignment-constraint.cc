@@ -76,19 +76,22 @@ vector<optional<int>> get_min_y_ge_x(const pairwise_alignment_t& a_xy)
     vector<optional<int>> min_y_ge_x;
 
     int y = 0;
+    for(int i=0; i<a_xy.size(); i++)
+	if (a_xy.has_character2(i)) y++;
+
     optional<int> last_matched_y;
     for(int i=int(a_xy.size())-1; i>=0; i--)
     {
+	if (a_xy.has_character2(i)) y--;
+
 	if (a_xy.is_match(i)) last_matched_y = y;
 
 	if (a_xy.has_character1(i))
 	    min_y_ge_x.push_back(last_matched_y);
-
-	if (a_xy.has_character2(i)) y--;
     }
 
     assert(min_y_ge_x.size() == a_xy.length1());
-
+    std::reverse(min_y_ge_x.begin(), min_y_ge_x.end());
     return min_y_ge_x;
 }
 
