@@ -68,7 +68,7 @@ struct data_partition_constants
 
     param cl_index;
 
-    int alignment_constraints_index;
+    int alignment_constraints_matrix_index;
 
     std::vector<int> conditional_likelihoods_for_branch;
 
@@ -156,6 +156,8 @@ public:
     std::vector<indel::PairHMM> get_branch_HMMs(const std::vector<int>&) const;
 
     object_ptr<const alignment_constraints> get_branch_alignment_constraints(int b) const;
+
+    object_ptr<const Pair<matrix<int>,std::vector<int>>> get_alignment_constraints_matrix() const;
 
     double sequence_length_pr(int i) const;
 

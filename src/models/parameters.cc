@@ -321,6 +321,14 @@ object_ptr<const alignment_constraints> data_partition::get_branch_alignment_con
     return convert<const alignment_constraints>(con.ptr());
 }
 
+object_ptr<const Pair<matrix<int>,vector<int>>> data_partition::get_alignment_constraints_matrix() const
+{
+    assert(variable_alignment());
+
+    auto con_matrix = P->evaluate( DPC().alignment_constraints_matrix_index );
+    return convert<const Pair<matrix<int>,vector<int>>>(con_matrix.ptr());
+}
+
 log_double_t data_partition::likelihood() const 
 {
     substitution::total_likelihood++;
@@ -434,6 +442,8 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
 	int empty_constraints_index = p->add_compute_expression(alignment_constraints());
 	for(int b=0;b<alignment_constraints_for_branch.size();b++)
 	    alignment_constraints_for_branch[b] = empty_constraints_index;
+
+	alignment_constraints_matrix_index = p->add_compute_expression(Pair<matrix<int>,vector<int>>());
     }
 
     //  const int n_states = state_letters().size();
@@ -505,11 +515,14 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
 	if (p->contains_key("constraint-width"))
 	{
 	    int delta = p->lookup_key("constraint-width");
+
 	    object_ptr<Pair<matrix<int>,vector<int>>> con ( new Pair<matrix<int>,vector<int>> );
 	    *con = constraint_matrix_from_alignment(AA, p->t().n_leaves());
+	    alignment_constraints_matrix_index = p->add_compute_expression(con);
+	    auto con_matrix = p->get_expression(alignment_constraints_matrix_index);
 
 	    // Create and set alignment constraints for each branch
-	    alignment_constraints_index = p->add_compute_expression({dummy("Alignment.alignment_constraints"),t,con,delta,as,seqs_array});
+	    int alignment_constraints_index = p->add_compute_expression({dummy("Alignment.alignment_constraints"),t,con_matrix,delta,as,seqs_array});
 	    auto alignment_constraints = p->get_expression(alignment_constraints_index);
 	    for(int b=0;b<alignment_constraints_for_branch.size();b++)
 		alignment_constraints_for_branch[b] = p->add_compute_expression({dummy("Prelude.!"),alignment_constraints,b});
