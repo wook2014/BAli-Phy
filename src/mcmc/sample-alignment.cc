@@ -74,17 +74,19 @@ shared_ptr<DPmatrixSimple> sample_alignment_forward(data_partition P, const inde
     state_emit[2] |= (1<<0);
     state_emit[3] |= 0;
 
+    auto con1 = P.get_branch_alignment_constraints(b);
+    auto con2 = P.get_branch_alignment_constraints(bb);
     int I = P.seqlength(t.source(b)); 
     int J = P.seqlength(t.source(bb));
+    auto yboundaries = get_yboundaries_from_cons(I,J,*con1,*con2);
 
     shared_ptr<DPmatrixSimple> 
 	Matrices( new DPmatrixSimple(HMM(state_emit, hmm.start_pi(), hmm, P.get_beta()),
 				     std::move(dists1), std::move(dists2), P.WeightedFrequencyMatrix())
 	    );
 
-    //------------------ Compute the DP matrix ---------------------//
-    vector<std::pair<int,int>> yboundaries(I+1, std::pair<int,int>(0,J));
 
+    //------------------ Compute the DP matrix ---------------------//
     Matrices->forward_band(yboundaries);
 
     return Matrices;

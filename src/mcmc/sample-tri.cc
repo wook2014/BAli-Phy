@@ -87,8 +87,6 @@ tri_sample_alignment_base(mutable_data_partition P, const vector<int>& nodes, co
     m123.B = P.get_beta();
 
     //------------- Compute sequence properties --------------//
-    int a1 = P.seqlength(nodes[1]);
-
     HMM::bitmask_t m23; m23.set(1); m23.set(2);
 
     auto dists1 = substitution::get_column_likelihoods(P, {b1}, get_indices_n(P.seqlength(nodes[1])), 2);
@@ -99,6 +97,26 @@ tri_sample_alignment_base(mutable_data_partition P, const vector<int>& nodes, co
     vector<int> branches(3);
     for(int i=0;i<3;i++)
 	branches[i] = t.find_branch(nodes[0],nodes[i+1]);
+
+    auto con1 = P.get_branch_alignment_constraints(b1);
+    auto con2 = P.get_branch_alignment_constraints(b2);
+    auto con3 = P.get_branch_alignment_constraints(b3);
+
+    pairwise_alignment_t a_yc;
+    pairwise_alignment_t a_zc;
+    for(auto& bits: a23)
+    {
+	a_yc.push_back(bits.test(1),true);
+	a_zc.push_back(bits.test(2),true);
+    }
+
+    auto con_matrix = P.get_alignment_constraints_matrix();
+    auto& totals = con_matrix->second;
+    alignment_constraints con23 = merge_alignment_constraints(*con2, a_yc, *con3, a_zc, totals); // we need to merge con2 and con3 here.
+
+    int I = P.seqlength(t.source(b1));
+    int J = a23.size();
+    auto yboundaries = get_yboundaries_from_cons(I,J,*con1,con23);
 
     shared_ptr<DPmatrixConstrained> 
 	Matrices(new DPmatrixConstrained(m123, std::move(dists1), std::move(dists23), P.WeightedFrequencyMatrix()));
@@ -139,31 +157,13 @@ tri_sample_alignment_base(mutable_data_partition P, const vector<int>& nodes, co
     }
 
     //------------------ Compute the DP matrix ---------------------//
-    //  vector<vector<int> > pins = get_pins(P.alignment_constraint,A,group1,group2 | group3,seq1,seq23);
-    vector<vector<int> > pins(2);
-
-    //  Note: we don't even HAVE an a123 unless tree_changed == false!
-    //  vector< pair<int,int> > yboundaries = get_y_ranges_for_band(bandwidth, seq23, seq1, seq123);
-    //  vector<pair<int,int>> yboundaries(seq1.size()+1,pair<int,int>(0,seq23.size()));
-    vector<pair<int,int>> yboundaries(a1+1,{0,a23.size()});
-  
-    // if the constraints are currently met but cannot be met
-    if (pins.size() == 1 and pins[0][0] == -1)
-	; //std::cerr<<"Constraints cannot be expressed in terms of DP matrix paths!"<<std::endl;
-    else 
-    {
-	const int I = a1+1;
-	const int J = a23.size()+1;
-	yboundaries = boundaries_intersection(yboundaries, get_yboundaries_from_pins(I, J, pins));
-
-	Matrices->forward_band(yboundaries);
-	if (Matrices->Pr_sum_all_paths() <= 0.0) 
-	    std::cerr<<"Constraints give this choice probability 0"<<std::endl;
-    }
+    Matrices->forward_band(yboundaries);
 
     // If the DP matrix ended up having probability 0, don't try to sample a path through it!
     if (Matrices->Pr_sum_all_paths() <= 0.0) 
     {
+	std::cerr<<"Constraints give this choice probability 0"<<std::endl;
+
 #ifndef NDEBUG_DP
 	Matrices->clear();
 #endif
