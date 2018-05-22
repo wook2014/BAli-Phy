@@ -150,7 +150,7 @@ void DPmatrix::forward_band(const vector< pair<int,int> >& yboundaries)
 	clear_cell(x1,y1-1);
 	forward_first_cell(x1,y1);
 	for(int y=y1+1;y<=y2;y++)
-	    forward_cell(x1,y);
+	    forward_cell_only_2(x1,y);
     }
 
     // forward other rows: x = 1...I-1
@@ -165,15 +165,20 @@ void DPmatrix::forward_band(const vector< pair<int,int> >& yboundaries)
 	// clear the untouched empty cells to our left
 	int z2 = 1 + yboundaries[x-2].second;
 	assert(z2 >= y1-1);
-	for(int y=z2+1;y<=y2;y++)
-	    clear_cell(x-1,y);
 
 	// clear the untouched empty cell below us
 	clear_cell(x,y1-1);
 
 	// compute the untouched cells in this row
-	for(int y=y1;y<=y2;y++)
+	forward_cell_only_1(x,y1);
+	for(int y=y1+1;y<=z2;y++)
 	    forward_cell(x,y);
+
+	for(int y=z2+1;y<=y2;y++)
+	{
+	    clear_cell(x-1,y);
+	    forward_cell_only_2(x,y);
+	}
     }
 
     compute_Pr_sum_all_paths();
@@ -489,6 +494,120 @@ void DPmatrixSimple::forward_cell(int i2,int j2)
     }
 } 
 
+void DPmatrixSimple::forward_cell_only_1(int i2,int j2)
+{
+    assert(0 < i2 and i2 < size1());
+    assert(0 < j2 and j2 < size2());
+
+    prepare_cell(i2,j2);
+
+    // determine initial scale for this cell
+    scale(i2,j2) = max(scale(i2-1,j2), max( scale(i2-1,j2-1), scale(i2,j2-1) ) );
+
+    double maximum = 0;
+
+    // If we have silent states, then we have to process them in
+    // the correct order: after all non-silent states and maybe
+    // after some silent states.
+    assert(not silent(dp_order(n_dp_states()-1)));
+
+    for(int S2=0;S2<n_dp_states();S2++)
+    {
+	//--- Get (i1,j1) from (i2,j2) and S2
+	int i1 = i2;
+	if (di(S2)) i1--;
+
+	int j1 = j2;
+	if (dj(S2)) j1--;
+
+	//--- Compute Arrival Probability ----
+	double temp  = 0;
+	for(int S1=0;S1<n_dp_states();S1++)
+	    temp += (*this)(i1,j1,S1) * GQ(S1,S2);
+
+	//--- Include Emission Probability----
+	if (i1 != i2 and j1 != j2)
+	    temp *= emitMM(i2,j2);
+
+	// rescale result to scale of this cell
+	if (scale(i1,j1) != scale(i2,j2))
+	    temp *= pow2(scale(i1,j1)-scale(i2,j2));
+
+	// record maximum
+	if (temp > maximum) maximum = temp;
+
+	// store the result
+	(*this)(i2,j2,S2) = temp;
+    }
+
+    //------- if exponent is too high or too low, rescale ------//
+    if (maximum > fp_scale::hi_cutoff or (maximum > 0 and maximum < fp_scale::lo_cutoff))
+    {
+	int logs = -(int)log2(maximum);
+	double scale_ = pow2(logs);
+	for(int S2=0;S2<n_dp_states();S2++)
+	    (*this)(i2,j2,S2) *= scale_;
+	scale(i2,j2) -= logs;
+    }
+}
+
+void DPmatrixSimple::forward_cell_only_2(int i2,int j2)
+{
+    assert(0 < i2 and i2 < size1());
+    assert(0 < j2 and j2 < size2());
+
+    prepare_cell(i2,j2);
+
+    // determine initial scale for this cell
+    scale(i2,j2) = max(scale(i2-1,j2), max( scale(i2-1,j2-1), scale(i2,j2-1) ) );
+
+    double maximum = 0;
+
+    // If we have silent states, then we have to process them in
+    // the correct order: after all non-silent states and maybe
+    // after some silent states.
+    assert(not silent(dp_order(n_dp_states()-1)));
+
+    for(int S2=0;S2<n_dp_states();S2++)
+    {
+	//--- Get (i1,j1) from (i2,j2) and S2
+	int i1 = i2;
+	if (di(S2)) i1--;
+
+	int j1 = j2;
+	if (dj(S2)) j1--;
+
+	//--- Compute Arrival Probability ----
+	double temp  = 0;
+	for(int S1=0;S1<n_dp_states();S1++)
+	    temp += (*this)(i1,j1,S1) * GQ(S1,S2);
+
+	//--- Include Emission Probability----
+	if (i1 != i2 and j1 != j2)
+	    temp *= emitMM(i2,j2);
+
+	// rescale result to scale of this cell
+	if (scale(i1,j1) != scale(i2,j2))
+	    temp *= pow2(scale(i1,j1)-scale(i2,j2));
+
+	// record maximum
+	if (temp > maximum) maximum = temp;
+
+	// store the result
+	(*this)(i2,j2,S2) = temp;
+    }
+
+    //------- if exponent is too high or too low, rescale ------//
+    if (maximum > fp_scale::hi_cutoff or (maximum > 0 and maximum < fp_scale::lo_cutoff))
+    {
+	int logs = -(int)log2(maximum);
+	double scale_ = pow2(logs);
+	for(int S2=0;S2<n_dp_states();S2++)
+	    (*this)(i2,j2,S2) *= scale_;
+	scale(i2,j2) -= logs;
+    }
+}
+
 //DPmatrixSimple::~DPmatrixSimple() {}
 
 
@@ -501,6 +620,130 @@ inline void DPmatrixConstrained::clear_cell(int i2,int j2)
 }
 
 inline void DPmatrixConstrained::forward_cell(int i2,int j2) 
+{
+    assert(0 < i2 and i2 < size1());
+    assert(0 < j2 and j2 < size2());
+
+    prepare_cell(i2,j2);
+
+    // determine initial scale for this cell
+    scale(i2,j2) = max(scale(i2-1,j2), max( scale(i2-1,j2-1), scale(i2,j2-1) ) );
+
+    double maximum = 0;
+
+    for(int s2=0;s2<states(j2).size();s2++)
+    {
+	int S2 = states(j2)[s2];
+
+	//--- Get (i1,j1) from (i2,j2) and S2
+	int i1 = i2;
+	if (di(S2)) i1--;
+
+	int j1 = j2;
+	if (dj(S2)) j1--;
+
+	//--- Compute Arrival Probability ----
+	unsigned MAX = states(j1).size();
+	if (not di(S2) and not dj(S2)) MAX = s2;
+
+	double temp = 0.0;
+	for(int s1=0;s1<MAX;s1++) {
+	    int S1 = states(j1)[s1];
+
+	    temp +=  (*this)(i1,j1,S1) * GQ(S1,S2);
+	}
+
+	//--- Include Emission Probability----
+	if (i1 != i2 and j1 != j2)
+	    temp *= emitMM(i2,j2);
+
+	// rescale result to scale of this cell
+	if (scale(i1,j1) != scale(i2,j2))
+	    temp *= pow2(scale(i1,j1)-scale(i2,j2));
+
+	// record maximum
+	if (temp > maximum) maximum = temp;
+
+	// store the result
+	(*this)(i2,j2,S2) = temp;
+    }
+
+    //------- if exponent is too high or too low, rescale ------//
+    if (maximum > fp_scale::hi_cutoff or (maximum > 0 and maximum < fp_scale::lo_cutoff))
+    {
+	int logs = -(int)log2(maximum);
+	double scale_ = pow2(logs);
+	for(int i=0;i<states(j2).size();i++) {
+	    int S2 = states(j2)[i];
+	    (*this)(i2,j2,S2) *= scale_;
+	}
+	scale(i2,j2) -= logs;
+    }
+}
+
+inline void DPmatrixConstrained::forward_cell_only_1(int i2,int j2) 
+{
+    assert(0 < i2 and i2 < size1());
+    assert(0 < j2 and j2 < size2());
+
+    prepare_cell(i2,j2);
+
+    // determine initial scale for this cell
+    scale(i2,j2) = max(scale(i2-1,j2), max( scale(i2-1,j2-1), scale(i2,j2-1) ) );
+
+    double maximum = 0;
+
+    for(int s2=0;s2<states(j2).size();s2++)
+    {
+	int S2 = states(j2)[s2];
+
+	//--- Get (i1,j1) from (i2,j2) and S2
+	int i1 = i2;
+	if (di(S2)) i1--;
+
+	int j1 = j2;
+	if (dj(S2)) j1--;
+
+	//--- Compute Arrival Probability ----
+	unsigned MAX = states(j1).size();
+	if (not di(S2) and not dj(S2)) MAX = s2;
+
+	double temp = 0.0;
+	for(int s1=0;s1<MAX;s1++) {
+	    int S1 = states(j1)[s1];
+
+	    temp +=  (*this)(i1,j1,S1) * GQ(S1,S2);
+	}
+
+	//--- Include Emission Probability----
+	if (i1 != i2 and j1 != j2)
+	    temp *= emitMM(i2,j2);
+
+	// rescale result to scale of this cell
+	if (scale(i1,j1) != scale(i2,j2))
+	    temp *= pow2(scale(i1,j1)-scale(i2,j2));
+
+	// record maximum
+	if (temp > maximum) maximum = temp;
+
+	// store the result
+	(*this)(i2,j2,S2) = temp;
+    }
+
+    //------- if exponent is too high or too low, rescale ------//
+    if (maximum > fp_scale::hi_cutoff or (maximum > 0 and maximum < fp_scale::lo_cutoff))
+    {
+	int logs = -(int)log2(maximum);
+	double scale_ = pow2(logs);
+	for(int i=0;i<states(j2).size();i++) {
+	    int S2 = states(j2)[i];
+	    (*this)(i2,j2,S2) *= scale_;
+	}
+	scale(i2,j2) -= logs;
+    }
+}
+
+inline void DPmatrixConstrained::forward_cell_only_2(int i2,int j2) 
 {
     assert(0 < i2 and i2 < size1());
     assert(0 < j2 and j2 < size2());

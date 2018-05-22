@@ -118,6 +118,8 @@ public:
     /// Compute the forward probabilities for a cell
     void forward_first_cell(int,int);
     virtual void forward_cell(int,int)=0;
+    virtual void forward_cell_only_1(int,int)=0;
+    virtual void forward_cell_only_2(int,int)=0;
 
     /// Compute the forward probabilities between y1(x) and y2(x)
     void forward_band(const std::vector< std::pair<int,int> >& boundaries);
@@ -182,6 +184,8 @@ public:
 class DPmatrixSimple final: public DPmatrixEmit {
 public:
     void forward_cell(int,int);
+    void forward_cell_only_1(int,int);
+    void forward_cell_only_2(int,int);
 
     using DPmatrixEmit::DPmatrixEmit;
 
@@ -209,6 +213,8 @@ public:
 
     void clear_cell(int,int);
     void forward_cell(int,int);
+    void forward_cell_only_1(int,int);
+    void forward_cell_only_2(int,int);
 
     DPmatrixConstrained(const HMM& M,
 			EmissionProbs&& d1,
