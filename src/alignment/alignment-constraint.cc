@@ -175,8 +175,9 @@ optional<T> min(const optional<T>& x, const optional<T>& y)
 
 alignment_constraints merge_alignment_constraints(const alignment_constraints& con_x, const pairwise_alignment_t& a_xz,
 						  const alignment_constraints& con_y, const pairwise_alignment_t& a_yz,
-						  const vector<int>& totals)
+						  const pair<matrix<int>,vector<int>>& con_matrix)
 {
+    auto& totals = con_matrix.second;
 
     auto max_z_le_x = get_max_y_le_x(a_xz);
     auto max_z_le_y = get_max_y_le_x(a_yz);

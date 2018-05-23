@@ -111,8 +111,7 @@ tri_sample_alignment_base(mutable_data_partition P, const vector<int>& nodes, co
     }
 
     auto con_matrix = P.get_alignment_constraints_matrix();
-    auto& totals = con_matrix->second;
-    alignment_constraints con23 = merge_alignment_constraints(*con2, a_yc, *con3, a_zc, totals); // we need to merge con2 and con3 here.
+    alignment_constraints con23 = merge_alignment_constraints(*con2, a_yc, *con3, a_zc, *con_matrix); // we need to merge con2 and con3 here.
 
     int I = P.seqlength(t.source(b1));
     int J = a23.size();

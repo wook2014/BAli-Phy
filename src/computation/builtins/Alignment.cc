@@ -401,14 +401,13 @@ extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& A
     auto a_yz_ = Args.evaluate(3);
     auto& a_yz = a_yz_.as_<pairwise_alignment_t>();
 
-    auto con_ = Args.evaluate(4);
-    auto& con = con_.as_<Pair<matrix<int>,vector<int>>>();
-    auto& totals = con.second;
+    auto con_matrix_ = Args.evaluate(4);
+    auto& con_matrix = con_matrix_.as_<Pair<matrix<int>,vector<int>>>();
 
     // 2. Construct the object to return
     object_ptr<alignment_constraints> con_z( new alignment_constraints );
 
-    *con_z = merge_alignment_constraints(con_x, a_xz, con_y, a_yz, totals);
+    *con_z = merge_alignment_constraints(con_x, a_xz, con_y, a_yz, con_matrix);
 
     return con_z;
 }
