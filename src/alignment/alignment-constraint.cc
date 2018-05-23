@@ -173,6 +173,52 @@ optional<T> min(const optional<T>& x, const optional<T>& y)
 }
 
 
+
+void check_constraints(const alignment_constraints& con_x, const alignment_constraints& con_y,
+		       const pairwise_alignment_t& a_xy, const pair<matrix<int>,vector<int>>& con_matrix)
+{
+    auto& totals = con_matrix.second;
+
+    assert(con_x.size() == con_y.size());
+    auto max_y_le_x = get_max_y_le_x(a_xy);
+    auto min_y_ge_x = get_min_y_ge_x(a_xy);
+
+    bool fail = false;
+
+    for(int i=0; i < con_x.size(); i++)
+    {
+	auto& xc = con_x[i];
+	auto& yc = con_y[i];
+	assert(get<0>(xc) == get<0>(yc));
+	int id = get<0>(xc);
+
+	auto ymax_x = lookup(max_y_le_x, get<1>(xc));
+	auto ymin_x = lookup(min_y_ge_x, get<2>(xc));
+	int xnum = get<3>(xc);
+
+	auto ymax_y = get<1>(yc);
+	auto ymin_y = get<2>(yc);
+	int ynum = get<3>(yc);
+
+	assert(xnum + ynum == totals[id]);
+
+        // 3c. Check that the constraint is met on the X and Y sequences.
+	if (ymax_x and ymin_y and not (*ymax_x < *ymin_y) )
+	{
+	    std::cerr<<"Constraint "<<id<<" failed: ymax_x ("<<*ymax_x<<") not less than ymin_y ("<<*ymin_y<<")\n";
+	    fail = true;
+	}
+	if (ymax_y and ymin_x and not (*ymax_y < *ymin_x) )
+	{
+	    std::cerr<<"Constraint "<<id<<" failed: ymax_y ("<<*ymax_y<<") not less than ymin_x ("<<*ymin_x<<")\n";
+	    fail = true;
+	}
+    }
+
+    if (fail)
+	throw myexception()<<"constraints failed!";
+}
+
 alignment_constraints merge_alignment_constraints(const alignment_constraints& con_x, const pairwise_alignment_t& a_xz,
 						  const alignment_constraints& con_y, const pairwise_alignment_t& a_yz,
 						  const pair<matrix<int>,vector<int>>& con_matrix)

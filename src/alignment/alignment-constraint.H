@@ -44,6 +44,11 @@ std::pair<matrix<int>,std::vector<int>> constraint_matrix_from_alignment(const a
 
 std::vector<std::pair<int,int>> get_yboundaries_from_cons(int I, int J, const alignment_constraints& x_con, const alignment_constraints& y_con);
 
+void check_constraints(const alignment_constraints& con_x, const alignment_constraints& con_y,
+		       const pairwise_alignment_t& a_xy, const std::pair<matrix<int>, std::vector<int>>& con_matrix);
+
+//---
+
 matrix<int> load_alignment_constraint(const std::string& filename,SequenceTree& T);
 
 std::vector< std::vector<int> > get_pins(const matrix<int>& constraint,const alignment& A,
