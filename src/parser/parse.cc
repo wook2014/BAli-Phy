@@ -222,6 +222,37 @@ void fail_if_reserved_qop(const StreamIter start, const StreamIter end, BOOST_SC
 	pass = lex::pass_flags::pass_fail;
 }
 
+template <typename TokenType> struct token_buffer {
+  std::vector<TokenType> tokens_;
+
+  token_buffer() = default;
+
+  bool operator()(TokenType t) {
+    tokens_.push_back(t);
+    return true;
+  }
+/*
+  void print(std::ostream &o) const {
+    std::cout << "tokens_.size() == " << tokens_.size() << std::endl;
+    for (size_t i = 0; i < tokens_.size(); ++i) {
+      const TokenType &t = tokens_[i];
+
+      o << "[" << i << "]: -" << token_id_string(t.id()) << "- \"" << t
+        << "\" [";
+
+      const auto &v = t.value();
+      if (t.id() == EOL) {
+        o << "\\n";
+      } else {
+        o << v;
+      }
+      o << "]" << std::endl;
+    }
+  }
+*/
+};
+
+
 // http://www.haskell.org/ghc/docs/6.10.2/html/libraries/haskell-src/Language-Haskell-Lexer.html
 template <typename Lexer>
 struct HTokens : lex::lexer<Lexer>
@@ -1266,6 +1297,8 @@ expression_ref parse_module_file(const string& lines)
     line_stream.unsetf(std::ios::skipws);
 
     StreamIter beg = StreamIter(line_stream), end;
+
+    token_buffer<Token> buf;
 
     HParser<HTokens<Lexer>::iterator_type>::error_handler_type error_handler(beg,end);
     HParser<HTokens<Lexer>::iterator_type> haskell_parser(error_handler,lexer1);
