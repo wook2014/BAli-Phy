@@ -252,6 +252,45 @@ template <typename TokenType> struct token_buffer {
 */
 };
 
+template <typename Iterator, typename TokenType,
+          typename Functor = lex::lexertl::functor<
+          TokenType, lex::lexertl::detail::data, Iterator>>
+class buffer_lexer_raw {
+    typedef TokenType token_type;
+    typedef std::vector<token_type> buff_type;
+    typedef typename buff_type::const_iterator vec_iterator_type;
+  public:
+
+    struct iterator_type : vec_iterator_type {
+        typedef vec_iterator_type base_iterator_type;
+        using vec_iterator_type::vec_iterator_type;
+	iterator_type(const vec_iterator_type& vi):vec_iterator_type(vi) {};
+    };
+
+    typedef char char_type;
+
+private:
+    buff_type buff_;
+
+public:
+    buffer_lexer_raw() {}
+
+    void set_buffer(const buff_type &b) { buff_ = b; }
+
+    iterator_type begin() const { return buff_.begin(); } 
+    iterator_type end()   const { return buff_.end();   } 
+
+    // for consistency with regular lexer `begin` signature, not sure if this is
+    // needed
+    template <typename T> iterator_type begin(T, T) { return begin(); }
+
+    std::size_t add_token(char_type const*, char_type, std::size_t, char_type const*) {
+        return 1;
+    }
+
+    void clear(char_type const *) {}
+};
+
 
 // http://www.haskell.org/ghc/docs/6.10.2/html/libraries/haskell-src/Language-Haskell-Lexer.html
 template <typename Lexer>
@@ -1298,7 +1337,12 @@ expression_ref parse_module_file(const string& lines)
 
     StreamIter beg = StreamIter(line_stream), end;
 
-    token_buffer<Token> buf;
+    token_buffer<Token> buff;
+
+    typedef buffer_lexer_raw<StreamIter, Token> concrete_lexer_type;
+
+    buffer_lexer_raw<StreamIter, Token> blex;
+    blex.set_buffer(buff.tokens_);
 
     HParser<HTokens<Lexer>::iterator_type>::error_handler_type error_handler(beg,end);
     HParser<HTokens<Lexer>::iterator_type> haskell_parser(error_handler,lexer1);
