@@ -80,7 +80,7 @@ endif
 baliphy = executable('bali-phy',
 		     baliphy_sources,
 		     include_directories: [root_inc,  extra_includes],
-		     dependencies: [boost, eigen, json, libdl],
+		     dependencies: [boost, eigen, json, yamlcpp, libdl],
 		     link_args: extra_link_args,
 		     link_with: [libbaliphy, libsums],
 		     install_rpath: extra_rpath,

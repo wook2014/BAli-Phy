@@ -6,6 +6,7 @@
 #include "io.H"
 #include <boost/optional.hpp>
 #include "util/json.hh"
+#include <yaml-cpp/yaml.h>
 #include "models/setup.H"
 #include "models/parse.H" // for is_constant( )
 
@@ -310,15 +311,49 @@ ptree json_to_ptree(const json& j)
     return p;
 }
 
+
+ptree yaml_to_ptree(const YAML::Node& y)
+{
+    ptree p;
+    string s;
+    switch(y.Type())
+    {
+    case YAML::NodeType::Null:
+	break;
+    case YAML::NodeType::Scalar:
+	s = y.as<string>();
+	if (s == "true")
+	    p = ptree(true);
+	else if (s == "false")
+	    p = ptree(false);
+	else
+	    p = ptree(s);
+	break;
+    case YAML::NodeType::Sequence:
+	for(auto& x: y)
+	    p.push_back({"", yaml_to_ptree(x)});
+	break;
+    case YAML::NodeType::Map:
+	for(auto& it: y)
+	{
+	    auto key = it.first.as<string>();
+	    p.push_back({key, yaml_to_ptree(it.second)});
+	}
+	break;
+    default:
+	std::abort();
+    }
+    return p;
+}
+
 void Rules::add_rule(const fs::path& path)
 {
     checked_ifstream infile(path.string(),"function file");
 
     Rule rule;
     try {
-	json j;
-	infile>>j;
-	rule = json_to_ptree(j);
+	auto y = YAML::Load(infile);
+	rule = yaml_to_ptree(y);
     }
     catch (const std::exception& e)
     {

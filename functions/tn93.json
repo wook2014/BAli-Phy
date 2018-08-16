@@ -1,43 +1,44 @@
-{
-    "name": "tn93",
-    "title": "The Tamura-Nei (1993) nucleotide rate matrix",
-    "deprecated-synonyms": ["TN","TrN","tn","TN93","trn"],
-    "result_type": "RevCTMC[a]",
-    "citation":{"type": "article",
-		"title": "Estimation of the number of nucleotide substitutions in the control region of mitochondrial DNA in humans and chimpanzees.",
-		"year": "1993",
-		"author": [{"name": "Tamura, Koichiro"}, {"name": "Nei, Masatoshi"}],
-		"journal": {"name": "Molecular biology and evolution", "volume": "10", "number": "3", "pages": "512--526"},
-		"identifier": [{"type":"doi","id":"10.1093/oxfordjournals.molbev.a040023"}]
-	       },
-    "constraints": ["Nucleotides[a]"],
-    "call": "SModel.Nucleotides.tn93[kappaPur,kappaPyr,SModel.Frequency.frequencies_from_dict[a,pi],a]",
-    "args": [
-        {
-            "arg_name": "kappaPur",
-            "arg_type": "Double",
-            "default_value": "~log_normal[log[2],0.25]",
-            "description": "A<->G Transition\/transversion ratio"
-        },
-        {
-            "arg_name": "kappaPyr",
-            "arg_type": "Double",
-            "default_value": "~log_normal[log[2],0.25]",
-            "description": "C<->T Transition\/transversion ratio"
-        },
-        {
-            "arg_name": "pi",
-            "arg_type": "List[Pair[String,Double]]",
-            "default_value": "~dirichlet_on[letters[@a],1]",
-	    "description": "Letter frequencies"
-        },
-        {
-            "arg_name": "a",
-            "arg_type": "a",
-	    "default_value": "getAlphabet",
-            "description": "The alphabet"
-        }
-    ],
-    "description":"The Tamura-Nei model.",
-    "extract": "all"
-}
+name: tn93
+title: The Tamura-Nei (1993) nucleotide rate matrix
+deprecated-synonyms: ["TN","TrN","tn","TN93","trn"]
+result_type: RevCTMC[a]
+citation:
+  type: article
+  title: Estimation of the number of nucleotide substitutions in the control region of mitochondrial DNA in humans and chimpanzees.
+  year: 1993
+  author:
+    - name: Tamura, Koichiro
+    - name: Nei, Masatoshi
+  journal:
+    name: Molecular biology and evolution
+    volume: 10
+    number: 3
+    pages: 512--526
+  identifier:
+    - type: doi
+      id: 10.1093/oxfordjournals.molbev.a040023
+constraints: [ "Nucleotides[a]" ]
+call: "SModel.Nucleotides.tn93[kappaPur,kappaPyr,SModel.Frequency.frequencies_from_dict[a,pi],a]"
+args:
+    - arg_name: kappaPur
+      arg_type: Double
+      default_value: "~logNormal[log[2],0.25]"
+
+    - arg_name: kappaPyr
+      arg_type: Double
+      default_value: "~logNormal[log[2],0.25]"
+      description: "C<->T Transition\/transversion ratio"
+
+    - arg_name: pi
+      arg_type: "List[Pair[String,Double]]"
+      default_value: "~dirichlet_on[letters[@a],1]"
+      description: Letter frequencies
+
+    - arg_name: a
+      arg_type: a
+      default_value: "getAlphabet"
+      description: "The alphabet"
+
+description: The Tamura-Nei model.
+extract: all
+
