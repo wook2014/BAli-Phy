@@ -1267,6 +1267,28 @@ typedef lex::lexertl::actor_lexer<Token> Lexer;
 
 HTokens<Lexer> lexer1;          // Our lexer
 
+token_buffer<Token> store_tokens(std::istream& input, bool silent)
+{
+    auto s   = StreamIter(input);
+    StreamIter end;
+
+    // create a lexer instance
+    HTokens<Lexer> lex;          // Our lexer
+
+    token_buffer<Token> buff;
+    if (!lex::tokenize(s, end, lex, [&](Token t) { return buff(t); })) {
+        if (!silent) {
+            std::cout << "\nTokenizing failed!" << std::endl;
+        }
+    } else {
+        if (!silent) {
+            std::cout << "\nTokenizing succeeded!" << std::endl;
+        }
+    }
+
+    return buff;
+}
+
 expression_ref parse_haskell_line(const string& line)
 {
     std::stringstream line_stream(line);
