@@ -292,9 +292,85 @@ public:
 };
 
 enum tokenids {
-    LeftParen = lex::min_token_id + 12345,
+    // Literal
+    IntTok = lex::min_token_id + 12345,
+    FloatTok,
+    Character,
+    StringTok,
+
+    LeftParen,
     RightParen,
+    SemiColon,
+    LeftCurly,
+    RightCurly,
+    VRightCurly,
+    LeftSquare,
+    RightSquare,
+    Comma,
+    BackQuote,
+
+    // underscore - part of reservedid?
+    Underscore,
+
+    // reservedop
+    DotDot,
+    Colon,
+    DoubleColon,
+    Equals,
+    Backslash,
+    Bar,
+    LeftArrow,
+    RightArrow,
+    At,
+    Tilde,
+    DoubleArrow,
+
+    // Minus and Exclamation are "special" varops
+    Minus,
+    Exclamation,
+
+    // reservedid
+    KW_Case,
+    KW_Class,
+    KW_Data,
+    KW_Default,
+    KW_Deriving,
+    KW_Do,
+    KW_Else,
+    KW_Foreign,
+    KW_If,
+    KW_Import,
+    KW_In,
+    KW_Infix,
+    KW_InfixL,
+    KW_InfixR,
+    KW_Instance,
+    KW_Let,
+    KW_Module,
+    KW_NewType,
+    KW_Of,
+    KW_Then,
+    KW_Type,
+    KW_Where,
+    KW_Hiding,
+    KW_Qualified,
+    KW_Safe,
+    KW_Unsafe,
+
+    // This is not a haskell keyword
+    KW_Builtin,
+
     QVarId,
+    VarId,
+    QConId,
+    ConId,
+    QVarSym,
+    VarSym,
+    QConSym,
+    ConSym,
+
+    // whitespace
+    WHITESPACE
 };
 
 // http://www.haskell.org/ghc/docs/6.10.2/html/libraries/haskell-src/Language-Haskell-Lexer.html
