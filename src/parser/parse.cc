@@ -433,8 +433,6 @@ struct HTokens : lex::lexer<Lexer>
 		// The char and string literals are missing some stuff
 		("escape","\\[abfnrtv\\\"']");
 
-	    VarSym = "{varsym}";
-
 	    // Literal
 	    IntTok = "{decimal}";
 	    FloatTok = "{digit}\\.{digit}{exponent}?|{digit}{exponent}";
@@ -568,8 +566,6 @@ struct HTokens : lex::lexer<Lexer>
 		| KW_Safe
 		| KW_Unsafe
 
-		| VarSym
-
 		// Literal
 		| IntTok
 		| FloatTok
@@ -584,6 +580,7 @@ struct HTokens : lex::lexer<Lexer>
 	    this->self.add
 		("!", Exclamation)
 		("{modid}{varsym}", QVarSym)  // [&fail_if_reserved_qop] /// We don't want to allow Mod.:
+		("{varsym}",        VarSym)
 		("[(]",             LeftParen)
 		("{modid}{varid}",  QVarId)
 		("{varid}",         VarId)
@@ -593,8 +590,6 @@ struct HTokens : lex::lexer<Lexer>
 		("{consym}",        ConSym)
 		;
 	}
-
-    lex::token_def<std::string> VarSym;   // String	
 
     lex::token_def<std::string> IntTok;   // Integer
     lex::token_def<std::string> FloatTok; // Rational	
@@ -727,7 +722,8 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	    conid %= token(ConId);
 	    qconid %= token(ConId) | token(QConId);
 
-	    varsym = tok.VarSym [_val = _1] | tok.Minus[_val = "-"] | token(Exclamation) [_val = "!"];
+	    varsymtok %= token(VarSym);
+	    varsym = varsymtok [_val = _1] | tok.Minus[_val = "-"] | token(Exclamation) [_val = "!"];
 	    qvarsym %= varsym | token(QVarSym);
 	    consym %= token(ConSym);
 	    qconsym %= token(ConSym) | token(QConSym);
@@ -1185,6 +1181,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
     qi::rule<Iterator, std::string()> qconid;
 
     qi::rule<Iterator, std::string()> varsym;
+    qi::rule<Iterator, std::string()> varsymtok;
     qi::rule<Iterator, std::string()> qvarsym;
     qi::rule<Iterator, std::string()> consym;
     qi::rule<Iterator, std::string()> qconsym;
