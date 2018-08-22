@@ -292,8 +292,9 @@ public:
 };
 
 enum tokenids {
-  LPAREN = lex::min_token_id + 10,
-  RPAREN,
+    LeftParen = lex::min_token_id + 12345,
+    RightParen,
+    QVarId,
 };
 
 // http://www.haskell.org/ghc/docs/6.10.2/html/libraries/haskell-src/Language-Haskell-Lexer.html
@@ -356,7 +357,6 @@ struct HTokens : lex::lexer<Lexer>
 		// The char and string literals are missing some stuff
 		("escape","\\[abfnrtv\\\"']");
 
-	    QVarId = "{modid}{varid}";
 	    VarId = "{varid}";
 	    QConId = "{modid}{conid}";
 	    ConId = "{conid}";
@@ -373,10 +373,6 @@ struct HTokens : lex::lexer<Lexer>
 	    //      StringTok = "\"({graphicnonqq}| |{escape})*\"";
 	    StringTok = "[\"]({graphicnonqq}| |{escape})*[\"]";
 
-	    // Add actual tokens (Patterns are defined above).
-	    this->self.add
-		("[(]",LPAREN)
-		;
 	    RightParen  = "[)]";
 	    SemiColon   = ";";
 	    LeftCurly   = "\\{";
@@ -504,7 +500,6 @@ struct HTokens : lex::lexer<Lexer>
 		| KW_Safe
 		| KW_Unsafe
 
-		| QVarId [&fail_if_reserved_qid]
 		| VarId
 		| QConId
 		| ConId
@@ -522,9 +517,14 @@ struct HTokens : lex::lexer<Lexer>
 		// whitespace
 		| WHITESPACE [ lex::_pass = lex::pass_flags::pass_ignore ] // how do we skip whitespace in the lexer?
 		;
+
+	    // Add actual tokens (Patterns are defined above).
+	    this->self.add
+		("[(]",LeftParen)
+		("{modid}{varid}",QVarId)
+		;
 	}
 
-    lex::token_def<std::string> QVarId;   // (String,STring)
     lex::token_def<std::string> VarId;    // String
     lex::token_def<std::string> QConId;   // (String, String)	
     lex::token_def<std::string> ConId;    // String	
@@ -661,7 +661,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	    typedef function<error_handler_type> error_handler_function;
 
 	    varid %= tok.VarId;
-	    qvarid %= tok.VarId | tok.QVarId;
+	    qvarid %= tok.VarId | token(QVarId);
 	    conid %= tok.ConId;
 	    qconid %= tok.ConId | tok.QConId;
 
@@ -721,13 +721,13 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		// literal
 		| literal [_val = _1 ]
 		// parenthesized expression
-		| eps[clear(_a)] >> token(LPAREN) >> exp [_val = _1] >> tok.RightParen
+		| eps[clear(_a)] >> token(LeftParen) >> exp [_val = _1] >> tok.RightParen
 		// tuple, k >= 2
-		| eps[clear(_a)] >> token(LPAREN) >> exp [push_back(_a,_1)] >> +(tok.Comma>>exp [push_back(_a,_1)]) >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("Tuple"), _a) ]
+		| eps[clear(_a)] >> token(LeftParen) >> exp [push_back(_a,_1)] >> +(tok.Comma>>exp [push_back(_a,_1)]) >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("Tuple"), _a) ]
 		// left section
-		| eps[clear(_a)] >> token(LPAREN) >> infixexp[push_back(_a,_1)]  >> qop[push_back(_a,_1)] >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("LeftSection"), _a) ]
+		| eps[clear(_a)] >> token(LeftParen) >> infixexp[push_back(_a,_1)]  >> qop[push_back(_a,_1)] >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("LeftSection"), _a) ]
 		// right section
-		| eps[clear(_a)] >> token(LPAREN) >> qop[push_back(_a,_1)] - tok.Minus >> infixexp[push_back(_a,_1)] >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("RightSection"), _a) ]
+		| eps[clear(_a)] >> token(LeftParen) >> qop[push_back(_a,_1)] - tok.Minus >> infixexp[push_back(_a,_1)] >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("RightSection"), _a) ]
 		// list
 		| tok.LeftSquare[clear(_a)] >> (exp[push_back(_a,_1)]%tok.Comma) >> tok.RightSquare >> eps [ _val = new_<expression>(AST_node("List"), _a) ]
 		// arithmetic sequence
@@ -742,15 +742,15 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		;
 	  
 	    /*----- Section 3.2 -------*/
-	    gcon =  token(LPAREN) >> tok.RightParen [_val = std::string("()")]
+	    gcon =  token(LeftParen) >> tok.RightParen [_val = std::string("()")]
 		| tok.LeftSquare >> tok.RightSquare [_val = std::string("[]")]
-		| token(LPAREN) >> tok.Comma [_val = std::string("(,")] >> *tok.Comma[_val += std::string(",")] >> tok.RightParen[_val += std::string(")")]
+		| token(LeftParen) >> tok.Comma [_val = std::string("(,")] >> *tok.Comma[_val += std::string(",")] >> tok.RightParen[_val += std::string(")")]
 		| qcon [ _val = _1];
 
-	    var  = varid[_val = _1] | token(LPAREN) >> varsym[_val = _1] >> tok.RightParen;    // variable
-	    qvar = qvarid[_val = _1] | token(LPAREN) >> qvarsym[_val = _1] >> tok.RightParen;   // qualified variable
-	    con  = conid[_val = _1]  | token(LPAREN) >> consym[_val = _1] >> tok.RightParen;    // constructor
-	    qcon = qconid[_val = _1] | token(LPAREN) >> gconsym[_val = _1] >> tok.RightParen;   // qualified constructor
+	    var  = varid[_val = _1] | token(LeftParen) >> varsym[_val = _1] >> tok.RightParen;    // variable
+	    qvar = qvarid[_val = _1] | token(LeftParen) >> qvarsym[_val = _1] >> tok.RightParen;   // qualified variable
+	    con  = conid[_val = _1]  | token(LeftParen) >> consym[_val = _1] >> tok.RightParen;    // constructor
+	    qcon = qconid[_val = _1] | token(LeftParen) >> gconsym[_val = _1] >> tok.RightParen;   // qualified constructor
 	    varop = varsym[_val = _1] | tok.BackQuote >> varid[_val = _1] >> tok.BackQuote;    // variable operator
 	    qvarop = qvarsym[_val = _1] | tok.BackQuote >> qvarid[_val = _1] >> tok.BackQuote; // qualified variable operator
 	    conop = consym[_val = _1] | tok.BackQuote >> conid[_val = _1] >> tok.BackQuote;    // constructor operator
@@ -815,9 +815,9 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		// wildcard
 		| tok.Underscore [ _val = construct<AST_node>(std::string("WildcardPattern")) ]
 		// parenthesized pattern
-		| token(LPAREN) >> pat [ _val = _1 ] >> tok.RightParen          
+		| token(LeftParen) >> pat [ _val = _1 ] >> tok.RightParen
 		// tuple patten
-		| eps[clear(_a)] >> token(LPAREN) >> pat[ push_back(_a,_1) ] >> +(tok.Comma >> pat[ push_back(_a,_1) ]) >> tok.RightParen [ _val = new_<expression>(AST_node("Tuple"), _a) ]
+		| eps[clear(_a)] >> token(LeftParen) >> pat[ push_back(_a,_1) ] >> +(tok.Comma >> pat[ push_back(_a,_1) ]) >> tok.RightParen [ _val = new_<expression>(AST_node("Tuple"), _a) ]
 		// list pattern
 		| tok.LeftSquare[clear(_a)] >> pat[ push_back(_a,_1) ] % tok.Comma >> tok.RightSquare [ _val = new_<expression>(AST_node("List"), _a) ]
 		// irrefutable pattern
@@ -882,23 +882,23 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		// type variable
 		| tyvar [_val = construct<AST_node>(std::string("type_id"),construct<String>(_1)) ]
 		// tuple type, k >= 2
-		| eps[clear(_a)] >> token(LPAREN) >> type[push_back(_a,_1)] >> +(tok.Comma>>type[push_back(_a,_1)]) >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("TupleType"), _a) ]
+		| eps[clear(_a)] >> token(LeftParen) >> type[push_back(_a,_1)] >> +(tok.Comma>>type[push_back(_a,_1)]) >> tok.RightParen >> eps [ _val = new_<expression>(AST_node("TupleType"), _a) ]
 		// list type
 		| eps[clear(_a)] >> tok.LeftSquare >> type [push_back(_a,_1)] >> tok.RightSquare  >> eps [ _val = new_<expression>(AST_node("ListType"), _a) ]
 		// parenthesized type
-		| eps[clear(_a)] >> token(LPAREN) >> type [_val = _1 ] >> tok.RightParen;
+		| eps[clear(_a)] >> token(LeftParen) >> type [_val = _1 ] >> tok.RightParen;
 	    atype2 = atype [_val = _1] | tok.Exclamation >> atype [push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("StrictAtype"), _a) ];
 
-	    gtycon = token(LPAREN) >> tok.RightParen [_val = std::string("()")]
+	    gtycon = token(LeftParen) >> tok.RightParen [_val = std::string("()")]
 		| tok.LeftSquare >> tok.RightSquare [_val = std::string("[]")]
-		| token(LPAREN) >> tok.RightArrow >> tok.RightParen [_val = std::string("->")]
-		| token(LPAREN) >> tok.Comma [_val = std::string("(,")] >> *tok.Comma[_val += std::string(",")] >>tok.RightParen[_val += std::string(")")]
+		| token(LeftParen) >> tok.RightArrow >> tok.RightParen [_val = std::string("->")]
+		| token(LeftParen) >> tok.Comma [_val = std::string("(,")] >> *tok.Comma[_val += std::string(",")] >>tok.RightParen[_val += std::string(")")]
 		| qtycon [ _val = _1];
 
 	    /*----- Section 4.1.3 ------*/
-	    //	context %= h_class | token(LPAREN) >> *h_class >> tok.RightParen;
+	    //	context %= h_class | token(LeftParen) >> *h_class >> tok.RightParen;
 	    //	h_class %= qtycls >> tyvar 
-	    //        | qtycls >> token(LPAREN) >> tyvar >> +atype >> tok.RightParen;
+	    //        | qtycls >> token(LeftParen) >> tyvar >> +atype >> tok.RightParen;
 
 	    /*----- Section 4.2.1 ------*/
 	    newconstr = con[push_back(_a,_1)] >> atype [push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("newconstr"), _a) ];
@@ -911,19 +911,19 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	    //	  | con >> tok.LeftCurly >> *fielddecl > tok.RightCurly;
 
 	    fielddecl = vars >> tok.DoubleColon >> (type | tok.Exclamation >> atype);
-	    //	deriving = tok.KW_Deriving >> (dclass | token(LPAREN) >> tok.RightParen | token(LPAREN) >> dclass%tok.Comma >> tok.RightParen);
+	    //	deriving = tok.KW_Deriving >> (dclass | token(LeftParen) >> tok.RightParen | token(LeftParen) >> dclass%tok.Comma >> tok.RightParen);
 	    dclass = qtycls;
 
 	    /*------ Section 4.3.1 -----*/
-	    //	scontext %= simpleclass | token(LPAREN) >> tok.RightParen | token(LPAREN) >> simpleclass%tok.Comma >> tok.RightParen;
+	    //	scontext %= simpleclass | token(LeftParen) >> tok.RightParen | token(LeftParen) >> simpleclass%tok.Comma >> tok.RightParen;
 	    //	simpleclass %= qtycls >> tyvar;
 	
 	    /*------ Section 4.3.2 -----*/
 	    /*
 	      inst %= 
 	      gtycon 
-	      | token(LPAREN) >> gtycon >> *tyvar >>tok.RightParen 
-	      | token(LPAREN) >> tyvar >> tok.Comma >> tyvar %tok.Comma >> tok.RightParen
+	      | token(LeftParen) >> gtycon >> *tyvar >>tok.RightParen
+	      | token(LeftParen) >> tyvar >> tok.Comma >> tyvar %tok.Comma >> tok.RightParen
 	      | tok.LeftSquare >> tyvar >> tok.RightSquare
 	      | tyvar >> tok.RightArrow >> tyvar
 	      ;
@@ -932,7 +932,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	    /*------ Section 4.4.3 -----*/
 	    funlhs = var [push_back(_a,construct<AST_node>(std::string("id"), construct<String>(_1)))] >> +apat[push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("funlhs1"), _a)  ]
 		| eps[clear(_a)] >> pat [push_back(_a,_1)] >> varop[push_back(_a,construct<AST_node>(std::string("id"), construct<String>(_1)))] >> pat[push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("funlhs2"), _a)  ]
-		| eps[clear(_a)] >> token(LPAREN) >> funlhs[push_back(_a,_1)] >> tok.RightParen >> +apat[push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("funlhs3"), _a)  ];
+		| eps[clear(_a)] >> token(LeftParen) >> funlhs[push_back(_a,_1)] >> tok.RightParen >> +apat[push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("funlhs3"), _a)  ];
 
 	    rhs = tok.Equals >> exp [push_back(_a,_1)] >> -(tok.KW_Where >> decls[push_back(_a,_1)]) >> eps [ _val = new_<expression>(AST_node("rhs"), _a)  ]
 		| gdrhs[push_back(_a,_1)] >> -(tok.KW_Where >> decls[push_back(_a,_1)]) >> eps [ _val = new_<expression>(AST_node("rhs"), _a)  ];
@@ -944,12 +944,12 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	
 	    /*------ Section 5.2 -------*/
 
-	    exports = token(LPAREN) [clear(_a)] >> tok.RightParen [_val = new_<expression>(AST_node("Exports"),_a)]
-		| token(LPAREN) [clear(_a)] >> h_export [push_back(_a,_1)] % tok.Comma >> -tok.Comma >> tok.RightParen [_val = new_<expression>(AST_node("Exports"),_a)];
+	    exports = token(LeftParen) [clear(_a)] >> tok.RightParen [_val = new_<expression>(AST_node("Exports"),_a)]
+		| token(LeftParen) [clear(_a)] >> h_export [push_back(_a,_1)] % tok.Comma >> -tok.Comma >> tok.RightParen [_val = new_<expression>(AST_node("Exports"),_a)];
 
 	    h_export = 	qvar [_val = construct<AST_node>(std::string("qvar"), construct<String>(_1)) ]
-//		| qtycon >> -(token(LPAREN) >> tok.DotDot >> tok.RightParen | token(LPAREN) >> tok.RightParen | token(LPAREN) >> cname %tok.Comma >> tok.RightParen)
-//		| qtycls >> -(token(LPAREN) >> tok.DotDot >> tok.RightParen | token(LPAREN) >> tok.RightParen | token(LPAREN) >> var %tok.Comma >> tok.RightParen)
+//		| qtycon >> -(token(LeftParen) >> tok.DotDot >> tok.RightParen | token(LeftParen) >> tok.RightParen | token(LeftParen) >> cname %tok.Comma >> tok.RightParen)
+//		| qtycls >> -(token(LeftParen) >> tok.DotDot >> tok.RightParen | token(LeftParen) >> tok.RightParen | token(LeftParen) >> var %tok.Comma >> tok.RightParen)
 		| tok.KW_Module >> modid [_val = construct<AST_node>(std::string("module"), construct<String>(_1)) ]
 	      ;
 
@@ -961,16 +961,16 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		>> /*-impspec >>*/ eps [ _val = new_<expression>(AST_node("ImpDecl"), _a)  ];
 
 	    //	impspec = 
-	    //	  token(LPAREN) >> tok.RightParen
-	    //	  | token(LPAREN) >> import%tok.Comma >> tok.RightParen
-	    //	  | tok.KW_Hiding >> token(LPAREN) >> import%tok.Comma >> tok.RightParen;
+	    //	  token(LeftParen) >> tok.RightParen
+	    //	  | token(LeftParen) >> import%tok.Comma >> tok.RightParen
+	    //	  | tok.KW_Hiding >> token(LeftParen) >> import%tok.Comma >> tok.RightParen;
 
 	    // FIXME! Parsing problems //
 	    /*
 	      import = 
 	      var
-	      | tycon >> -(token(LPAREN) >> tok.DotDot >> tok.RightParen | token(LPAREN) >> tok.RightParen | token(LPAREN) >> cname %"," >> tok.RightParen)
-	      | tycls >> -(token(LPAREN) >> tok.DotDot >> tok.RightParen | token(LPAREN) >> tok.RightParen | token(LPAREN) >> var %"," >> tok.RightParen);
+	      | tycon >> -(token(LeftParen) >> tok.DotDot >> tok.RightParen | token(LeftParen) >> tok.RightParen | token(LeftParen) >> cname %"," >> tok.RightParen)
+	      | tycls >> -(token(LeftParen) >> tok.DotDot >> tok.RightParen | token(LeftParen) >> tok.RightParen | token(LeftParen) >> var %"," >> tok.RightParen);
 	    */
 
 #define add_error_handler(node) on_error<fail>(node,			\
