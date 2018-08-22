@@ -470,7 +470,6 @@ struct HTokens : lex::lexer<Lexer>
 	    DoubleArrow = "=>";
 	    // Minus and Exclamation are "special" varops
 	    Minus = "-";
-	    Exclamation = "!";
 
 	    // reservedid
 	    KW_Case = "case";
@@ -540,7 +539,6 @@ struct HTokens : lex::lexer<Lexer>
 		| Tilde
 		| DoubleArrow
 		| Minus         //?
-		| Exclamation   //?
 
 		// reservedid
 		| KW_Case
@@ -584,6 +582,7 @@ struct HTokens : lex::lexer<Lexer>
 
 	    // Add actual tokens (Patterns are defined above).
 	    this->self.add
+		("!", Exclamation)
 		("{modid}{varsym}", QVarSym)  // [&fail_if_reserved_qop] /// We don't want to allow Mod.:
 		("[(]",             LeftParen)
 		("{modid}{varid}",  QVarId)
@@ -627,7 +626,6 @@ struct HTokens : lex::lexer<Lexer>
     lex::token_def<> DoubleArrow;
 
     lex::token_def<> Minus;
-    lex::token_def<> Exclamation;
     // Keywords
     lex::token_def<> KW_Case;
     lex::token_def<> KW_Class;
@@ -729,7 +727,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	    conid %= token(ConId);
 	    qconid %= token(ConId) | token(QConId);
 
-	    varsym = tok.VarSym [_val = _1] | tok.Minus[_val = "-"] | tok.Exclamation [_val = "!"];
+	    varsym = tok.VarSym [_val = _1] | tok.Minus[_val = "-"] | token(Exclamation) [_val = "!"];
 	    qvarsym %= varsym | token(QVarSym);
 	    consym %= token(ConSym);
 	    qconsym %= token(ConSym) | token(QConSym);
@@ -951,7 +949,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		| eps[clear(_a)] >> tok.LeftSquare >> type [push_back(_a,_1)] >> tok.RightSquare  >> eps [ _val = new_<expression>(AST_node("ListType"), _a) ]
 		// parenthesized type
 		| eps[clear(_a)] >> token(LeftParen) >> type [_val = _1 ] >> tok.RightParen;
-	    atype2 = atype [_val = _1] | tok.Exclamation >> atype [push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("StrictAtype"), _a) ];
+	    atype2 = atype [_val = _1] | token(Exclamation) >> atype [push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("StrictAtype"), _a) ];
 
 	    gtycon = token(LeftParen) >> tok.RightParen [_val = std::string("()")]
 		| tok.LeftSquare >> tok.RightSquare [_val = std::string("[]")]
@@ -974,7 +972,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 		| (btype | atype2)[push_back(_a,_1)] >> conop[push_back(_a,_1)] >> (btype | atype2)[push_back(_a,_1)] >> eps [ _val = new_<expression>(AST_node("constr_op"), _a) ];
 	    //	  | con >> tok.LeftCurly >> *fielddecl > tok.RightCurly;
 
-	    fielddecl = vars >> tok.DoubleColon >> (type | tok.Exclamation >> atype);
+	    fielddecl = vars >> tok.DoubleColon >> (type | token(Exclamation) >> atype);
 	    //	deriving = tok.KW_Deriving >> (dclass | token(LeftParen) >> tok.RightParen | token(LeftParen) >> dclass%tok.Comma >> tok.RightParen);
 	    dclass = qtycls;
 
