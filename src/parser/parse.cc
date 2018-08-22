@@ -435,8 +435,6 @@ struct HTokens : lex::lexer<Lexer>
 
 	    QVarSym = "{modid}{varsym}";
 	    VarSym = "{varsym}";
-	    QConSym = "{modid}{consym}";
-	    ConSym = "{consym}";
 
 	    // Literal
 	    IntTok = "{decimal}";
@@ -573,8 +571,6 @@ struct HTokens : lex::lexer<Lexer>
 		| KW_Safe
 		| KW_Unsafe
 
-		| QConSym [&fail_if_reserved_qop]
-		| ConSym
 		| QVarSym [&fail_if_reserved_qop]
 		| VarSym
 
@@ -595,13 +591,13 @@ struct HTokens : lex::lexer<Lexer>
 		("{varid}", VarId)
 		("{modid}{conid}",QConId)
 		("{conid}", ConId)
+		("{modid}{consym}", QConSym)
+		("{consym}", ConSym)
 		;
 	}
 
     lex::token_def<std::string> QVarSym;  // (String, String)	
     lex::token_def<std::string> VarSym;   // String	
-    lex::token_def<std::string> QConSym;  // (String, String)	
-    lex::token_def<std::string> ConSym;   // String 
 
     lex::token_def<std::string> IntTok;   // Integer
     lex::token_def<std::string> FloatTok; // Rational	
@@ -737,8 +733,8 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 
 	    varsym = tok.VarSym [_val = _1] | tok.Minus[_val = "-"] | tok.Exclamation [_val = "!"];
 	    qvarsym %= varsym | tok.QVarSym;
-	    consym %= tok.ConSym;
-	    qconsym %= tok.ConSym | tok.QConSym;
+	    consym %= token(ConSym);
+	    qconsym %= token(ConSym) | token(QConSym);
 
 	    tyvar %= varid;
 	    tycon %= conid;
