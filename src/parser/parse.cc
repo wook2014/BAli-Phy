@@ -433,7 +433,6 @@ struct HTokens : lex::lexer<Lexer>
 		// The char and string literals are missing some stuff
 		("escape","\\[abfnrtv\\\"']");
 
-	    QVarSym = "{modid}{varsym}";
 	    VarSym = "{varsym}";
 
 	    // Literal
@@ -571,7 +570,6 @@ struct HTokens : lex::lexer<Lexer>
 		| KW_Safe
 		| KW_Unsafe
 
-		| QVarSym [&fail_if_reserved_qop]
 		| VarSym
 
 		// Literal
@@ -586,17 +584,17 @@ struct HTokens : lex::lexer<Lexer>
 
 	    // Add actual tokens (Patterns are defined above).
 	    this->self.add
-		("[(]",LeftParen)
-		("{modid}{varid}",QVarId)
-		("{varid}", VarId)
-		("{modid}{conid}",QConId)
-		("{conid}", ConId)
+		("{modid}{varsym}", QVarSym)  // [&fail_if_reserved_qop] /// We don't want to allow Mod.:
+		("[(]",             LeftParen)
+		("{modid}{varid}",  QVarId)
+		("{varid}",         VarId)
+		("{modid}{conid}",  QConId)
+		("{conid}",         ConId)
 		("{modid}{consym}", QConSym)
-		("{consym}", ConSym)
+		("{consym}",        ConSym)
 		;
 	}
 
-    lex::token_def<std::string> QVarSym;  // (String, String)	
     lex::token_def<std::string> VarSym;   // String	
 
     lex::token_def<std::string> IntTok;   // Integer
@@ -732,7 +730,7 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 	    qconid %= token(ConId) | token(QConId);
 
 	    varsym = tok.VarSym [_val = _1] | tok.Minus[_val = "-"] | tok.Exclamation [_val = "!"];
-	    qvarsym %= varsym | tok.QVarSym;
+	    qvarsym %= varsym | token(QVarSym);
 	    consym %= token(ConSym);
 	    qconsym %= token(ConSym) | token(QConSym);
 
