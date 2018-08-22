@@ -433,9 +433,6 @@ struct HTokens : lex::lexer<Lexer>
 		// The char and string literals are missing some stuff
 		("escape","\\[abfnrtv\\\"']");
 
-	    VarId = "{varid}";
-	    QConId = "{modid}{conid}";
-	    ConId = "{conid}";
 	    QVarSym = "{modid}{varsym}";
 	    VarSym = "{varsym}";
 	    QConSym = "{modid}{consym}";
@@ -576,9 +573,6 @@ struct HTokens : lex::lexer<Lexer>
 		| KW_Safe
 		| KW_Unsafe
 
-		| VarId
-		| QConId
-		| ConId
 		| QConSym [&fail_if_reserved_qop]
 		| ConSym
 		| QVarSym [&fail_if_reserved_qop]
@@ -598,12 +592,12 @@ struct HTokens : lex::lexer<Lexer>
 	    this->self.add
 		("[(]",LeftParen)
 		("{modid}{varid}",QVarId)
+		("{varid}", VarId)
+		("{modid}{conid}",QConId)
+		("{conid}", ConId)
 		;
 	}
 
-    lex::token_def<std::string> VarId;    // String
-    lex::token_def<std::string> QConId;   // (String, String)	
-    lex::token_def<std::string> ConId;    // String	
     lex::token_def<std::string> QVarSym;  // (String, String)	
     lex::token_def<std::string> VarSym;   // String	
     lex::token_def<std::string> QConSym;  // (String, String)	
@@ -736,10 +730,10 @@ struct HParser : qi::grammar<Iterator, expression_ref()>
 
 	    typedef function<error_handler_type> error_handler_function;
 
-	    varid %= tok.VarId;
-	    qvarid %= tok.VarId | token(QVarId);
-	    conid %= tok.ConId;
-	    qconid %= tok.ConId | tok.QConId;
+	    varid %= token(VarId);
+	    qvarid %= token(VarId) | token(QVarId);
+	    conid %= token(ConId);
+	    qconid %= token(ConId) | token(QConId);
 
 	    varsym = tok.VarSym [_val = _1] | tok.Minus[_val = "-"] | tok.Exclamation [_val = "!"];
 	    qvarsym %= varsym | tok.QVarSym;
