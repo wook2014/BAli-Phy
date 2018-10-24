@@ -1,7 +1,7 @@
 //#ifdef NDEBUG
 //#undef NDEBUG
 //#endif
-#define COMBINE_STEPS
+// #define COMBINE_STEPS
 #include "graph_register.H"
 #include "error_exception.H"
 #include "computation/expression/expression.H"
