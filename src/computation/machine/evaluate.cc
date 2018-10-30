@@ -122,6 +122,8 @@ public:
 	    int r = OperationArgs::allocate_reg();
 	    if (s>0)
 		M.mark_reg_created_by_step(r,s);
+
+	    assert(not M.has_step(r));
 	    return r;
 	}
   
@@ -385,7 +387,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		    {
 			r2 = Args.allocate( std::move(closure_stack.back()) ) ;
 			assert(access(r2).created_by.first == S);
-			assert(not has_step(r2));
 		    }
 
 		    auto p = incremental_evaluate(r2);
@@ -402,7 +403,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		    else
 		    {
 			int r2 = Args.allocate( std::move(closure_stack.back()) );
-			assert(not has_step(r2));
 			access(r2).type = reg::type_t::constant;
 			// assert(is_WHNF(access(r2).C.exp)) ?
 			p = {r2,r2};
