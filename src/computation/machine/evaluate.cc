@@ -506,14 +506,7 @@ void reg_heap::incremental_evaluate_from_call_(int S)
     if (not closure_stack.back().exp.head().is_index_var() and
 	not is_WHNF(closure_stack.back().exp))
     {
-	// Maybe this should be a member function:
-	//   allocate_from_step(int S, closures&& C);
-	//   allocate_from_step(int S);
-	int r2 = allocate();
-	assert(not has_step(r2));
-	mark_reg_created_by_step(r2,S);
-	total_reg_allocations++;
-	set_C(r2, std::move(closure_stack.back()));
+	int r2 = allocate_reg_from_step(S,std::move(closure_stack.back()));
 	closure_stack.back() = closure(index_var(0),{r2});
     }
 }
