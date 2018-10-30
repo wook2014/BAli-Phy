@@ -1,7 +1,7 @@
 //#ifdef NDEBUG
 //#undef NDEBUG
 //#endif
-// #define COMBINE_STEPS
+#define COMBINE_STEPS
 #include "graph_register.H"
 #include "error_exception.H"
 #include "computation/expression/expression.H"
@@ -454,6 +454,9 @@ void reg_heap::incremental_evaluate_from_call(int S, closure& value)
 //   So we could write \x y -> let {x'' = case x of x':_ -> f x'; y'' = case y of y':_ -> g y'} in h x'' y''.  This would be best for purposes of invalidation!
 // * if E2 is a let (or if S2 performs allocation?) then we stop merging and make a new reg, charging the allocations to S1
 // Don't we have to know about the allocation BEFORE we perform?
+
+// The parent step S is known to be changeable.
+// If the child step step is a let, these can be merged with the parent with no lose, but should not be merged with a grandchild.
 void reg_heap::incremental_evaluate_from_call_(int S)
 {
     assert(is_completely_dirty(root_token));
@@ -461,7 +464,6 @@ void reg_heap::incremental_evaluate_from_call_(int S)
     assert(S > 0);
 
     while (not closure_stack.back().exp.head().is_index_var() and
-	   closure_stack.back().exp.head().type() != let2_type and
 	   not is_WHNF(closure_stack.back().exp))
     {
 #ifndef NDEBUG
@@ -473,6 +475,7 @@ void reg_heap::incremental_evaluate_from_call_(int S)
 	{
 	    RegOperationArgs Args(S, S, *this);
 	    int n_used_inputs1 = steps[S].used_inputs.size();
+	    int n_allocated1 = steps[S].created_regs.size();
 	    auto O = closure_stack.back().exp.head().assert_is_a<Operation>()->op;
 	    closure_stack.back() = (*O)(Args);
 	    int n_used_inputs2 = steps[S].used_inputs.size();
@@ -481,6 +484,8 @@ void reg_heap::incremental_evaluate_from_call_(int S)
 	    total_reductions++;
 	    if (changed)
 		total_changeable_reductions++;
+	    if (steps[S].created_regs.size() > n_allocated1)
+		break;
 	}
 	catch (error_exception& e)
 	{
@@ -497,7 +502,9 @@ void reg_heap::incremental_evaluate_from_call_(int S)
 	    throw_reg_exception(*this, root_token, closure_stack.back(), e);
 	}
     }
-    if (closure_stack.back().exp.head().type() == let2_type)
+
+    if (not closure_stack.back().exp.head().is_index_var() and
+	not is_WHNF(closure_stack.back().exp))
     {
 	// Maybe this should be a member function:
 	//   allocate_from_step(int S, closures&& C);
