@@ -245,6 +245,8 @@ public:
 
     log_double_t probability_for_context(int c);
 
+    log_double_t probability_ratio_for_contexts(int c1, int c2);
+
     // the list of modifiables
     std::vector<int> random_modifiables_;
   

@@ -187,7 +187,7 @@ public:
 
     log_double_t get_probability() const;
 
-    int add_probability_factor(const expression_ref& E);
+    log_double_t get_probability_ratio(const context& C2) const;
 
 protected:  
     void collect_garbage() const;

@@ -141,6 +141,43 @@ log_double_t Model::prior() const
     return get_probability();
 }
 
+log_double_t Model::probability() const {return prior() * likelihood();}
+log_double_t Model::likelihood() const {return 1.0;}
+
+log_double_t Model::heated_prior() const {return prior();}
+log_double_t Model::heated_likelihood() const {return likelihood();}
+log_double_t Model::heated_probability() const {return heated_prior() * heated_likelihood();}
+
+log_double_t Model::prior_ratio(const Model& M) const
+{
+    return get_probability_ratio(M);
+}
+
+log_double_t Model::likelihood_ratio(const Model& M) const
+{
+    return 1.0;
+}
+
+log_double_t Model::probability_ratio(const Model& M) const
+{
+    return prior_ratio(M) * likelihood_ratio(M);
+}
+
+log_double_t Model::heated_prior_ratio(const Model& M) const
+{
+    return prior_ratio(M);
+}
+
+log_double_t Model::heated_likelihood_ratio(const Model& M) const
+{
+    return likelihood_ratio(M);
+}
+
+log_double_t Model::heated_probability_ratio(const Model& M) const
+{
+    return heated_prior_ratio(M) * heated_likelihood_ratio(M);
+}
+
 Model::Model(const std::shared_ptr<module_loader>& L, const key_map_t& k)
     :context(L),keys(new key_map_t(k))
 { }

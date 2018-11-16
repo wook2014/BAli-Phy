@@ -92,12 +92,20 @@ public:
 
     /// the prior for the model, on the same scale as proposal densities
     virtual log_double_t prior() const;
-    virtual log_double_t probability() const {return prior() * likelihood();}
-    virtual log_double_t likelihood() const {return 1.0;}
+    virtual log_double_t probability() const;
+    virtual log_double_t likelihood() const;
 
-    virtual log_double_t heated_prior() const {return prior();}
-    virtual log_double_t heated_likelihood() const {return likelihood();}
-    virtual log_double_t heated_probability() const {return heated_prior() * heated_likelihood();}
+    virtual log_double_t heated_prior() const;
+    virtual log_double_t heated_likelihood() const;
+    virtual log_double_t heated_probability() const;
+
+    virtual log_double_t prior_ratio(const Model& M) const;
+    virtual log_double_t likelihood_ratio(const Model& M) const;
+    virtual log_double_t probability_ratio(const Model& M) const;
+
+    virtual log_double_t heated_prior_ratio(const Model& M) const;
+    virtual log_double_t heated_likelihood_ratio(const Model& M) const;
+    virtual log_double_t heated_probability_ratio(const Model& M) const;
 
     bool has_bounds(int i) const;
     const Bounds<double>& get_bounds(int i) const;

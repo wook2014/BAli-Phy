@@ -365,11 +365,10 @@ log_double_t context::get_probability() const
     return memory()->probability_for_context(context_index);
 }
 
-int context::add_probability_factor(const expression_ref& E)
+log_double_t context::get_probability_ratio(const context& C1) const
 {
-    return memory()->register_probability(preprocess(E));
+    return memory()->probability_ratio_for_contexts(C1.context_index, context_index);
 }
-
 
 void context::collect_garbage() const
 {

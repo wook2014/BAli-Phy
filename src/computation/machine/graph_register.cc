@@ -351,7 +351,14 @@ void reg_heap::dec_probability(int rc)
     prs_list.push_back(r);
 }
 
-double id(double x) {return x;}
+// This doesn't handle temperatures yet.
+// Currently our heated_prior and our heated_likelihood work differently:
+//  - the alignment prior is a function of the temperature
+//  - whereas the likelihood just raises the likelihood to the power 1/T
+log_double_t reg_heap::probability_ratio_for_contexts(int c1, int c2)
+{
+    return probability_for_context(c2)/probability_for_context(c1);
+}
 
 log_double_t reg_heap::probability_for_context_diff(int c)
 {
