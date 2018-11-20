@@ -1611,7 +1611,7 @@ bool accept_MH(const Model& P1,const Model& P2,log_double_t rho)
 	std::cerr<<endl<<endl;
     }
 
-    log_double_t ratio = rho*P2.heated_probability_ratio(p1);
+    log_double_t ratio = rho*P2.heated_probability_ratio(P1);
 
     if (log_verbose >= 3) std::cerr<<" probability ratio = "<<ratio<<"\n";
 

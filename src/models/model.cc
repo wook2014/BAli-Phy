@@ -145,15 +145,26 @@ log_double_t Model::probability() const {return prior() * likelihood();}
 log_double_t Model::likelihood() const {return 1.0;}
 
 log_double_t Model::heated_prior() const {return prior();}
-log_double_t Model::heated_likelihood() const {return likelihood();}
-log_double_t Model::heated_probability() const {return heated_prior() * heated_likelihood();}
+
+log_double_t Model::heated_likelihood() const
+{
+    if (get_beta() == 0)
+	return 1.0;
+    else
+	return pow(likelihood(), get_beta());
+}
+
+log_double_t Model::heated_probability() const
+{
+    return heated_prior() * heated_likelihood();
+}
 
 log_double_t Model::prior_ratio(const Model& M) const
 {
     return get_probability_ratio(M);
 }
 
-log_double_t Model::likelihood_ratio(const Model& M) const
+log_double_t Model::likelihood_ratio(const Model&) const
 {
     return 1.0;
 }
@@ -170,7 +181,10 @@ log_double_t Model::heated_prior_ratio(const Model& M) const
 
 log_double_t Model::heated_likelihood_ratio(const Model& M) const
 {
-    return likelihood_ratio(M);
+    if (get_beta() == 0)
+	return 1.0;
+    else
+	return pow(likelihood_ratio(M), get_beta());
 }
 
 log_double_t Model::heated_probability_ratio(const Model& M) const
