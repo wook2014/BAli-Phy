@@ -320,6 +320,8 @@ bool reg_heap::inc_probability_for_reg(int r)
     assert(reg_is_changeable(r));
     int rc = result_index_for_reg(r);
 
+    if (not reg_exists(r)) return false; // reg does not exist in this context!
+
     if (rc > 0 and results[rc].flags.test(0)) return true; // already included
 
     incremental_evaluate(r);
