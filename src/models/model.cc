@@ -189,6 +189,9 @@ log_double_t Model::heated_likelihood_ratio(const Model& M) const
 
 log_double_t Model::heated_probability_ratio(const Model& M) const
 {
+    // How do we compute the ratio for these things without moving back and forth?
+    // I guess the obvious answer is to actually compute the likelihood in the machine...
+    // .. and to actually return both the likelihood ratios and the prior ratios separately...
     return heated_prior_ratio(M) * heated_likelihood_ratio(M);
 }
 
