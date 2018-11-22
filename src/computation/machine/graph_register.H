@@ -96,6 +96,8 @@ public:
 
     std::pair<int, int> created_by;
 
+    std::bitset<8> flags;
+
     void clear();
 
     void check_cleared();
@@ -153,6 +155,8 @@ class reg_heap: public Object
 
     mutable int n_active_scratch_lists = 0;
     mutable std::vector< object_ptr<Vector<int> > > scratch_lists;
+
+    std::vector<std::function<void(int)>> reroot_handlers;
 
     void get_more_memory();
 

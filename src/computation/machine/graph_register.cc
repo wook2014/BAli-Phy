@@ -182,14 +182,17 @@ reg& reg::operator=(reg&& R) noexcept
 
     created_by = std::move(R.created_by);
 
+    flags = R.flags;
+
     return *this;
 }
 
 reg::reg(reg&& R) noexcept
 :C( std::move(R.C) ),
-			 type ( R.type ),
-			 n_heads( R.n_heads ),
-			 created_by( std::move(R.created_by) )
+ type ( R.type ),
+ n_heads( R.n_heads ),
+ created_by( std::move(R.created_by) ),
+ flags ( std::move(R.flags) )
 { }
 
 void reg::clear()
@@ -197,6 +200,7 @@ void reg::clear()
     assert(n_heads == 0);
     C.clear();
     type = type_t::unknown;
+    flags.reset();
 }
 
 void reg::check_cleared()
@@ -206,6 +210,7 @@ void reg::check_cleared()
     assert(n_heads == 0);
     assert(created_by.first == 0);
     assert(created_by.second == 0);
+    assert(flags.none());
 }
 
 void mapping::add_value(int r, int v) 
@@ -294,6 +299,8 @@ void reg_heap::register_probability(int r)
     }
     else
     {
+	regs.access(r).flags.set(0);
+
 	assert(reg_is_changeable(r));
 
 	int rc = result_index_for_reg(r);
@@ -359,7 +366,68 @@ void reg_heap::dec_probability(int rc)
 //  - whereas the likelihood just raises the likelihood to the power 1/T
 log_double_t reg_heap::probability_ratio_for_contexts(int c1, int c2)
 {
-    return probability_for_context(c2)/probability_for_context(c1);
+#if DEBUG_MACHINE >= 2
+    for(auto x : prog_temp)
+	assert(x == 0);
+#endif
+
+    // 1. reroot to c1 and force the program
+    auto pr1 = probability_for_context(c1);
+
+    // 2. install another reroot handler
+    vector<pair<int,int>> original_pdf_results;
+
+    std::function<void(int)> handler = [&original_pdf_results,this](int old_root)
+    {
+	for(auto& p: tokens[old_root].delta_result())
+	{
+	    int r =  p.first;
+	    int rc = p.second;
+	    if (rc > 0 and regs.access(r).flags.test(0) and (prog_temp[r]&4)==0)
+	    {
+		prog_temp[r] |= 4;
+		original_pdf_results.push_back(p);
+	    }
+	}
+    };
+
+    reroot_handlers.push_back(handler);
+    
+    // 3. reroot to c2 and force the program
+    auto pr2 = probability_for_context(c2);
+
+    // 4. compute the ratio only for (i) changed pdfs that (ii) exist in both c1 and c2
+    log_double_t ratio = 1.0;
+    for(auto& p: original_pdf_results)
+    {
+	int pdf_reg = p.first;
+	int rc1 = p.second;
+
+	assert((prog_temp[pdf_reg] & 4) == 4);
+
+	prog_temp[pdf_reg] &= ~4;
+
+	if (has_result(pdf_reg))
+	{
+	    int result_reg1 = results[rc1].value;
+	    int result_reg2 = result_value_for_reg(pdf_reg);
+	    log_double_t r = (*this)[result_reg2].exp.as_log_double() / (*this)[result_reg1].exp.as_log_double();
+	    ratio *= r;
+	}
+    }
+    
+#if DEBUG_MACHINE >= 2
+    for(auto x : prog_temp)
+	assert(x == 0);
+#endif
+
+    // 5. remove the reroot handler
+    reroot_handlers.pop_back();
+    
+    if (pr1 > 0.0 and pr2 > 0.0)
+	assert( std::abs( (pr2/pr1).log() - ratio.log() ) < 1.0e-9 );
+
+    return ratio;
 }
 
 log_double_t reg_heap::probability_for_context_diff(int c)
@@ -502,13 +570,13 @@ double reg_heap::get_rate_for_reg(int r)
 
 int reg_heap::step_index_for_reg(int r) const 
 {
-    assert(prog_steps[r] > 0);
+    assert(prog_steps[r] != 0);
     return prog_steps[r];
 }
 
 int reg_heap::result_index_for_reg(int r) const 
 {
-    assert(prog_results[r] > 0);
+    assert(prog_results[r] != 0);
     return prog_results[r];
 }
 
