@@ -139,6 +139,7 @@ void reg_heap::trace(vector<int>& remap)
     vector<int>& used_regs = get_scratch_list();
     vector<int>& used_steps = get_scratch_list();
     vector<int>& used_results = get_scratch_list();
+    int step_index = 0, result_index = 0;
 
     auto mark_reg = [this,&used_regs](int r) {
 	assert(r > 0);
@@ -187,60 +188,66 @@ void reg_heap::trace(vector<int>& remap)
 	}
     }
 
-    // 5. Mark all steps/results at heads in non-root tokens
-    for(int t=0;t<get_n_tokens();t++)
+    vector<int> active_tokens = {root_token};
+    for(int i=0;i<active_tokens.size();i++)
     {
-	if (not token_is_used(t)) continue;
-
-	if (is_root_token(t)) continue;
-
-	// 5.1 Mark all steps at heads in non-root tokens.
-	// FIXME - We can remove this after we maintain references to invalidated computations.
-	//         Then there should always be a result for every step, valid or invalid.
-	for(auto [r,step]: tokens[t].delta_step())
-	    if (regs.is_marked(r) and step > 0)
-		mark_step(step);
-
-	// 5.2 Mark all results at heads in non-root tokens.
-	// NOTE - The corresponding head, whatever it is, must ALSO be marked,
-	//        since we mark all steps at heads.
-	for(const auto& [r,result]: tokens[t].delta_result())
-	    if (regs.is_marked(r) and result > 0)
-		mark_result(result);
+	int t = active_tokens[t];
+	for(int t2: tokens[t].children)
+	    active_tokens.push_back(t2);
     }
 
-    // 6. Trace unwalked steps and results
-    int step_index = 0, result_index = 0;
-
-    while(step_index < used_steps.size() or result_index < used_results.size())
+    // 5. Mark all steps/results at heads in non-root tokens
+    for(int t: active_tokens)
     {
-	// 6.1 Trace unwalked steps
-	for(;step_index < used_steps.size();step_index++)
+	assert(token_is_used(t));
+
+	if (not is_root_token(t))
 	{
-	    const auto& S = steps[used_steps[step_index]];
-	    assert(S.source_reg);
+	    // 5.1 Mark all steps at heads in non-root tokens.
+	    // FIXME - We can remove this after we maintain references to invalidated computations.
+	    //         Then there should always be a result for every step, valid or invalid.
+	    for(const auto& [r,step]: tokens[t].delta_step())
+		if (regs.is_marked(r) and step > 0)
+		    mark_step(step);
 
-	    // 6.1.1 Visit called reg
-	    if (S.call > 0)
-		mark_reg(S.call);
-
-	    // 6.1.2 Visit used results
-	    for(const auto& rc: S.used_inputs)
-		mark_result(rc.first);
+	    // 5.2 Mark all results at heads in non-root tokens.
+	    // NOTE - The corresponding head, whatever it is, must ALSO be marked,
+	    //        since we mark all steps at heads.
+	    for(const auto& [r,result]: tokens[t].delta_result())
+		if (regs.is_marked(r) and result > 0)
+		    mark_result(result);
 	}
 
-	// 6.2 Trace unwalked results
-	for(;result_index < used_results.size();result_index++)
+	while(step_index < used_steps.size() or result_index < used_results.size())
 	{
-	    const auto& R = results[used_results[result_index]];
-	    assert(R.source_reg);
+	    // 6.1 Trace unwalked steps
+	    for(;step_index < used_steps.size();step_index++)
+	    {
+		const auto& S = steps[used_steps[step_index]];
+		assert(S.source_reg);
 
-	    // 6.2.1 Visit associated step
-	    mark_step(R.source_step);
+		// 6.1.1 Visit called reg
+		if (S.call > 0)
+		    mark_reg(S.call);
 
-	    // 6.2.2 Visit called_result
-	    if (R.call_edge.first > 0)
-		mark_result(R.call_edge.first);
+		// 6.1.2 Visit used results
+		for(const auto& rc: S.used_inputs)
+		    mark_result(rc.first);
+	    }
+
+	    // 6.2 Trace unwalked results
+	    for(;result_index < used_results.size();result_index++)
+	    {
+		const auto& R = results[used_results[result_index]];
+		assert(R.source_reg);
+
+		// 6.2.1 Visit associated step
+		mark_step(R.source_step);
+
+		// 6.2.2 Visit called_result
+		if (R.call_edge.first > 0)
+		    mark_result(R.call_edge.first);
+	    }
 	}
     }
 
