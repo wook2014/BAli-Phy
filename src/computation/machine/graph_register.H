@@ -339,6 +339,9 @@ private:
 
     std::vector<int> prog_steps;
     std::vector<int> prog_results;
+    std::vector<char> prog_unforced_step;
+    std::vector<char> prog_unforced_result;
+
     mutable std::vector<std::bitset<8>> prog_temp;
   
 public:
