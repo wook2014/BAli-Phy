@@ -254,6 +254,8 @@ size_t reg_heap::size() const
     assert(regs.size() == prog_steps.size());
     assert(regs.size() == prog_results.size());
     assert(regs.size() == prog_temp.size());
+    assert(regs.size() == prog_unforced_step.size());
+    assert(regs.size() == prog_unforced_result.size());
     return regs.size();
 }
 
@@ -1174,6 +1176,8 @@ void reg_heap::resize(int s)
     // Extend program.  Use regs.size() instead of size()
     prog_steps.resize(regs.size());
     prog_results.resize(regs.size());
+    prog_unforced_step.resize(regs.size());
+    prog_unforced_result.resize(regs.size());
     prog_temp.resize(regs.size());
 
     // Now we can use size() again.
@@ -1181,9 +1185,13 @@ void reg_heap::resize(int s)
     {
 	prog_steps[i] = non_computed_index;
 	prog_results[i] = non_computed_index;
+	prog_unforced_step[i] = 1;
+	prog_unforced_result[i] = 1;
 
 	assert(prog_steps[i] == non_computed_index);
 	assert(prog_results[i] == non_computed_index);
+	assert(prog_unforced_step[i] == 1);
+	assert(prog_unforced_result[i] == 1);
 	assert(prog_temp[i].none());
     }
 }
@@ -1698,6 +1706,8 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
      P(new Program(L)),
      prog_steps(1,non_existant_index),
      prog_results(1, non_existant_index),
+     prog_unforced_step(1,1),
+     prog_unforced_result(1,1),
      prog_temp(1)
 {
 }
