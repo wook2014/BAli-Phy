@@ -77,10 +77,16 @@ void reg_heap::reroot_at(int t)
     // 3. Change the relative mappings
     total_steps_pivoted += tokens[t].delta_step().size();
     total_results_pivoted += tokens[t].delta_result().size();
+
     pivot_mapping(prog_steps, tokens[t].vm_step);
     std::swap(tokens[parent].vm_step, tokens[t].vm_step);
     pivot_mapping(prog_results, tokens[t].vm_result);
     std::swap(tokens[parent].vm_result, tokens[t].vm_result);
+
+    pivot_mapping(prog_unforced_step, tokens[t].vm_unforced_step);
+    std::swap(tokens[parent].vm_unforced_step, tokens[t].vm_unforced_step);
+    pivot_mapping(prog_unforced_result, tokens[t].vm_unforced_result);
+    std::swap(tokens[parent].vm_unforced_result, tokens[t].vm_unforced_result);
 
     // 4. Alter the inheritance tree
     tokens[parent].parent = t;

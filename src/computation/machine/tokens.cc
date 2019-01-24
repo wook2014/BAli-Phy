@@ -59,6 +59,10 @@ void reg_heap::destroy_all_computations_in_token(int t)
 	    results.reclaim_used(rc);
     }
     tokens[t].vm_result.clear();
+
+    tokens[t].vm_unforced_step.clear();
+
+    tokens[t].vm_unforced_result.clear();
 }
 
 void reg_heap::release_tip_token(int t)
@@ -109,6 +113,8 @@ void reg_heap::release_tip_token(int t)
     // 5. Make sure the token is empty
     assert(tokens[t].vm_step.empty());
     assert(tokens[t].vm_result.empty());
+    assert(tokens[t].vm_unforced_step.empty());
+    assert(tokens[t].vm_unforced_result.empty());
 }
 
 // Given parent -> t1 -> t2 -> XXX, make t2 a child of parent instead of t1.
@@ -210,6 +216,38 @@ void reg_heap::merge_split_mappings(const vector<int>& knuckle_tokens)
 	merge_split_mapping_(tokens[t].vm_step, tokens[child_token].vm_step, prog_temp);
     }
     unload_map(tokens[child_token].vm_step, prog_temp);
+
+    load_map(tokens[child_token].vm_unforced_step, prog_temp);
+    for(int t: knuckle_tokens)
+    {
+	assert(token_is_used(t));
+	assert(not tokens[t].is_referenced());
+	assert(tokens[t].children.size() == 1);
+
+	assert(tokens[t].version <= tokens[child_token].version);
+
+	// The child token (t2) needs to be up-to-date with respect to the parent token.
+	assert(tokens[t].version <= tokens[child_token].version);
+
+	merge_split_mapping_(tokens[t].vm_unforced_step, tokens[child_token].vm_unforced_step, prog_temp);
+    }
+    unload_map(tokens[child_token].vm_unforced_step, prog_temp);
+
+    load_map(tokens[child_token].vm_unforced_result, prog_temp);
+    for(int t: knuckle_tokens)
+    {
+	assert(token_is_used(t));
+	assert(not tokens[t].is_referenced());
+	assert(tokens[t].children.size() == 1);
+
+	assert(tokens[t].version <= tokens[child_token].version);
+
+	// The child token (t2) needs to be up-to-date with respect to the parent token.
+	assert(tokens[t].version <= tokens[child_token].version);
+
+	merge_split_mapping_(tokens[t].vm_unforced_result, tokens[child_token].vm_unforced_result, prog_temp);
+    }
+    unload_map(tokens[child_token].vm_unforced_result, prog_temp);
 }
 
 // Release any knuckle tokens that are BEFORE the child token, and then return the parent of the child token.
@@ -487,6 +525,8 @@ int reg_heap::get_unused_token()
     assert(tokens[t].children.empty());
     assert(tokens[t].vm_step.empty());
     assert(tokens[t].vm_result.empty());
+    assert(tokens[t].vm_unforced_step.empty());
+    assert(tokens[t].vm_unforced_result.empty());
     assert(not tokens[t].is_referenced());
 
     return t;

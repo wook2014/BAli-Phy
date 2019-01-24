@@ -1185,13 +1185,13 @@ void reg_heap::resize(int s)
     {
 	prog_steps[i] = non_computed_index;
 	prog_results[i] = non_computed_index;
-	prog_unforced_step[i] = 1;
-	prog_unforced_result[i] = 1;
+	prog_unforced_step[i] = unforced_index;
+	prog_unforced_result[i] = unforced_index;
 
 	assert(prog_steps[i] == non_computed_index);
 	assert(prog_results[i] == non_computed_index);
-	assert(prog_unforced_step[i] == 1);
-	assert(prog_unforced_result[i] == 1);
+	assert(prog_unforced_step[i] == unforced_index);
+	assert(prog_unforced_result[i] == unforced_index);
 	assert(prog_temp[i].none());
     }
 }
@@ -1704,10 +1704,10 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
      steps(1),
      results(1),
      P(new Program(L)),
-     prog_steps(1,non_existant_index),
-     prog_results(1, non_existant_index),
-     prog_unforced_step(1,1),
-     prog_unforced_result(1,1),
+     prog_steps(1, non_computed_index),
+     prog_results(1, non_computed_index),
+     prog_unforced_step(1, unforced_index),
+     prog_unforced_result(1, unforced_index),
      prog_temp(1)
 {
 }
