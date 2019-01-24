@@ -179,12 +179,57 @@ void reg_heap::unshare_regs(int t)
 #endif
 
     total_invalidate++;
-  
+
     constexpr int result_bit = 0;
     constexpr int step_bit = 1;
-
+    constexpr int unforced_result_bit = 2;
+    constexpr int unforced_step_bit = 3;
+  
     auto& vm_result = tokens[t].vm_result;
     auto& vm_step = tokens[t].vm_step;
+    auto& vm_unforced_step = tokens[t].vm_unforced_step;
+    auto& vm_unforced_result = tokens[t].vm_unforced_result;
+
+    // find all regs in t that are not shared from the root
+    const auto& delta_result = vm_result.delta();
+    const auto& delta_step = vm_step.delta();
+    const auto& delta_unforced_step = vm_unforced_step.delta();
+    const auto& delta_unforced_result = vm_unforced_result.delta();
+
+    int n_delta_result0 = delta_result.size();
+    int n_delta_step0 = delta_step.size();
+
+    auto check_bits = [&](int r)
+			  {
+			      // result => unforced_result;
+			      assert(not prog_temp[r].test(result_bit) or prog_temp[r].test(unforced_result_bit));
+			      // step => unforced_step;
+			      assert(not prog_temp[r].test(step_bit) or prog_temp[r].test(unforced_step_bit));
+			      // step => result
+			      assert(not prog_temp[r].test(step_bit) or prog_temp[r].test(result_bit));
+			  };
+
+    auto unshare_unforced_step = [&](int r)
+			    {
+				check_bits(r);
+
+				if (not prog_temp[r].test(unforced_step_bit))
+				{
+				    prog_temp[r].set(unforced_step_bit);
+				    vm_unforced_step.add_value(r, unforced_index);
+				}
+			    };
+
+    auto unshare_unforced_result = [&](int r)
+			    {
+				check_bits(r);
+
+				if (not prog_temp[r].test(unforced_result_bit))
+				{
+				    prog_temp[r].set(unforced_result_bit);
+				    vm_unforced_result.add_value(r, unforced_index);
+				}
+			    };
 
     // find all regs in t that are not shared from the root
     const auto& delta_result = vm_result.delta();
@@ -195,35 +240,55 @@ void reg_heap::unshare_regs(int t)
 
     auto unshare_result = [&](int r)
                               {
+				  check_bits(r);
+
                                   // This result is already unshared
-                                  if (not prog_temp[r].test(result_bit))
-                                  {
-                                      prog_temp[r].set(result_bit);
-                                      vm_result.add_value(r, non_computed_index);
-                                  }
+				  if (prog_temp[r].test(result_bit)) return;
+
+				  unshare_unforced_result(r);
+
+				  prog_temp[r].set(result_bit);
+				  vm_result.add_value(r, non_computed_index);
                               };
 
     auto unshare_step = [&](int r)
                             {
+				check_bits(r);
+
                                 // This step is already unshared
-                                if (prog_temp[r].test(step_bit)) return;
+				if (prog_temp[r].test(step_bit)) return;
 
                                 unshare_result(r);
+				unshare_unforced_step(r);
 
-                                prog_temp[r].set(step_bit);
+				prog_temp[r].set(step_bit);
                                 vm_step.add_value(r, non_computed_index);
                             };
 
     // All the regs with delta_result set have results invalidated in t
-    for(auto [r,_]: delta_result)
+    for(const auto& [r,unforced]: delta_unforced_result)
+	prog_temp[r].set(unforced_result_bit);
+
+    // All the regs with delta_result set have results invalidated in t
+    for(const auto& [r,result]: delta_result)
+    {
         prog_temp[r].set(result_bit);
+	prog_temp[r].set(result_bit);
+	assert(prog_temp[r].test(result_bit));
+	assert(prog_temp[r].test(unforced_result_bit));
+    }
+
+    for(const auto& [r,unforced]: delta_unforced_step)
+	prog_temp[r].set(unforced_step_bit);
 
     // All the regs with delta_step set have steps (and results) invalidated in t
-    for(auto [r,_]: delta_step)
+    for(const auto& [r,step]: delta_step)
     {
-        prog_temp[r].set(step_bit);
-        assert(prog_temp[r].test(result_bit));
-        assert(prog_temp[r].test(step_bit));
+	prog_temp[r].set(step_bit);
+	assert(prog_temp[r].test(result_bit));
+	assert(prog_temp[r].test(step_bit));
+	assert(prog_temp[r].test(unforced_result_bit));
+	assert(prog_temp[r].test(unforced_step_bit));
     }
 
 #ifndef NDEBUG
@@ -241,6 +306,8 @@ void reg_heap::unshare_regs(int t)
             {
                 assert(prog_temp[r2].test(result_bit));
                 assert(prog_temp[r2].test(step_bit));
+	        assert(prog_temp[r2].test(unforced_result_bit));
+	        assert(prog_temp[r2].test(unforced_step_bit));
             }
         }
     }
@@ -304,10 +371,13 @@ void reg_heap::unshare_regs(int t)
 #endif
 
     // Erase the marks that we made on prog_temp.
-    for(auto [r,_]: delta_result)
+    for(const auto& p: delta_unforced_result)
     {
-        prog_temp[r].reset(result_bit);
-        prog_temp[r].reset(step_bit);
+	int r = p.first;
+	prog_temp[r].reset(result_bit);
+	prog_temp[r].reset(step_bit);
+	prog_temp[r].reset(unforced_result_bit);
+	prog_temp[r].reset(unforced_step_bit);
     }
 
     total_results_invalidated += (delta_result.size() - n_delta_result0);
@@ -322,5 +392,3 @@ void reg_heap::unshare_regs(int t)
     check_used_regs();
 #endif
 }
-
-
