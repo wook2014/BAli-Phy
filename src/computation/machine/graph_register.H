@@ -91,7 +91,9 @@ struct Result
 
 constexpr int non_computed_index = -1;
 
-constexpr int non_existant_index = -2;
+constexpr int forced_index = 0;
+
+constexpr int unforced_index = 1;
 
 class reg
 {
@@ -340,6 +342,8 @@ public:
 
 	mapping<int> vm_result;
 	mapping<int> vm_step;
+	mapping<char> vm_unforced_step;
+	mapping<char> vm_unforced_result;
 
 	bool used = false;
 	long version = 0;
