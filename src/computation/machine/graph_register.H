@@ -81,7 +81,7 @@ struct Result
 
 constexpr int non_computed_index = -1;
 
-constexpr int forced_index = 0;
+constexpr int forced_index = -1;
 
 constexpr int unforced_index = 1;
 

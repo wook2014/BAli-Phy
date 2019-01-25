@@ -654,7 +654,7 @@ bool reg_heap::has_result(int r) const
 
 bool reg_heap::unforced_step(int r) const
 {
-    return prog_unforced_step[r] != forced_index;
+    return prog_unforced_step[r] > 0;
 }
 
 void reg_heap::force_step(int r)
@@ -681,7 +681,7 @@ void reg_heap::force_step(int r)
 
 bool reg_heap::unforced_result(int r) const
 {
-    return prog_unforced_result[r] != forced_index;
+    return prog_unforced_result[r] > 0;
 }
 
 void reg_heap::force_result(int r)
