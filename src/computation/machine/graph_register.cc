@@ -882,6 +882,9 @@ void reg_heap::set_result_value_for_reg(int r1)
     auto& RES1 = results[res1];
     RES1.value = value;
 
+    // Mark the result forced.
+    prog_unforced_result[r1] = forced_index;
+
     // If R2 is WHNF then we are done
     if (regs.access(call).type == reg::type_t::constant) return;
 
@@ -957,6 +960,8 @@ void reg_heap::set_call(int R1, int R2)
 
     // Set the call
     set_call_from_step(step_index_for_reg(R1), R2);
+
+    prog_unforced_step[R1] = forced_index;
 }
 
 void reg_heap::set_call_from_step(int s, int R2)
