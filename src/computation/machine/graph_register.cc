@@ -749,6 +749,54 @@ bool reg_heap::has_result(int r) const
     return result_index_for_reg(r)>0;
 }
 
+bool reg_heap::unforced_step(int r) const
+{
+    return prog_unforced_step[r] != forced_index;
+}
+
+void reg_heap::force_step(int r)
+{
+    int s = step_index_for_reg(r);
+    const auto& S = steps.access(s);
+
+    for(auto& [result,_]: S.used_inputs)
+    {
+	int r2 = results.access(result).source_reg;
+	incremental_evaluate(r2);
+    }
+
+    bool missing_edges = false;
+    for(auto r2: S.forced_regs)
+    {
+	incremental_evaluate(r2);
+	if (missing_edges)
+	    set_forced_input(s, r2);
+    }
+
+    prog_unforced_step[r] = forced_index;
+}
+
+bool reg_heap::unforced_result(int r) const
+{
+    return prog_unforced_result[r] != forced_index;
+}
+
+void reg_heap::force_result(int r)
+{
+    const auto& S = step_for_reg(r);
+
+    assert(S.call > 0);
+
+    incremental_evaluate(S.call);
+
+    prog_unforced_result[r] = forced_index;
+}
+
+bool reg_heap::unforced_reg(int r) const
+{
+    return unforced_result(r) or unforced_step(r);
+}
+
 int reg_heap::value_for_reg(int r) const 
 {
     assert(not (*this)[r].exp.is_index_var());
