@@ -1140,9 +1140,11 @@ void reg_heap::set_reg_value(int R, closure&& value, int t)
 
     assert(tokens[t].vm_step.empty());
     tokens[t].vm_step.add_value(R,s);
+    tokens[t].vm_unforced_step.add_value(R,forced_index);
 
     assert(tokens[t].vm_result.empty());
     tokens[t].vm_result.add_value(R, non_computed_index);
+    tokens[t].vm_unforced_result.add_value(R, unforced_index);
 
     assert(not children_of_token(t).size());
 
