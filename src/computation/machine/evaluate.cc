@@ -287,7 +287,22 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 
 		if (value)
 		{
+		    if (unforced_step(R))
+		    {
+			std::abort();
+			force_step(R);
+		    }
+
+		    if (unforced_result(R))
+		    {
+			std::abort();
+			force_result(R);
+		    }
+
 		    total_changeable_eval_with_result++;
+
+		    assert(not unforced_step(R));
+		    assert(not unforced_result(R));
 		    return {R, value};
 		}
 	    }
@@ -295,7 +310,15 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	    // If we know what to call, then call it and use it to set the value
 	    if (reg_has_call(R))
 	    {
-		// Evaluate S, looking through unchangeable redirections
+		assert(unforced_result(R));
+
+		if (unforced_step(R))
+		{
+		    std::abort();
+		    force_step(R);
+		}
+
+                // Evaluate S, looking through unchangeable redirections
 		auto [call, value] = incremental_evaluate(call_for_reg(R));
 
 		// If computation_for_reg(R).call can be evaluated to refer to S w/o moving through any changable operations, 
@@ -309,6 +332,9 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		// R gets its value from S.
 		set_result_value_for_reg( R);
 		total_changeable_eval_with_call++;
+
+		assert(not unforced_result(R));
+		assert(not unforced_step(R));
 		return {R, value};
 	    }
 	}
@@ -367,6 +393,8 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	// 3. Reduction: Operation (includes @, case, +, etc.)
 	else
 	{
+	    assert(unforced_step(R));
+
 	    // We keep the (same) computation here, until we prove that we don't need one.
 	    // We don't need one if we evaluate to WHNF, and then we remove it.
 	    if (not has_step(R))
@@ -439,6 +467,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 
 		    set_call(R, r3);
 		    set_result_value_for_reg(R);
+
 		    return {R, value};
 		}
 	    }
