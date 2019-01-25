@@ -28,7 +28,8 @@ struct Step
 
     /// Which reg's were used to reduce this expression?
     boost::container::small_vector< std::pair<int,int>, 2 > used_inputs;
-    boost::container::small_vector< int, 2 > forced_regs;
+    boost::container::small_vector< std::pair<int,int>, 2 > forced_inputs;
+    boost::container::small_vector< int, 2> forced_regs;
     boost::container::small_vector< int, 2 > created_regs;
 
     std::bitset<8> flags;
@@ -60,6 +61,9 @@ struct Result
   
     /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
     boost::container::small_vector<std::pair<int,int>, 2> used_by;
+
+    /// Which pairs (reg,slot) FORCED the reduction value of C (via an operation)?
+    boost::container::small_vector<std::pair<int,int>, 2> forced_by;
 
     /// Which reduction values made use of the value of this expression (via call)
     boost::container::small_vector<int, 5> called_by;
@@ -134,8 +138,12 @@ class reg_heap: public Object
     void reclaim_used(int);
 
     bool result_is_called_by(int, int) const;
+
     bool result_is_used_by(int, int) const;
     bool reg_is_used_by(int, int) const;
+
+    bool result_is_forced_by(int, int) const;
+    bool reg_is_forced_by(int, int) const;
 
 public:
     const closure& closure_at(int r) const {assert(r); return regs.access(r).C;}

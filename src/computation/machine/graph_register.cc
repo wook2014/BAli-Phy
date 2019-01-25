@@ -98,6 +98,7 @@ void Step::clear()
     source_reg = -1;
     call = 0;
     truncate(used_inputs);
+    truncate(forced_inputs);
     truncate(forced_regs);
     assert(created_regs.empty());
 
@@ -109,6 +110,7 @@ void Step::check_cleared()
 {
     assert(not call);
     assert(used_inputs.empty());
+    assert(forced_inputs.empty());
     assert(forced_regs.empty());
     assert(created_regs.empty());
     assert(flags.none());
@@ -119,6 +121,7 @@ Step& Step::operator=(Step&& S) noexcept
     source_reg = S.source_reg;
     call = S.call;
     used_inputs  = std::move( S.used_inputs );
+    forced_inputs  = std::move( S.forced_inputs );
     forced_regs  = std::move( S.forced_regs );
     created_regs  = std::move( S.created_regs );
     flags = S.flags;
@@ -130,6 +133,7 @@ Step::Step(Step&& S) noexcept
 :source_reg( S.source_reg),
  call ( S.call ),
  used_inputs ( std::move(S.used_inputs) ),
+ forced_inputs (std::move(S.forced_inputs) ),
  forced_regs (std::move(S.forced_regs) ),
  created_regs ( std::move(S.created_regs) ),
  flags ( S.flags )
@@ -142,6 +146,7 @@ void Result::clear()
     value = 0;
     truncate(call_edge);
     truncate(used_by);
+    truncate(forced_by);
     truncate(called_by);
 
     // This should already be cleared.
@@ -154,6 +159,7 @@ void Result::check_cleared()
     assert(not call_edge.first);
     assert(called_by.empty());
     assert(used_by.empty());
+    assert(forced_by.empty());
     assert(flags.none());
 }
 
@@ -164,6 +170,7 @@ Result& Result::operator=(Result&& R) noexcept
     source_reg = R.source_reg;
     call_edge = R.call_edge;
     used_by = std::move( R.used_by );
+    forced_by = std::move( R.forced_by );
     called_by = std::move( R.called_by );
     flags = R.flags;
 
@@ -176,6 +183,7 @@ Result::Result(Result&& R) noexcept
 			 value (R.value), 
 			 call_edge (R.call_edge),
 			 used_by ( std::move( R.used_by) ),
+			 forced_by ( std::move( R.forced_by) ),
 			 called_by ( std::move( R.called_by) ),
 			 flags ( R.flags )
 { }
@@ -790,7 +798,15 @@ void reg_heap::set_forced_input(int s1, int R2)
     // So, we may as well forbid using an index_var as an input.
     assert(not expression_at(R2).is_index_var());
 
+    int res2 = result_index_for_reg(R2);
+
+    int back_index = results[res2].forced_by.size();
+    int forw_index = steps[s1].forced_inputs.size();
+    results[res2].forced_by.push_back({s1,forw_index});
+    steps[s1].forced_inputs.push_back({res2,back_index});
     steps[s1].forced_regs.push_back(R2);
+
+    assert(result_is_forced_by(s1,res2));
 }
 
 void reg_heap::set_call(int R1, int R2)
@@ -1286,12 +1302,29 @@ bool reg_heap::result_is_used_by(int s1, int res2) const
     return false;
 }
 
+bool reg_heap::result_is_forced_by(int s1, int res2) const
+{
+    for(auto& [s,index]: results[res2].forced_by)
+	if (s == s1)
+	    return true;
+
+    return false;
+}
+
 bool reg_heap::reg_is_used_by(int r1, int r2) const
 {
     int s1 = step_index_for_reg(r1);
     int res2 = result_index_for_reg(r2);
 
     return result_is_used_by(s1,res2);
+}
+
+bool reg_heap::reg_is_forced_by(int r1, int r2) const
+{
+    int s1 = step_index_for_reg(r1);
+    int res2 = result_index_for_reg(r2);
+
+    return result_is_forced_by(s1,res2);
 }
 
 void reg_heap::check_tokens() const
@@ -1580,6 +1613,30 @@ void reg_heap::clear_back_edges_for_step(int s)
 
 	    assert(steps[s2].used_inputs[i2].second == j);
 	    assert(results[forward2[i2].first].used_by[forward2[i2].second].second == i2);
+	}
+
+	backward.pop_back();
+    }
+    for(auto& forward: steps[s].forced_inputs)
+    {
+	auto [res,j] = forward;
+	auto& backward = results[res].forced_by;
+	assert(0 <= j and j < backward.size());
+
+	forward = {0,0};
+
+	if (j+1 < backward.size())
+	{
+	    // erase the backward edge by moving another backward edge on top of it.
+	    backward[j] = backward.back();
+	    auto [s2,i2] = backward[j];
+	    // adjust the forward edge for that backward edge
+	    auto& forward2 = steps[s2].forced_inputs;
+	    assert(0 <= i2 and i2 < forward2.size());
+	    forward2[i2].second = j;
+
+	    assert(steps[s2].forced_inputs[i2].second == j);
+	    assert(results[forward2[i2].first].forced_by[forward2[i2].second].second == i2);
 	}
 
 	backward.pop_back();
