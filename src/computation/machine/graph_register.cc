@@ -1117,7 +1117,9 @@ int reg_heap::allocate_reg_from_step_in_token(int s, int t)
 {
     int r = allocate_reg_from_step(s);
     tokens[t].vm_result.add_value(r, non_computed_index);
+    tokens[t].vm_unforced_result.add_value(r, unforced_index);
     tokens[t].vm_step.add_value(r, non_computed_index);
+    tokens[t].vm_unforced_step.add_value(r, unforced_index);
     return r;
 }
 
