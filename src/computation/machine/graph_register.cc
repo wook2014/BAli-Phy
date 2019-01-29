@@ -1777,6 +1777,32 @@ void reg_heap::clear_back_edges_for_result(int res)
 	}
 	backward.pop_back();
     }
+
+    // If this result is destroyed, the step that forced it may survive,
+    // so clear forward force-edges from any step that forced this result.
+    for(auto& backward: results[res].forced_by)
+    {
+	auto [step,j] = backward;
+	auto& forward = steps[step].forced_inputs;
+	assert(0 <= j and j < forward.size());
+
+	backward = {0,0};
+
+	if (j+1 < forward.size())
+	{
+	    //erase the forward edge by moving another forward edge on top of it.
+	    forward[j] = forward.back();
+	    auto [res2,i2] = forward[j];
+	    // adjust the forward edge for that backward edge
+	    auto& backward2 = results[res2].forced_by;
+	    assert( 0 <= i2 and i2 <= backward2.size());
+	    backward2[i2].second = j;
+
+	    assert(backward2[i2].first == step);
+	    assert(results[res2].forced_by[i2].second == j);
+	    assert(steps[backward2[i2].first].forced_inputs[backward2[i2].second].second == i2);
+	}
+    }
 }
 
 void reg_heap::clear_step(int r)
