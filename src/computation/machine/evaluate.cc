@@ -243,6 +243,10 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
     assert(is_completely_dirty(root_token));
     assert(regs.is_valid_address(R));
     assert(regs.is_used(R));
+    assert(has_step(R) or not has_result(R));
+    assert(has_result(R) or unforced_result(R));
+    assert(has_step(R) or (unforced_step(R) and reforce_step(R)));
+    assert(not reforce_step(R) or unforced_step(R));
 
 #ifndef NDEBUG
     if (reg_has_value(R))
@@ -297,10 +301,11 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	    // If we know what to call, then call it and use it to set the value
 	    if (reg_has_call(R))
 	    {
+		assert(not has_result(R));
 		assert(unforced_result(R));
 
-		if (unforced_step(R))
-		    force_step(R);
+		// Force the step if we need to.
+		if (unforced_step(R)) force_step(R);
 
                 // Evaluate S, looking through unchangeable redirections
 		auto [call, value] = incremental_evaluate(call_for_reg(R));
