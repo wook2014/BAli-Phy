@@ -83,10 +83,8 @@ void reg_heap::reroot_at(int t)
     pivot_mapping(prog_results, tokens[t].vm_result);
     std::swap(tokens[parent].vm_result, tokens[t].vm_result);
 
-    pivot_mapping(prog_unforced_step, tokens[t].vm_unforced_step);
-    std::swap(tokens[parent].vm_unforced_step, tokens[t].vm_unforced_step);
-    pivot_mapping(prog_unforced_result, tokens[t].vm_unforced_result);
-    std::swap(tokens[parent].vm_unforced_result, tokens[t].vm_unforced_result);
+    pivot_mapping(prog_unforced, tokens[t].vm_unforced);
+    std::swap(tokens[parent].vm_unforced, tokens[t].vm_unforced);
 
     // 4. Alter the inheritance tree
     tokens[parent].parent = t;
@@ -161,39 +159,47 @@ void reg_heap::unshare_regs(int t)
 
     constexpr int result_bit = 0;
     constexpr int step_bit = 1;
-    constexpr int unforced_result_bit = 2;
-    constexpr int unforced_step_bit = 3;
   
     auto& vm_result = tokens[t].vm_result;
     auto& vm_step = tokens[t].vm_step;
-    auto& vm_unforced_step = tokens[t].vm_unforced_step;
-    auto& vm_unforced_result = tokens[t].vm_unforced_result;
+    auto& vm_unforced = tokens[t].vm_unforced;
 
     // find all regs in t that are not shared from the root
     const auto& delta_result = vm_result.delta();
     const auto& delta_step = vm_step.delta();
-    const auto& delta_unforced_step = vm_unforced_step.delta();
-    const auto& delta_unforced_result = vm_unforced_result.delta();
+    const auto& delta_unforced = vm_unforced.delta();
 
     int n_delta_result0 = delta_result.size();
     int n_delta_step0 = delta_step.size();
 
+    auto add_bits = [&](int r, unsigned int mask)
+			{
+			    int index = prog_index[r];
+			    // Clearly no invalidate bits are set
+			    if (index == no_index)
+			    {
+				prog_index[r] = vm_unforced.delta().size();
+				vm_unforced.add_value(r, prog_unforced[r] | mask);
+			    }
+			    // Update the bits.
+			    else
+				vm_unforced.delta()[index].second |= mask;
+			    // Later, we might need to move the reg ahead of k to do further invalidations.
+			    // However, adding more bits does not affect propagation, since ANY set bit means the reg is not fully forced.
+			    assert(prog_index[r] != no_index);
+			};
+    auto unshare_reforce_step = [&](int r)
+			    {
+				add_bits(r, reforce_step_bit | unforced_step_bit);
+			    };
     auto unshare_unforced_step = [&](int r)
 			    {
-				if (not prog_temp[r].test(unforced_step_bit))
-				{
-				    prog_temp[r].set(unforced_step_bit);
-				    vm_unforced_step.add_value(r, unforced_index);
-				}
+				add_bits(r, unforced_step_bit);
 			    };
 
     auto unshare_unforced_result = [&](int r)
 			    {
-				if (not prog_temp[r].test(unforced_result_bit))
-				{
-				    prog_temp[r].set(unforced_result_bit);
-				    vm_unforced_result.add_value(r, unforced_index);
-				}
+				add_bits(r, unforced_result_bit);
 			    };
 
     auto unshare_result = [&](int r)
@@ -205,6 +211,8 @@ void reg_heap::unshare_regs(int t)
 
 				  prog_temp[r].set(result_bit);
 				  vm_result.add_value(r, non_computed_index);
+				  assert(prog_index[r] != no_index);
+				  assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
                               };
 
     auto unshare_step = [&](int r)
@@ -213,36 +221,42 @@ void reg_heap::unshare_regs(int t)
 				if (prog_temp[r].test(step_bit)) return;
 
                                 unshare_result(r);
-				unshare_unforced_step(r);
+				unshare_reforce_step(r);
 
 				prog_temp[r].set(step_bit);
                                 vm_step.add_value(r, non_computed_index);
                             };
 
     // All the regs with delta_result set have results invalidated in t
-    for(const auto& [r,unforced]: delta_unforced_result)
-	prog_temp[r].set(unforced_result_bit);
+    for(int i=0;i<delta_unforced.size();i++)
+    {
+	auto [r,_] = delta_unforced[i];
+	prog_index[r] = i;
+    }
 
     // All the regs with delta_result set have results invalidated in t
     for(const auto& [r,result]: delta_result)
     {
         prog_temp[r].set(result_bit);
-	prog_temp[r].set(result_bit);
-	assert(prog_temp[r].test(result_bit));
-	assert(prog_temp[r].test(unforced_result_bit));
-    }
 
-    for(const auto& [r,unforced]: delta_unforced_step)
-	prog_temp[r].set(unforced_step_bit);
+	assert(prog_index[r] != no_index);
+	if (result < 0)
+	    assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
+    }
 
     // All the regs with delta_step set have steps (and results) invalidated in t
     for(const auto& [r,step]: delta_step)
     {
 	prog_temp[r].set(step_bit);
 	assert(prog_temp[r].test(result_bit));
-	assert(prog_temp[r].test(step_bit));
-	assert(prog_temp[r].test(unforced_result_bit));
-	assert(prog_temp[r].test(unforced_step_bit));
+
+	assert(prog_index[r] != no_index);
+	if (step < 0)
+	{
+	    assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
+	    assert(delta_unforced[prog_index[r]].second & unforced_step_bit);
+	    assert(delta_unforced[prog_index[r]].second & reforce_step_bit);
+	}
     }
 
 #ifndef NDEBUG
@@ -260,8 +274,7 @@ void reg_heap::unshare_regs(int t)
             {
                 assert(prog_temp[r2].test(result_bit));
                 assert(prog_temp[r2].test(step_bit));
-	        assert(prog_temp[r2].test(unforced_result_bit));
-	        assert(prog_temp[r2].test(unforced_step_bit));
+	        assert(prog_index[r2] != no_index);
             }
         }
     }
@@ -274,116 +287,50 @@ void reg_heap::unshare_regs(int t)
         {
             const auto& Result = result_for_reg(r);
 
-            // Look at results that call the root's result (that is overridden in t)
+	    // Look at results that CALL the root's result (that is overridden in t)
             for(int res2: Result.called_by)
                 if (int r2 = results[res2].source_reg; prog_results[r2] == res2)
                     unshare_result(r2);
 
-            // Look at step that use the root's result (that is overridden in t)
+	    // Look at steps that USE the root's result (that is overridden in t)
             for(auto& [s2,_]: Result.used_by)
                 if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
                     unshare_step(r2);
 
-	    // Look at step that use the root's result (that is overridden in t)
-	    for(auto& [s2,index]: Result.forced_by)
-	    {
-		int r2 = steps[s2].source_reg;
-
-		// The root program's step at r2 is s2, which uses the root program's result at r
-		if (prog_steps[r2] == s2)
-		    unshare_unforced_step(r2);
-	    }
+	    // Look at steps that FORCE the root's result (that is overridden in t)
+	    for(auto& [s2,_]: Result.forced_by)
+		if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
+		    unshare_reforce_step(r2);
 	}
 
     // LOGIC: Marking something unforced will never give it an invalid result.
     //        Therefore, this logic need not go into the former loop.
-    int k=0,l=0;
-    while(k < delta_unforced_result.size() or l < delta_unforced_step.size())
+
+    for(int k=0;k<delta_unforced.size();k++)
     {
-	// Scan regs with different result in t that are used/called by root steps/results
-	for(;k<delta_unforced_result.size();k++)
-	{
-	    int r = delta_unforced_result[k].first;
+	auto [r,_] = delta_unforced[k];
 
-	    if (prog_temp[r].test(result_bit) or prog_temp[r].test(step_bit)) continue;
+	// If this has an invalid result then it will be handled above.
+	if (prog_temp[r].test(result_bit)) continue;
 
-	    if (not has_result(r)) continue;
+	if (not has_result(r)) continue;
 
-	    const auto& Result = result_for_reg(r);
+	const auto& Result = result_for_reg(r);
 
-	    // Look at results that call the root's result (that is overridden in t)
-	    for(int res2: Result.called_by)
-	    {
-		int r2 = results[res2].source_reg;
+	// Look at results that call the root's result (that is overridden in t)
+	for(int res2: Result.called_by)
+	    if (int r2 = results[res2].source_reg; prog_results[r2] == res2)
+		unshare_unforced_result(r2);
 
-		// The root program's result at r2 is res2, which calls the root program's result at r
-		if (prog_results[r2] == res2)
-		    unshare_unforced_result(r2);
-	    }
+	// Look at step that use the root's result (that is overridden in t)
+	for(auto& [s2,index]: Result.used_by)
+	    if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
+		unshare_unforced_step(r2);
 
-	    // Look at step that use the root's result (that is overridden in t)
-	    for(auto& [s2,index]: Result.used_by)
-	    {
-		int r2 = steps[s2].source_reg;
-
-		// The root program's step at r2 is s2, which uses the root program's result at r
-		if (prog_steps[r2] == s2)
-		    unshare_unforced_step(r2);
-	    }
-
-	    // Look at steps that force the root's result (that is overridden in t)
-	    for(auto& [s2,index]: Result.forced_by)
-	    {
-		int r2 = steps[s2].source_reg;
-
-		// The root program's step at r2 is s2, which forces the root program's result at r
-		if (prog_steps[r2] == s2)
-		    unshare_unforced_step(r2);
-	    }
-	}
-
-	// Scan regs with different result in t that are used/called by root steps/results
-	for(;l<delta_unforced_step.size();l++)
-	{
-	    int r = delta_unforced_step[l].first;
-
-	    if (prog_temp[r].test(result_bit) or prog_temp[r].test(step_bit)) continue;
-
-	    if (not has_result(r)) continue;
-
-	    const auto& Result = result_for_reg(r);
-
-	    // Look at results that call the root's result (that is overridden in t)
-	    for(int res2: Result.called_by)
-	    {
-		const auto& Result2 = results[res2];
-		int r2 = Result2.source_reg;
-
-		// The root program's result at r2 is res2, which calls the root program's result at r
-		if (prog_results[r2] == res2)
-		    unshare_unforced_result(r2);
-	    }
-
-	    // Look at step that use the root's result (that is overridden in t)
-	    for(auto& [s2,index]: Result.used_by)
-	    {
-		int r2 = steps[s2].source_reg;
-
-		// The root program's step at r2 is s2, which uses the root program's result at r
-		if (prog_steps[r2] == s2)
-		    unshare_unforced_step(r2);
-	    }
-
-	    // Look at steps that force the root's result (that is overridden in t)
-	    for(auto& [s2,index]: Result.forced_by)
-	    {
-		int r2 = steps[s2].source_reg;
-
-		// The root program's step at r2 is s2, which uses the root program's result at r
-		if (prog_steps[r2] == s2)
-		    unshare_unforced_step(r2);
-	    }
-	}
+	// Look at steps that force the root's result (that is overridden in t)
+	for(auto& [s2,index]: Result.forced_by)
+	    if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
+		unshare_unforced_step(r2);
     }
 
 
@@ -391,7 +338,6 @@ void reg_heap::unshare_regs(int t)
     int j=0; // FIXME if the existing steps don't share any created regs, then we don't have to scan them.
              // FIXME: while the overriding steps in the child should have their created regs unshared, the overridden steps in the root need not!
              //        this means that we need to scan all overridden steps each time :-(
-
     // Also unshare any results and steps that are for regs created in the root context.
     // LOGIC: Any reg that uses or call a created reg must either
     //          (i) be another created reg, or
@@ -427,14 +373,20 @@ void reg_heap::unshare_regs(int t)
 #endif
 
     // Erase the marks that we made on prog_temp.
-    for(const auto& p: delta_unforced_result)
+    for(const auto& [r,res]: delta_result)
     {
-	int r = p.first;
 	prog_temp[r].reset(result_bit);
 	prog_temp[r].reset(step_bit);
-	prog_temp[r].reset(unforced_result_bit);
-	prog_temp[r].reset(unforced_step_bit);
+
+	// check that all of the invalid results are also unforced results
+	assert(prog_index[r] != no_index);
+	if (res < 0)
+	    assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
     }
+
+    // Erase the marks that we made on prog_index
+    for(const auto& [r,_]: delta_unforced)
+	prog_index[r] = no_index;
 
     total_results_invalidated += (delta_result.size() - n_delta_result0);
     total_steps_invalidated += (delta_step.size() - n_delta_step0);
