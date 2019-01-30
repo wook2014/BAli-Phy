@@ -10,6 +10,7 @@
 #include "computation/expression/trim.H"
 #include "computation/expression/index_var.H"
 #include "computation/operations.H"
+#include "util/log-level.H"
 
 using std::string;
 using std::vector;
@@ -718,7 +719,10 @@ int reg_heap::incremental_evaluate_unchangeable_(int R)
 	    }
 	    catch (error_exception& e)
 	    {
-		throw;
+		if (log_verbose)
+		    throw_reg_exception(*this, root_token, R, e, false);
+		else
+		    throw;
 	    }
 	    catch (myexception& e)
 	    {

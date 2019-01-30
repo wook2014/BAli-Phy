@@ -272,9 +272,9 @@ size_t reg_heap::size() const
 {
     assert(regs.size() == prog_steps.size());
     assert(regs.size() == prog_results.size());
+    assert(regs.size() == prog_unforced.size());
+    assert(regs.size() == prog_index.size());
     assert(regs.size() == prog_temp.size());
-    assert(regs.size() == prog_unforced_step.size());
-    assert(regs.size() == prog_unforced_result.size());
     return regs.size();
 }
 
@@ -406,7 +406,7 @@ prob_ratios_t reg_heap::probability_ratios(int c1, int c2)
 	assert(x.none());
 #endif
 
-    constexpr int pdf_bit = 4;
+    constexpr int pdf_bit = 7;
 
     // 1. reroot to c1 and force the program
     evaluate_program(c1);
@@ -759,7 +759,14 @@ bool reg_heap::has_result(int r) const
 
 bool reg_heap::unforced_step(int r) const
 {
-    return prog_unforced_step[r] > 0;
+    // FIXME: check that if we have reforce_step, then we also have unforced_step
+    return prog_unforced[r] & unforced_step_bit;
+}
+
+bool reg_heap::reforce_step(int r) const
+{
+    // FIXME: check that if we have reforce_step, then we also have unforced_step
+    return prog_unforced[r] & reforce_step_bit;
 }
 
 void reg_heap::force_step(int r)
@@ -773,20 +780,20 @@ void reg_heap::force_step(int r)
 	incremental_evaluate(r2);
     }
 
-    bool missing_edges = false;
+    bool force_step = reforce_step(r);
     for(auto r2: S.forced_regs)
     {
 	incremental_evaluate(r2);
-	if (missing_edges)
-	    set_forced_input(s, r2);
+	if (force_step)
+	    set_forced_input(s, r2, false);
     }
 
-    prog_unforced_step[r] = forced_index;
+    prog_unforced[r] &= ~(reforce_step_bit|unforced_step_bit);
 }
 
 bool reg_heap::unforced_result(int r) const
 {
-    return prog_unforced_result[r] > 0;
+    return prog_unforced[r] & unforced_result_bit;
 }
 
 void reg_heap::force_result(int r)
@@ -797,12 +804,12 @@ void reg_heap::force_result(int r)
 
     incremental_evaluate(S.call);
 
-    prog_unforced_result[r] = forced_index;
+    prog_unforced[r] &= ~unforced_result_bit;
 }
 
 bool reg_heap::unforced_reg(int r) const
 {
-    return unforced_result(r) or unforced_step(r);
+    return unforced_result(r) or unforced_step(r) or reforce_step(r);
 }
 
 int reg_heap::value_for_reg(int r) const 
@@ -840,7 +847,7 @@ void reg_heap::set_result_value_for_reg(int r1)
     RES1.value = value;
 
     // Mark the result forced.
-    prog_unforced_result[r1] = forced_index;
+    prog_unforced[r1] &= ~unforced_result_bit;
 
     // If R2 is WHNF then we are done
     if (regs.access(call).type == reg::type_t::constant) return;
@@ -880,7 +887,7 @@ void reg_heap::set_used_input(int s1, int R2)
     assert(result_is_used_by(s1,res2));
 }
 
-void reg_heap::set_forced_input(int s1, int R2)
+void reg_heap::set_forced_input(int s1, int R2, bool first_execution)
 {
     assert(reg_is_changeable(R2));
 
@@ -901,7 +908,8 @@ void reg_heap::set_forced_input(int s1, int R2)
     int forw_index = steps[s1].forced_inputs.size();
     results[res2].forced_by.push_back({s1,forw_index});
     steps[s1].forced_inputs.push_back({res2,back_index});
-    steps[s1].forced_regs.push_back(R2);
+    if (first_execution)
+	steps[s1].forced_regs.push_back(R2);
 
     assert(result_is_forced_by(s1,res2));
 }
@@ -926,7 +934,8 @@ void reg_heap::set_call(int R1, int R2)
     // Set the call
     set_call_from_step(step_index_for_reg(R1), R2);
 
-    prog_unforced_step[R1] = forced_index;
+    // Clear the unforced_result bit
+    prog_unforced[R1] &= ~unforced_result_bit;
 }
 
 void reg_heap::set_call_from_step(int s, int R2)
@@ -1018,9 +1027,8 @@ int reg_heap::allocate_reg_from_step_in_token(int s, int t)
 {
     int r = allocate_reg_from_step(s);
     tokens[t].vm_result.add_value(r, non_computed_index);
-    tokens[t].vm_unforced_result.add_value(r, unforced_index);
     tokens[t].vm_step.add_value(r, non_computed_index);
-    tokens[t].vm_unforced_step.add_value(r, unforced_index);
+    tokens[t].vm_unforced.add_value(r, unforced_bits);
     return r;
 }
 
@@ -1059,11 +1067,12 @@ void reg_heap::set_reg_value(int R, closure&& value, int t)
 
     assert(tokens[t].vm_step.empty());
     tokens[t].vm_step.add_value(R,s);
-    tokens[t].vm_unforced_step.add_value(R,forced_index);
 
     assert(tokens[t].vm_result.empty());
     tokens[t].vm_result.add_value(R, non_computed_index);
-    tokens[t].vm_unforced_result.add_value(R, unforced_index);
+
+    assert(tokens[t].vm_unforced.empty());
+    tokens[t].vm_unforced.add_value(R, forced_bits | unforced_result_bit);
 
     assert(not children_of_token(t).size());
 
@@ -1352,8 +1361,8 @@ void reg_heap::resize(int s)
     // Extend program.  Use regs.size() instead of size()
     prog_steps.resize(regs.size());
     prog_results.resize(regs.size());
-    prog_unforced_step.resize(regs.size());
-    prog_unforced_result.resize(regs.size());
+    prog_unforced.resize(regs.size());
+    prog_index.resize(regs.size());
     prog_temp.resize(regs.size());
 
     // Now we can use size() again.
@@ -1361,13 +1370,13 @@ void reg_heap::resize(int s)
     {
 	prog_steps[i] = non_computed_index;
 	prog_results[i] = non_computed_index;
-	prog_unforced_step[i] = unforced_index;
-	prog_unforced_result[i] = unforced_index;
+	prog_unforced[i] = unforced_bits;
+	prog_index[i] = no_index;
 
 	assert(prog_steps[i] == non_computed_index);
 	assert(prog_results[i] == non_computed_index);
-	assert(prog_unforced_step[i] == unforced_index);
-	assert(prog_unforced_result[i] == unforced_index);
+	assert(prog_unforced[i] == unforced_bits);
+	assert(prog_index[i] == no_index);
 	assert(prog_temp[i].none());
     }
 }
@@ -1722,6 +1731,8 @@ void reg_heap::clear_back_edges_for_step(int s)
 
 	backward.pop_back();
     }
+    steps[s].used_inputs.clear();
+
     for(auto& forward: steps[s].forced_inputs)
     {
 	auto [res,j] = forward;
@@ -1746,6 +1757,8 @@ void reg_heap::clear_back_edges_for_step(int s)
 
 	backward.pop_back();
     }
+    steps[s].forced_inputs.clear();
+
     for(auto& r: steps[s].created_regs)
 	regs.access(r).created_by = {0,{}};
     steps[s].created_regs.clear();
@@ -1788,6 +1801,7 @@ void reg_heap::clear_back_edges_for_result(int res)
 	auto& forward = steps[step].forced_inputs;
 	assert(0 <= j and j < forward.size());
 
+	// WHY?
 	backward = {0,0};
 
 	if (j+1 < forward.size())
@@ -1804,7 +1818,9 @@ void reg_heap::clear_back_edges_for_result(int res)
 	    assert(results[res2].forced_by[i2].second == j);
 	    assert(steps[backward2[i2].first].forced_inputs[backward2[i2].second].second == i2);
 	}
+	forward.pop_back();
     }
+    results[res].forced_by.clear(); // OK?
 }
 
 void reg_heap::clear_step(int r)
@@ -1949,9 +1965,9 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
      P(new Program(L)),
      prog_steps(1, non_computed_index),
      prog_results(1, non_computed_index),
-     prog_unforced_step(1, unforced_index),
-     prog_unforced_result(1, unforced_index),
-     prog_temp(1)
+     prog_unforced(1, unforced_bits),
+     prog_temp(1),
+     prog_index(1, no_index)
 {
 }
 
