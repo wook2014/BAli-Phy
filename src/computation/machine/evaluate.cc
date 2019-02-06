@@ -281,16 +281,10 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		if (value)
 		{
 		    if (unforced_step(R))
-		    {
-			std::abort();
 			force_step(R);
-		    }
 
 		    if (unforced_result(R))
-		    {
-			std::abort();
 			force_result(R);
-		    }
 
 		    total_changeable_eval_with_result++;
 
@@ -306,10 +300,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		assert(unforced_result(R));
 
 		if (unforced_step(R))
-		{
-		    std::abort();
 		    force_step(R);
-		}
 
                 // Evaluate S, looking through unchangeable redirections
 		auto [call, value] = incremental_evaluate(call_for_reg(R));
