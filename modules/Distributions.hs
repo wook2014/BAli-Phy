@@ -43,9 +43,9 @@ data Random a = Random (IO a)
 
 sample dist = Sample dist
 sample_with_initial_value dist value = SampleWithInitialValue dist value
-observe dist x = Strict (Observe dist x)
-add_move m = Strict (AddMove m)
-liftIO x = Strict (LiftIO x)
+observe dist x = Observe dist x
+add_move m = AddMove m
+liftIO x = LiftIO x
 
 log_all loggers = (Nothing,loggers)
 
@@ -95,15 +95,14 @@ run_lazy alpha (Strict r) = run_strict alpha r
 -- Plan: We can implement lazy interpretation by add a (Strict action) constructor to Random, and modifying (IOAndPass f g) to
 --       do unsafeInterleaveIO if f does not match (Strict f')
 
-run_random' = run_lazy'
+run_random' = run_strict'
 
-run_strict' alpha rate (IOAndPass (Strict f) g) = do x <- run_lazy' alpha rate f
-                                                     run_lazy' alpha rate $ g x
-run_strict' alpha rate (IOAndPass f g) = do x <- unsafeInterleaveIO $ run_lazy' alpha rate f
-                                            run_lazy' alpha rate $ g x
+run_strict' alpha rate (IOAndPass f g) = do x <- run_strict' alpha rate f
+                                            run_strict' alpha rate $ g x
 run_strict' alpha rate (IOReturn v) = return v
 run_strict' alpha rate (Lazy r) = unsafeInterleaveIO $ run_lazy' alpha rate r
 run_strict' alpha rate (Print s) = putStrLn (show s)
+run_strict' alpha rate (Observe dist datum) = sequence_ [register_likelihood term | term <- densities dist datum]
 
 
 run_lazy' alpha rate (IOAndPass (Strict f) g) = do x <- run_lazy' alpha rate f
