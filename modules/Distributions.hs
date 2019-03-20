@@ -105,8 +105,6 @@ run_strict' alpha rate (Print s) = putStrLn (show s)
 run_strict' alpha rate (Observe dist datum) = sequence_ [register_likelihood term | term <- densities dist datum]
 
 
-run_lazy' alpha rate (IOAndPass (Strict f) g) = do x <- run_lazy' alpha rate f
-                                                   run_lazy' alpha rate $ g x
 run_lazy' alpha rate (IOAndPass f g) = do x <- unsafeInterleaveIO $ run_lazy' alpha rate f
                                           run_lazy' alpha rate $ g x
 -- It seems like we wouldn't need laziness for `do {x <- r;return x}`.  Do we need it for `r`?
