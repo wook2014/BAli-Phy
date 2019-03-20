@@ -61,29 +61,26 @@ run_strict alpha (IOAndPass f g) = do
   run_lazy alpha $ g x
 run_strict alpha (Lazy r) = run_lazy alpha r
 run_strict alpha (IOReturn v) = return v
+run_strict alpha (AddMove m) = return ()
+run_strict alpha (Print s) = putStrLn (show s)
 
 
-run_lazy alpha (LiftIO a) = a
-run_lazy alpha (Random a) = a
-run_lazy alpha (IOAndPass (Strict f) g) = do
-  x <- run_lazy alpha f
-  run_lazy alpha $ g x
 run_lazy alpha (IOAndPass f g) = do
   x <- unsafeInterleaveIO $ run_lazy alpha f
   run_lazy alpha $ g x
 run_lazy alpha (IOReturn v) = return v
+run_lazy alpha (LiftIO a) = a
+run_lazy alpha (Random a) = a
 run_lazy alpha (Sample (ProbDensity _ _ (RandomStructure _ a) _)) = run_lazy alpha a
 run_lazy alpha (Sample (ProbDensity _ _ a _)) = run_lazy alpha a
 run_lazy alpha (SampleWithInitialValue (ProbDensity _ _ (RandomStructure _ a) _) _) = run_lazy alpha a
 run_lazy alpha (SampleWithInitialValue (ProbDensity _ _ a _) _) = run_lazy alpha a
 run_lazy alpha GetAlphabet = return alpha
 run_lazy alpha (SetAlphabet a2 x) = run_lazy a2 x
-run_lazy alpha (AddMove m) = return ()
 run_lazy alpha (SamplingRate _ model) = run_lazy alpha model
 run_lazy alpha (MFix f) = MFix ((run_lazy alpha).f)
-run_lazy alpha (Print s) = putStrLn (show s)
 run_lazy alpha (Lazy r) = run_lazy alpha r
-run_lazy alpha (Strict r) = run_lazy alpha r
+run_lazy alpha (Strict r) = run_strict alpha r
 
 
 -- Question: why do we need to duplicate things over RandomStructure and Random?
