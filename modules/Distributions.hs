@@ -103,6 +103,7 @@ run_strict' alpha rate (IOReturn v) = return v
 run_strict' alpha rate (Lazy r) = unsafeInterleaveIO $ run_lazy' alpha rate r
 run_strict' alpha rate (Print s) = putStrLn (show s)
 run_strict' alpha rate (Observe dist datum) = sequence_ [register_likelihood term | term <- densities dist datum]
+run_strict' alpha rate (AddMove m) = register_transition_kernel m
 
 
 run_lazy' alpha rate (IOAndPass f g) = do x <- unsafeInterleaveIO $ run_lazy' alpha rate f
@@ -131,13 +132,10 @@ run_lazy' alpha rate (SampleWithInitialValue dist@(ProbDensity _ _ (RandomStruct
       rv = random_variable x (density dist x) range rate
   return x
 run_lazy' alpha rate (Sample (ProbDensity _ _ s _)) = run_lazy' alpha rate s
-run_lazy' alpha rate (Observe dist datum) = sequence_ [register_likelihood term | term <- densities dist datum]
-run_lazy' alpha rate (AddMove m) = register_transition_kernel m
 run_lazy' alpha rate (MFix f) = MFix ((run_lazy' alpha rate).f)
 run_lazy' alpha rate (SamplingRate rate2 a) = run_lazy' alpha (rate*rate2) a
 run_lazy' alpha _    GetAlphabet = return alpha
 run_lazy' alpha rate (SetAlphabet a2 x) = run_lazy' a2 rate x
-run_lazy' alpha rate (Lazy r) = run_lazy' alpha rate r
 run_lazy' alpha rate (Strict r) = run_strict' alpha rate r
 
 set_alphabet a x = do (a',_) <- a
