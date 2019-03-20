@@ -51,25 +51,22 @@ log_all loggers = (Nothing,loggers)
 
 x %% y = (y,(Just x,[]))
 
-
 run_random = run_strict
-run_strict alpha (IOAndPass (Strict f) g) = do
-  x <- run_lazy alpha f
-  run_lazy alpha $ g x
+
 run_strict alpha (IOAndPass f g) = do
-  x <- unsafeInterleaveIO $ run_lazy alpha f
-  run_lazy alpha $ g x
-run_strict alpha (Lazy r) = run_lazy alpha r
+  x <- run_strict alpha f
+  run_strict alpha $ g x
 run_strict alpha (IOReturn v) = return v
+run_strict alpha (Lazy r) = unsafeInterleaveIO $ run_lazy alpha r
 run_strict alpha (AddMove m) = return ()
 run_strict alpha (Print s) = putStrLn (show s)
+run_strict alpha (LiftIO a) = a
 
 
 run_lazy alpha (IOAndPass f g) = do
   x <- unsafeInterleaveIO $ run_lazy alpha f
   run_lazy alpha $ g x
 run_lazy alpha (IOReturn v) = return v
-run_lazy alpha (LiftIO a) = a
 run_lazy alpha (Random a) = a
 run_lazy alpha (Sample (ProbDensity _ _ (RandomStructure _ a) _)) = run_lazy alpha a
 run_lazy alpha (Sample (ProbDensity _ _ a _)) = run_lazy alpha a
@@ -79,7 +76,6 @@ run_lazy alpha GetAlphabet = return alpha
 run_lazy alpha (SetAlphabet a2 x) = run_lazy a2 x
 run_lazy alpha (SamplingRate _ model) = run_lazy alpha model
 run_lazy alpha (MFix f) = MFix ((run_lazy alpha).f)
-run_lazy alpha (Lazy r) = run_lazy alpha r
 run_lazy alpha (Strict r) = run_strict alpha r
 
 
