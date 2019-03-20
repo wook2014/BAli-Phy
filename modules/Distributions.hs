@@ -95,13 +95,21 @@ run_lazy alpha (Strict r) = run_strict alpha r
 -- Plan: We can implement lazy interpretation by add a (Strict action) constructor to Random, and modifying (IOAndPass f g) to
 --       do unsafeInterleaveIO if f does not match (Strict f')
 
-run_random = run_lazy'
+run_random' = run_lazy'
 
-run_lazy' alpha rate (LiftIO v) = v
-run_lazy' alpha rate (IOAndPass (Strict f) g) = do x <- run_lazy' alpha rate f
+run_strict' alpha rate (IOAndPass (Strict f) g) = do x <- run_lazy' alpha rate f
                                                      run_lazy' alpha rate $ g x
-run_lazy' alpha rate (IOAndPass f g) = do x <- unsafeInterleaveIO $ run_lazy' alpha rate f
+run_strict' alpha rate (IOAndPass f g) = do x <- unsafeInterleaveIO $ run_lazy' alpha rate f
                                             run_lazy' alpha rate $ g x
+run_strict' alpha rate (IOReturn v) = return v
+run_strict' alpha rate (Lazy r) = unsafeInterleaveIO $ run_lazy' alpha rate r
+run_strict' alpha rate (Print s) = putStrLn (show s)
+
+
+run_lazy' alpha rate (IOAndPass (Strict f) g) = do x <- run_lazy' alpha rate f
+                                                   run_lazy' alpha rate $ g x
+run_lazy' alpha rate (IOAndPass f g) = do x <- unsafeInterleaveIO $ run_lazy' alpha rate f
+                                          run_lazy' alpha rate $ g x
 -- It seems like we wouldn't need laziness for `do {x <- r;return x}`.  Do we need it for `r`?
 run_lazy' alpha rate (IOReturn v) = return v
 -- It seems like we wouldn't need laziness for `do {x <- r;return x}`.  Do we need it for `r`?
@@ -128,13 +136,12 @@ run_lazy' alpha rate (SampleWithInitialValue dist@(ProbDensity _ _ (RandomStruct
 run_lazy' alpha rate (Sample (ProbDensity _ _ s _)) = run_lazy' alpha rate s
 run_lazy' alpha rate (Observe dist datum) = sequence_ [register_likelihood term | term <- densities dist datum]
 run_lazy' alpha rate (AddMove m) = register_transition_kernel m
-run_lazy' alpha rate (Print s) = putStrLn (show s)
 run_lazy' alpha rate (MFix f) = MFix ((run_lazy' alpha rate).f)
 run_lazy' alpha rate (SamplingRate rate2 a) = run_lazy' alpha (rate*rate2) a
 run_lazy' alpha _    GetAlphabet = return alpha
 run_lazy' alpha rate (SetAlphabet a2 x) = run_lazy' a2 rate x
 run_lazy' alpha rate (Lazy r) = run_lazy' alpha rate r
-run_lazy' alpha rate (Strict r) = run_lazy' alpha rate r
+run_lazy' alpha rate (Strict r) = run_strict' alpha rate r
 
 set_alphabet a x = do (a',_) <- a
                       SetAlphabet a' x
