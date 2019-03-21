@@ -143,7 +143,7 @@ set_alphabet a x = do (a',_) <- a
 
 set_alphabet' = SetAlphabet
 
-gen_model_no_alphabet m = run_random' (error "No default alphabet!") 1.0 m
+gen_model_no_alphabet m = run_lazy' (error "No default alphabet!") 1.0 m
 
 add_logger old name (value,[]) False = old
 add_logger old name (value,loggers) do_log = (name,(if do_log then Just value else Nothing, loggers)):old
