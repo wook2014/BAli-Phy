@@ -1073,7 +1073,6 @@ int reg_heap::add_program(const expression_ref& E)
     auto P = E;
     P = {var("Distributions.gen_model_no_alphabet"), P};
     P = {var("Prelude.unsafePerformIO"), P};
-    P = {var("Parameters.evaluate"), -1, P};
 
     int program_head = add_compute_expression(P);
     P = reg_var(heads[program_head]);
