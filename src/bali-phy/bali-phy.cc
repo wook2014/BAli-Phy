@@ -501,17 +501,17 @@ int main(int argc,char* argv[])
 		if (as.size() == 1)
 		{
 		    if (alpha == "DNA")
-			a = DNA();
+			a = Box<DNA>();
 		    else if (alpha == "RNA")
-			a = RNA();
+			a = Box<RNA>();
 		    else if (alpha == "AA")
-			a = AminoAcids();
+			a = Box<AminoAcids>();
 		    else if (alpha == "Doublets")
-			a = Doublets(RNA());
+			a = Box<Doublets>(RNA());
 		    else if (alpha == "Triplets")
-			a = Triplets(DNA());
+			a = Box<Triplets>(DNA());
 		    else if (alpha == "Codons")
-			a = Codons(DNA(), AminoAcids(), Standard_Genetic_Code());
+			a = Box<Codons>(DNA(), AminoAcids(), Standard_Genetic_Code());
 		}
 	    }
 	    print_exp = {var("Distributions.run_random"), a, false, print_exp};

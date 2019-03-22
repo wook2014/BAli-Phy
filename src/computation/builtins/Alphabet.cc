@@ -79,22 +79,22 @@ extern "C" closure builtin_function_genetic_code_standard(OperationArgs&)
 
 extern "C" closure builtin_function_dna(OperationArgs&)
 {
-    return {DNA()};
+    return {Box<DNA>()};
 }
 
 extern "C" closure builtin_function_rna(OperationArgs&)
 {
-    return {RNA()};
+    return {Box<RNA>()};
 }
 
 extern "C" closure builtin_function_aa(OperationArgs&)
 {
-    return {AminoAcids()};
+    return {Box<AminoAcids>()};
 }
 
 extern "C" closure builtin_function_aaWithStop(OperationArgs&)
 {
-    return {AminoAcidsWithStop()};
+    return {Box<AminoAcidsWithStop>()};
 }
 
 extern "C" closure builtin_function_translate(OperationArgs& Args)
