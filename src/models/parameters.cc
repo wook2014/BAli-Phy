@@ -522,10 +522,10 @@ data_partition_constants::data_partition_constants(Parameters* p, int i, const a
 	    auto con_matrix = p->get_expression(alignment_constraints_matrix_index);
 
 	    // Create and set alignment constraints for each branch
-	    int alignment_constraints_index = p->add_compute_expression({dummy("Alignment.alignment_constraints"),t,con_matrix,delta,as,seqs_array});
+	    int alignment_constraints_index = p->add_compute_expression({var("Alignment.alignment_constraints"),tree_var,con_matrix,delta,as,seqs_array});
 	    auto alignment_constraints = p->get_expression(alignment_constraints_index);
 	    for(int b=0;b<alignment_constraints_for_branch.size();b++)
-		alignment_constraints_for_branch[b] = p->add_compute_expression({dummy("Prelude.!"),alignment_constraints,b});
+		alignment_constraints_for_branch[b] = p->add_compute_expression({var("Prelude.!"),alignment_constraints,b});
 	}
 
         // R8. Register conditional likelihoods
