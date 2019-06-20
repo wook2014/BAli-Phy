@@ -386,8 +386,6 @@ extern "C" closure builtin_function_leaf_alignment_constraint(OperationArgs& Arg
 
 extern "C" closure builtin_function_merge_alignment_constraints(OperationArgs& Args)
 {
-    using boost::get;
-
     // 1. Read the arguments
     auto con_x_ = Args.evaluate(0);
     auto& con_x = con_x_.as_<alignment_constraints>();
