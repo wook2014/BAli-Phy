@@ -28,7 +28,7 @@
 
 #include <vector>
 #include <memory>
-
+#include "models/parameters.H"     // for P0
 #include <memory>                  // for shared_ptr
 #include <vector>                  // for vector
 #include "dp-engine.H"             // for DPengine
