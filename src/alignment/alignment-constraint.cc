@@ -236,8 +236,8 @@ alignment_constraints merge_alignment_constraints(const alignment_constraints& c
 
     for(auto xi = con_x.begin(), yi = con_y.begin(); xi != con_x.end() or yi != con_y.end();)
     {
-	auto x_id = (xi != con_x.end()) ? optional<int>(get<0>(*xi)) : {};
-	auto y_id = (yi != con_y.end()) ? optional<int>(get<0>(*yi)) : {};
+	auto x_id = (xi != con_x.end()) ? optional<int>(get<0>(*xi)) : std::nullopt;
+	auto y_id = (yi != con_y.end()) ? optional<int>(get<0>(*yi)) : std::nullopt;
 	int id = *min(x_id, y_id);
 
 	bool have_x_con = (x_id == id);
