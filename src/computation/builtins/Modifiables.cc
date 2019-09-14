@@ -103,7 +103,7 @@ optional<int> find_random_variable_in_root_token(reg_heap& M, int r)
 {
     // Warning: ABOMINATION!
     // FIXME: This should be forced by a `seq` inside the program.
-    r = M.incremental_evaluate(r).first;
+    r = M.incremental_evaluate(r,false).first;
 
     // r should not be unknown or an index_var
     assert(M.reg_is_constant(r) or (M.reg_is_changeable(r) and M.reg_has_call(r)));

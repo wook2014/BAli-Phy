@@ -354,7 +354,7 @@ void reg_heap::register_likelihood_(int r)
 void reg_heap::register_likelihood(int r)
 {
     mark_completely_dirty(root_token);
-    auto [r2,v] = incremental_evaluate(r);
+    auto [r2,v] = incremental_evaluate(r, true);
 
     register_likelihood_(r2);
 }
@@ -464,7 +464,7 @@ expression_ref reg_heap::evaluate_program(int c)
     if (not program_result_head)
 	throw myexception()<<"No program has been set!";
 
-    auto result = lazy_evaluate(heads[*program_result_head], c).exp;
+    auto result = lazy_evaluate(heads[*program_result_head], c, true).exp;
 
     // Force the computation of priors and likelihoods
     likelihood_for_context(c);
@@ -876,13 +876,13 @@ void reg_heap::force_step(int r)
     for(auto& [result,_]: S.used_inputs)
     {
 	int r2 = results.access(result).source_reg;
-	incremental_evaluate(r2);
+	incremental_evaluate(r2, true);
     }
 
     bool force_step = reforce_step(r);
     for(auto r2: S.forced_regs)
     {
-	incremental_evaluate(r2);
+	incremental_evaluate(r2, true);
 	if (force_step)
 	    set_forced_input(s, r2, false);
     }
@@ -901,7 +901,7 @@ void reg_heap::force_result(int r)
 
     assert(S.call > 0);
 
-    incremental_evaluate(S.call);
+    incremental_evaluate(S.call, true);
 
     prog_unforced[r] &= ~unforced_result_bit;
 }
@@ -1974,7 +1974,7 @@ const expression_ref& reg_heap::get_reg_value_in_context(int& R, int c)
     }
 
     // If the value needs to be computed (e.g. its a call expression) then compute it.
-    auto [R2, value] = incremental_evaluate_in_context(R,c);
+    auto [R2, value] = incremental_evaluate_in_context(R,c,true);
     R = R2;
 
     return expression_at(value);
@@ -1987,7 +1987,7 @@ void reg_heap::set_reg_value_in_context(int P, closure&& C, int c)
     set_reg_value(P, std::move(C), t);
 }
 
-pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c)
+pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c, bool force)
 {
 #if DEBUG_MACHINE >= 2
     check_used_regs();
@@ -1995,7 +1995,7 @@ pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c)
 
     reroot_at_context(c);
     mark_completely_dirty(root_token);
-    auto p = incremental_evaluate(R);
+    auto p = incremental_evaluate(R, force);
 
 #if DEBUG_MACHINE >= 2
     check_used_regs();
@@ -2004,25 +2004,25 @@ pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c)
     return p;
 }
 
-const closure& reg_heap::lazy_evaluate(int& R)
+const closure& reg_heap::lazy_evaluate(int& R, bool force)
 {
     mark_completely_dirty(root_token);
-    auto [R2, value] = incremental_evaluate(R);
+    auto [R2, value] = incremental_evaluate(R, force);
     R = R2;
     return closure_at(value);
 }
 
-const closure& reg_heap::lazy_evaluate(int& R, int c)
+const closure& reg_heap::lazy_evaluate(int& R, int c, bool force)
 {
-    auto [R2, value] = incremental_evaluate_in_context(R,c);
+    auto [R2, value] = incremental_evaluate_in_context(R,c,force);
     R = R2;
     return closure_at(value);
 }
 
-const closure& reg_heap::lazy_evaluate_head(int index, int c)
+const closure& reg_heap::lazy_evaluate_head(int index, int c, bool force)
 {
     int R1 = heads[index];
-    auto [R2, value] = incremental_evaluate_in_context(R1,c);
+    auto [R2, value] = incremental_evaluate_in_context(R1,c,force);
     if (R2 != R1)
 	set_head(index, R2);
 
