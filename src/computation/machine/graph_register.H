@@ -557,24 +557,25 @@ public:
     bool is_completely_dirty(int t) const;
     bool is_dirty(int t) const;
 
-    std::pair<int,int> incremental_evaluate_in_context(int R, int c);
+    std::pair<int,int> incremental_evaluate_in_context(int R, int c, bool force);
 
-    std::pair<int,int> incremental_evaluate(int R);
+    std::pair<int,int> incremental_evaluate(int R, bool force);
+
+    int incremental_evaluate_unchangeable(int R);
 private:  
-    std::pair<int,int> incremental_evaluate_(int R);
+    std::pair<int,int> incremental_evaluate_(int R, bool force);
+    void incremental_evaluate_from_call(int S, closure&, bool force);
+    void incremental_evaluate_from_call_(int S, bool force);
+
     int incremental_evaluate_unchangeable_(int R);
-    void incremental_evaluate_from_call(int S, closure&);
-    void incremental_evaluate_from_call_(int S);
 
 public:
-  
-    int incremental_evaluate_unchangeable(int R);
 
-    const closure& lazy_evaluate(int& R);
+    const closure& lazy_evaluate(int& R, bool force);
 
-    const closure& lazy_evaluate(int& R, int c);
+    const closure& lazy_evaluate(int& R, int c, bool force);
 
-    const closure& lazy_evaluate_head(int h, int c);
+    const closure& lazy_evaluate_head(int h, int c, bool force);
 
     const closure& lazy_evaluate_unchangeable(int& R);
 

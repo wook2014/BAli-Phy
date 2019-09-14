@@ -58,7 +58,7 @@ void context_ref::rename_parameter(int i, const string& new_name)
 /// Return the value of a particular index, computing it if necessary
 const closure& context_ref::lazy_evaluate(int index) const
 {
-    return memory()->lazy_evaluate_head(index, context_index);
+    return memory()->lazy_evaluate_head(index, context_index, true);
 }
 
 /// Return the value of a particular index, computing it if necessary
@@ -80,7 +80,7 @@ const closure& context_ref::lazy_evaluate_expression_(closure&& C, bool ec) cons
     try {
 	int R = memory()->push_temp_head( std::move(C) );
 
-	const closure& result = ec?memory()->lazy_evaluate(R, context_index) : memory()->lazy_evaluate_unchangeable(R);
+	const closure& result = ec?memory()->lazy_evaluate(R, context_index, true) : memory()->lazy_evaluate_unchangeable(R);
     
 	memory()->pop_temp_head();
 	return result;
@@ -121,7 +121,7 @@ const expression_ref& context_ref::perform_expression(const expression_ref& E,bo
 
 expression_ref context_ref::recursive_evaluate_reg(int r) const
 {
-    closure C1 = memory()->lazy_evaluate(r, context_index);
+    closure C1 = memory()->lazy_evaluate(r, context_index, true);
     expression_ref E1 = deindexify(trim_unnormalize(C1));
 
     if (E1.is_atomic())
