@@ -42,7 +42,7 @@ optional<bounds<double>> param::has_bounds(const context& C) const
 expression_ref param::get_value(const context& C) const
 {
     if (head)
-        return C.evaluate(*head);
+        return C.evaluate(*head, false);
     else
         return *value;
 }
