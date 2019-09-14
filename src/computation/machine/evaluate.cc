@@ -73,6 +73,8 @@ class RegOperationArgs: public OperationArgs
 
     const int P;
 
+    bool force;
+
     const closure& current_closure() const {return memory().closure_stack.back();}
 
     bool evaluate_changeables() const {return true;}
@@ -80,14 +82,14 @@ class RegOperationArgs: public OperationArgs
     /// Evaluate the reg R2, record dependencies, and return the reg following call chains.
     int evaluate_reg(int R2)
 	{
-	    auto [_, value] = memory().incremental_evaluate(R2);
+	    auto [_, value] = memory().incremental_evaluate(R2, force);
 	    return value;
 	}
 
     /// Evaluate the reg R2, record dependencies, and return the reg following call chains.
     int evaluate_reg_force(int R2)
 	{
-	    auto [R3, value] = memory().incremental_evaluate(R2);
+	    auto [R3, value] = memory().incremental_evaluate(R2,force);
 
 	    if (M.reg_is_changeable(R3))
 	    {
@@ -102,7 +104,7 @@ class RegOperationArgs: public OperationArgs
     int evaluate_reg_to_reg(int R2)
 	{
 	    // Compute the value, and follow index_var chains (which are not changeable).
-	    auto [R3, value] = M.incremental_evaluate(R2);
+	    auto [R3, value] = M.incremental_evaluate(R2,force);
 
 	    // Note that although R2 is newly used, R3 might be already used if it was 
 	    // found from R2 through a non-changeable reg_var chain.
@@ -151,8 +153,8 @@ public:
   
     RegOperationArgs* clone() const {return new RegOperationArgs(*this);}
 
-    RegOperationArgs(int s, int p, reg_heap& m)
-	:OperationArgs(m), S(s), P(p)
+    RegOperationArgs(int s, int p, reg_heap& m, bool f)
+	:OperationArgs(m), S(s), P(p), force(f)
 	{ }
 };
 
@@ -210,7 +212,7 @@ public:
  */
 
 
-pair<int,int> reg_heap::incremental_evaluate(int R)
+pair<int,int> reg_heap::incremental_evaluate(int R, bool force)
 {
 #ifndef NDEBUG
     if (regs.access(R).flags.test(3))
@@ -219,7 +221,7 @@ pair<int,int> reg_heap::incremental_evaluate(int R)
         regs.access(R).flags.set(3);
 #endif
     stack.push_back(R);
-    auto result = incremental_evaluate_(R);
+    auto result = incremental_evaluate_(R, force);
     stack.pop_back();
 #ifndef NDEBUG
     assert(regs.access(R).flags.test(3));
@@ -239,7 +241,7 @@ pair<int,int> reg_heap::incremental_evaluate(int R)
 
 /// Evaluate R and look through reg_var chains to return the first reg that is NOT a reg_var.
 /// The returned reg is guaranteed to be (a) in WHNF (a lambda or constructor) and (b) not a reg_var.
-pair<int,int> reg_heap::incremental_evaluate_(int R)
+pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 {
     assert(is_completely_dirty(root_token));
     assert(regs.is_valid_address(R));
@@ -285,17 +287,19 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 
 		if (value)
 		{
-		    if (unforced_step(R))
-			force_step(R);
-
-		    if (unforced_result(R))
-			force_result(R);
-
 		    total_changeable_eval_with_result++;
+                    if (force)
+                    {
+                        if (unforced_step(R))
+                            force_step(R);
 
-		    assert(not unforced_step(R));
-		    assert(not unforced_result(R));
-		    return {R, value};
+                        if (unforced_result(R))
+                            force_result(R);
+
+                        assert(not unforced_step(R));
+                        assert(not unforced_result(R));
+                    }
+                    return {R, value};
 		}
 	    }
 
@@ -306,10 +310,10 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		assert(unforced_result(R));
 
 		// Force the step if we need to.
-		if (unforced_step(R)) force_step(R);
+		if (force and unforced_step(R)) force_step(R);
 
                 // Evaluate S, looking through unchangeable redirections
-		auto [call, value] = incremental_evaluate(call_for_reg(R));
+		auto [call, value] = incremental_evaluate(call_for_reg(R), force);
 
 		// If computation_for_reg(R).call can be evaluated to refer to S w/o moving through any changable operations, 
 		// then it should be safe to change computation_for_reg(R).call to refer to S, even if R is changeable.
@@ -323,15 +327,15 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 		set_result_value_for_reg( R);
 		total_changeable_eval_with_call++;
 
-		assert(not unforced_result(R));
-		assert(not unforced_step(R));
+		assert(not force or not unforced_result(R));
+		assert(not force or not unforced_step(R));
 		return {R, value};
 	    }
 	}
 	else if (reg_type == reg::type_t::index_var)
 	{
 	    int R2 = closure_at(R).reg_for_index_var();
-	    return incremental_evaluate(R2);
+	    return incremental_evaluate(R2, force);
 	}
 	else
 	    assert(reg_type == reg::type_t::unknown);
@@ -358,7 +362,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	    // Return the end of the index_var chain.
 	    // We used to update the index_var to point to the end of the chain.
 
-	    return incremental_evaluate(R2);
+	    return incremental_evaluate(R2, force);
 	}
 
 	// Check for WHNF *OR* heap variables
@@ -396,7 +400,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	    try
 	    {
 		closure_stack.push_back (closure_at(R) );
-		RegOperationArgs Args(S, P, *this);
+		RegOperationArgs Args(S, P, *this, force);
 		auto O = expression_at(R).head().assert_is_a<Operation>()->op;
 		closure value = (*O)(Args);
 		closure_stack.pop_back();
@@ -432,15 +436,15 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 			assert(not has_step(r2));
 		    }
 
-		    auto p = incremental_evaluate(r2);
+		    auto p = incremental_evaluate(r2, force);
 #else
-		    incremental_evaluate_from_call_(S);
+		    incremental_evaluate_from_call_(S, force);
 
 		    pair<int,int> p;
 		    if (closure_stack.back().exp.head().is_index_var())
 		    {
 			int r2 = closure_stack.back().reg_for_index_var();
-			p = incremental_evaluate(r2);
+			p = incremental_evaluate(r2, force);
 		    }
 		    else
 		    {
@@ -485,11 +489,11 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
     std::abort();
 }
 
-void reg_heap::incremental_evaluate_from_call(int S, closure& value)
+void reg_heap::incremental_evaluate_from_call(int S, closure& value, bool force)
 {
     closure_stack.push_back( value );
 
-    incremental_evaluate_from_call_(S);
+    incremental_evaluate_from_call_(S, force);
 }
 
 // The goal here is to merge steps S->S2->S3 => S.  At this point S is known to be changeable.
@@ -499,7 +503,7 @@ void reg_heap::incremental_evaluate_from_call(int S, closure& value)
 // with any downstream regs that are changeable.
 //
 // Therefore, if we have any allocations performed in S, create a new reg and delegate to it.
-void reg_heap::incremental_evaluate_from_call_(int S)
+void reg_heap::incremental_evaluate_from_call_(int S, bool force)
 {
     assert(is_completely_dirty(root_token));
 
@@ -524,7 +528,7 @@ void reg_heap::incremental_evaluate_from_call_(int S)
 
 	try
 	{
-	    RegOperationArgs Args(S, S, *this);
+	    RegOperationArgs Args(S, S, *this, force);
 	    auto O = closure_stack.back().exp.head().assert_is_a<Operation>()->op;
 	    closure_stack.back() = (*O)(Args);
 	
