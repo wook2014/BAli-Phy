@@ -77,10 +77,10 @@ public:
     bounds<double> get_bounds_for_compute_expression(int i) const;
 
     /// Return the value of a particular index, computing it if necessary
-    const closure& lazy_evaluate(int index) const;
+    const closure& lazy_evaluate(int index, bool force) const;
 
     /// Return the value of a particular index, computing it if necessary
-    const expression_ref& evaluate(int index) const;
+    const expression_ref& evaluate(int index, bool force) const;
 
     /// Return the value of a particular index, computing it if necessary
     const expression_ref& perform(int index, bool ec = false) const;

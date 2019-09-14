@@ -59,15 +59,15 @@ void context_ref::rename_parameter(int i, const string& new_name)
 }
 
 /// Return the value of a particular index, computing it if necessary
-const closure& context_ref::lazy_evaluate(int index) const
+const closure& context_ref::lazy_evaluate(int index, bool force) const
 {
-    return memory()->lazy_evaluate_head(index, context_index, true);
+    return memory()->lazy_evaluate_head(index, context_index, force);
 }
 
 /// Return the value of a particular index, computing it if necessary
-const expression_ref& context_ref::evaluate(int index) const
+const expression_ref& context_ref::evaluate(int index, bool force) const
 {
-    return lazy_evaluate(index).exp;
+    return lazy_evaluate(index, force).exp;
 }
 
 /// Return the value of a particular index, computing it if necessary
@@ -436,7 +436,7 @@ json context_ref::get_logged_parameters() const
     if (not memory()->logging_head)
 	throw myexception()<<"No logging head has been set!";
 
-    auto L = evaluate(*memory()->logging_head);
+    auto L = evaluate(*memory()->logging_head, true);
     return L.as_checked<Box<json>>().value();
 }
 
