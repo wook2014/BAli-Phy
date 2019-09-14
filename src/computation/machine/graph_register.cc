@@ -466,10 +466,6 @@ expression_ref reg_heap::evaluate_program(int c)
 
     auto result = lazy_evaluate(heads[*program_result_head], c, true).exp;
 
-    // Force the computation of priors and likelihoods
-    likelihood_for_context(c);
-    prior_for_context(c);
-
     // Check that all the priors and likelihoods are forced.
 #ifndef NDEBUG
     for(int r_likelihood: likelihood_heads)
