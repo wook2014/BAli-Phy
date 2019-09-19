@@ -307,6 +307,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		if (value)
 		{
 		    total_changeable_eval_with_result++;
+                    assert(unforced_result(R) or not unforced_reg(call_for_reg(R)));
                     if (force)
                     {
                         if (unforced_step(R))
