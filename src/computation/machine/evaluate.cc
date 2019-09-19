@@ -95,6 +95,7 @@ class RegOperationArgs: public OperationArgs
 	    {
 		used_changeable = true;
 		M.set_forced_input(S, R3);
+                used_an_unforced_reg = used_an_unforced_reg or memory().unforced_reg(R3);
 	    }
 
 	    return value;
@@ -112,6 +113,7 @@ class RegOperationArgs: public OperationArgs
 	    {
 		used_changeable = true;
 		M.set_used_input(S, R3);
+                used_an_unforced_reg = used_an_unforced_reg or memory().unforced_reg(R3);
 	    }
 
 	    return value;
@@ -130,6 +132,8 @@ class RegOperationArgs: public OperationArgs
 	}
 
 public:
+
+    bool used_an_unforced_reg = false;
 
     bool used_changeable = false;
 
@@ -465,8 +469,15 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 
 		    auto [r3,value] = incremental_evaluate(r2, force);
 
+                    // Since we are going to re-execute all forces and uses, we clear the reforce_step bit.
+                    // We may want to keep the unforced_step or unforced_result bit.  See below.
 		    set_call(R, r3);
+                    prog_unforced[R] &= (~reforce_step_bit);
 		    set_result_value_for_reg(R);
+                    if (not Args.used_an_unforced_reg)
+                        prog_unforced[R] &= (~unforced_step_bit);
+                    assert(not reforce_step(R));
+                    assert(not force or not unforced_result(R));
                     assert(not force or not unforced_step(R));
 
                     assert(unforced_result(R) == unforced_reg(call_for_reg(R)));
