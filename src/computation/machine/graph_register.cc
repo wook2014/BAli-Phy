@@ -904,7 +904,7 @@ void reg_heap::force_result(int r)
 
 bool reg_heap::unforced_reg(int r) const
 {
-    return unforced_result(r) or unforced_step(r) or reforce_step(r);
+    return reg_is_changeable(r) and (unforced_result(r) or unforced_step(r) or reforce_step(r));
 }
 
 int reg_heap::value_for_reg(int r) const 
