@@ -881,6 +881,10 @@ void reg_heap::force_step(int r)
 	incremental_evaluate(r2, true);
 	if (force_step)
 	    set_forced_input(s, r2, false);
+        assert(reg_has_result_value(r2));
+        assert(not reforce_step(r2));
+        assert(not unforced_step(r2));
+        assert(not unforced_result(r2));
     }
 
     prog_unforced[r] &= ~(reforce_step_bit|unforced_step_bit);
@@ -1100,6 +1104,19 @@ void reg_heap::mark_step_with_nonforce_effect(int s, int /* r */)
 int reg_heap::allocate()
 {
     total_reg_allocations++;
+    int r = regs.allocate();
+
+    // invariant: newly allocated regs have no step //
+    assert(not has_step(r));
+    // invariant: newly allocated regs have no result //
+    assert(not has_result(r));
+    // invariant: newly allocated regs are type unknown //
+    assert(regs[r].type == reg::type_t::unknown);
+    // invariant: newly allocated regs have all unforced bits //
+    assert(reforce_step(r));
+    assert(unforced_step(r));
+    assert(unforced_result(r));
+
     return regs.allocate();
 }
 
