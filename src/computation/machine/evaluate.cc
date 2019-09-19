@@ -280,7 +280,15 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 
 	reg::type_t reg_type = regs.access(R).type;
 
-	if (reg_type == reg::type_t::constant) return {R,R};
+	if (reg_type == reg::type_t::constant)
+        {
+            assert(not has_step(R));
+            assert(not has_result(R));
+            assert(reforce_step(R));
+            assert(unforced_step(R));
+            assert(unforced_result(R));
+            return {R,R};
+        }
 
 	else if (reg_type == reg::type_t::changeable)
 	{
@@ -303,9 +311,14 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
                         if (unforced_result(R))
                             force_result(R);
 
+                        assert(not reforce_step(R));
                         assert(not unforced_step(R));
                         assert(not unforced_result(R));
                     }
+                    assert(not force or not reforce_step(R));
+                    assert(not force or not unforced_result(R));
+                    assert(not force or not unforced_step(R));
+                    assert(unforced_result(R) or not unforced_reg(call_for_reg(R)));
                     return {R, value};
 		}
 	    }
@@ -334,8 +347,10 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		set_result_value_for_reg( R);
 		total_changeable_eval_with_call++;
 
+                assert(not force or not reforce_step(R));
 		assert(not force or not unforced_result(R));
 		assert(not force or not unforced_step(R));
+                assert(unforced_result(R) == unforced_reg(call));
 		return {R, value};
 	    }
 	}
@@ -369,6 +384,10 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    // Return the end of the index_var chain.
 	    // We used to update the index_var to point to the end of the chain.
 
+	    assert(reforce_step(R));
+	    assert(unforced_step(R));
+	    assert(unforced_result(R));
+
 	    return incremental_evaluate(R2, force);
 	}
 
@@ -381,6 +400,11 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    if (s > 0)
 		clear_back_edges_for_step(s);
 	    clear_step(R);
+
+	    assert(reforce_step(R));
+	    assert(unforced_step(R));
+	    assert(unforced_result(R));
+
 	    return {R,R};
 	}
 
@@ -394,7 +418,9 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	// 3. Reduction: Operation (includes @, case, +, etc.)
 	else
 	{
+	    assert(reforce_step(R));
 	    assert(unforced_step(R));
+	    assert(unforced_result(R));
 
 	    // We keep the (same) computation here, until we prove that we don't need one.
 	    // We don't need one if we evaluate to WHNF, and then we remove it.
@@ -448,7 +474,9 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 
 		    set_call(R, r3);
 		    set_result_value_for_reg(R);
+                    assert(not force or not unforced_step(R));
 
+                    assert(unforced_result(R) == unforced_reg(call_for_reg(R)));
 		    return {R, value};
 		}
 	    }
