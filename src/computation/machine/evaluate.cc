@@ -430,7 +430,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		    make_reg_changeable(R);
 		    closure_stack.push_back(value);
 
-#ifndef COMBINE_STEPS
 		    int r2;
 		    if (closure_stack.back().exp.head().is_index_var())
 		    {
@@ -443,28 +442,9 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 			assert(not has_step(r2));
 		    }
 
-		    auto p = incremental_evaluate(r2, force);
-#else
-		    incremental_evaluate_from_call_(S, force);
-
-		    pair<int,int> p;
-		    if (closure_stack.back().exp.head().is_index_var())
-		    {
-			int r2 = closure_stack.back().reg_for_index_var();
-			p = incremental_evaluate(r2, force);
-		    }
-		    else
-		    {
-			int r2 = Args.allocate( std::move(closure_stack.back()) );
-			assert(not has_step(r2));
-			regs.access(r2).type = reg::type_t::constant;
-			// assert(is_WHNF(expression_at(r2))) ?
-			p = {r2,r2};
-		    }
-#endif
 		    closure_stack.pop_back();
 
-		    auto [r3,value] = p;
+		    auto [r3,value] = incremental_evaluate(r2, force);
 
 		    set_call(R, r3);
 		    set_result_value_for_reg(R);
