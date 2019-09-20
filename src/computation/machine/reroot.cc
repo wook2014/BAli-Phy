@@ -4,6 +4,8 @@
 #include "util/range.H"
 #include "mapping.H"
 
+#define DEBUG_MACHINE 2
+
 using std::string;
 using std::vector;
 using std::pair;
@@ -43,16 +45,32 @@ void reg_heap::reroot_at_context(int c)
             break;
     }
 
+#ifdef DEBUG_MACHINE
+    check_used_regs();
+#endif
+
     // 3. Get the tokens on the path to the root.
     for(int i=int(path.size())-2; i>=0; i--)
         reroot_at(path[i]);
 
+#ifdef DEBUG_MACHINE
+    check_used_regs();
+#endif
+
     // 4. Clean up old root token if it became an unused tip
     int t2 = release_unreferenced_tips(old_root);
+
+#ifdef DEBUG_MACHINE
+    check_used_regs();
+#endif
 
     // 5. Remove sequences of knuckles - only remove a knuckle if its child was part of the original path
     for(; t2 != root_token;)
         t2 = release_knuckle_tokens(t2);
+
+#ifdef DEBUG_MACHINE
+    check_used_regs();
+#endif
 }
 
 void reg_heap::reroot_at(int t)
@@ -109,9 +127,22 @@ void reg_heap::reroot_at(int t)
     for(int t2: tokens[t].children)
         assert(tokens[t2].version <= tokens[t].version);
 
+#ifdef DEBUG_MACHINE
+    check_used_regs();
+#endif
+
     assert(is_root_token(t));
 }
 
+
+std::optional<char> lookup_in_vector(const vector<pair<int,char>>& x, int u)
+{
+    for(auto& [u0,v0]: x)
+        if (u0 == u)
+            return v0;
+    return {};
+}
+    
 
 /*
  * In the current framework, regs may be incorrectly shared, if they are not overridden in the child and should be.
@@ -322,7 +353,7 @@ void reg_heap::unshare_regs(int t)
 	    if (int r2 = results[res2].source_reg; prog_results[r2] == res2)
 		unshare_unforced_result(r2);
 
-	// Look at step that use the root's result (that is overridden in t)
+	// Look at steps that use the root's result (that is overridden in t)
 	for(auto& [s2,index]: Result.used_by)
 	    if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
 		unshare_unforced_step(r2);
@@ -334,15 +365,45 @@ void reg_heap::unshare_regs(int t)
     }
 
 
+    // We seem to have a problem with a step s at r1=(x*y) where y is unforced but _does_ have a result, and r1 has a result and is FULLY forced.
+    /*
+      OK, so r1 = 19306  s1 = 3965  res1 = 3984  unforced_flags = null                           exp = *   <15558> <12255>
+             r2 = 12255  s2 = 3964  res2 = 3985  unforced_flags = {unforced_step,reforce_step}   exp = seq <12223> <12259>
+
+             step[s1].used_inputs = [471,3985]  and results[res2].used_by = {3965}      So the edges are connected correctly.
+
+      The child token before the reroot, and root  token afterwards is: 295.
+      The root  token before the reroot, and child token afterwards is: 294.
+
+      OK, so the child token 294 has only 16 unshared steps!  They occur at regs 19306, which has step 12499 in token=294.
+      The child token has 32 unshared results, and these include both 12255=>12504 and 19306=>12503.
+
+      Therefore, after pivoting we must have something like:
+                                    r1:19306                                  r2:12255
+        token 295:     step=3965 /result=3984 /unfored=none        step=3964/result=3985 /unforced={unforced_step,reforce_step}
+        token 294:     step=12499/result=12503/unforced=??         step=3964/result=12504/unforced=??
+
+      Therefore, BEFORE pivoting, we might have had something like:
+                                    r1:19306                                  r2:12255
+        token 295:     step=3965 /result=3984 /unforced=none        step= NA /result=3985 /unforced={unforced_step,reforce_step}
+        token 294:     step=12499/result=12503/unforced=??         step=3964/result=12504/unforced=??
+
+      Now in this situation, step 3965 has an edge to result 3985.  That means that if we have an over-ridden reg at r2, we aren't going to propagate this to
+      r1.  In fact, (a) r1 and r2 should already have their unforcedness unshared in 295 AND they should already have the unforced flags set.  Specifically,
+      r1:19306 should have its unforcedness flags set!
+        
+     */
+
+    // LOGIC: Any reg that uses or call a created reg must either
+    //          (i) be another created reg, or
+    //          (ii) access the created reg through a chain of use or call edges to the step that created the reg.
+    //        In the former case, this loop handles them.  In the later case, they should be invalid.
+
 //  int j = delta_step.size();
     int j=0; // FIXME if the existing steps don't share any created regs, then we don't have to scan them.
              // FIXME: while the overriding steps in the child should have their created regs unshared, the overridden steps in the root need not!
              //        this means that we need to scan all overridden steps each time :-(
     // Also unshare any results and steps that are for regs created in the root context.
-    // LOGIC: Any reg that uses or call a created reg must either
-    //          (i) be another created reg, or
-    //          (ii) access the created reg through a chain of use or call edges to the step that created the reg.
-    //        In the former case, this loop handles them.  In the later case, they should be invalid.
     for(;j<delta_step.size();j++)
         if (auto [r,_] = delta_step[j]; has_step(r))
             for(int r2: step_for_reg(r).created_regs)

@@ -301,6 +301,14 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		{
 		    total_changeable_eval_with_result++;
                     assert(unforced_result(R) or not unforced_reg(call_for_reg(R)));
+                    if (not unforced_step(R))
+                        for(auto r2: step_for_reg(R).forced_regs)
+                        {
+                            assert(reg_has_result_value(r2));
+                            assert(not reforce_step(r2));
+                            assert(not unforced_step(r2));
+                            assert(not unforced_result(r2));
+                        }
                     if (force)
                     {
                         if (unforced_step(R))
@@ -313,6 +321,14 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
                         assert(not unforced_step(R));
                         assert(not unforced_result(R));
                     }
+                    if (not unforced_step(R))
+                        for(auto r2: step_for_reg(R).forced_regs)
+                        {
+                            assert(reg_has_result_value(r2));
+                            assert(not reforce_step(r2));
+                            assert(not unforced_step(r2));
+                            assert(not unforced_result(r2));
+                        }
                     assert(not force or not reforce_step(R));
                     assert(not force or not unforced_result(R));
                     assert(not force or not unforced_step(R));
@@ -348,6 +364,14 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
                 assert(not force or not reforce_step(R));
 		assert(not force or not unforced_result(R));
 		assert(not force or not unforced_step(R));
+                if (not unforced_step(R))
+                    for(auto r2: step_for_reg(R).forced_regs)
+                    {
+                        assert(reg_has_result_value(r2));
+                        assert(not reforce_step(r2));
+                        assert(not unforced_step(r2));
+                        assert(not unforced_result(r2));
+                    }
                 assert(unforced_result(R) == unforced_reg(call));
 		return {R, value};
 	    }
