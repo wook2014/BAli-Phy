@@ -10,6 +10,8 @@
 #include "computation/operations.H"
 #include "effect.H"
 
+#define DEBUG_MACHINE 2
+
 using std::string;
 using std::vector;
 using std::pair;
@@ -1706,6 +1708,43 @@ void reg_heap::check_used_regs() const
 	if (call > 0)
 	    assert(not results.is_free(call));
     }
+
+    for(int r=regs.n_null();r<regs.size();r++)
+        if (regs.is_used(r) and reg_is_changeable(r))
+        {
+            // If we have no step, then we should have no result, and be completely unforced.
+            if (not has_step(r))
+            {
+                assert(prog_unforced[r] == unforced_bits);
+                assert(not has_result(r));
+                continue;
+            }
+
+            if (not unforced_step(r))
+            {
+                auto& S = step_for_reg(r);
+                for(auto r2: S.forced_regs)
+                {
+                    assert(reg_has_result_value(r2));
+                    assert(not reforce_step(r2));
+                    assert(not unforced_step(r2));
+                    assert(not unforced_result(r2));
+                }
+            }
+
+            // (u or reforce_step(r)) => unforced_step(r)
+            bool u = false;
+            for(auto r2: step_for_reg(r).forced_regs)
+                u = u or unforced_reg(r2);
+            for(auto r2: used_regs_for_reg(r))
+                u = u or unforced_reg(r2);
+            if (u or reforce_step(r))
+                assert(unforced_step(r));
+
+            // (no result or unforced_reg(call)) => unforced_result(r)
+            if (not has_result(r) or unforced_reg(call_for_reg(r)))
+                assert(unforced_result(r));
+        }
 }
 
 int reg_heap::get_shared_step(int r)
