@@ -6,13 +6,14 @@
    - Switch to c++17
    - Read tree properties that look like [&key=value,&key=value]
  - Models
-   - Add +mut_sel_aa for selection on amino-acids in codo models.
+   - Add +mut_sel_aa for selection on amino-acids in codon models.
  - MCMC
-   - Add move to slice sample a branch length while integrating out the alignment.
+   - Add move to slice-sample a branch length while integrating out the alignment.
  - Graphical models
    + Allow sampling characters on random trees (recursive, via mfix).
      - Implement syntactic sugar 'rec' for mfix.
    - Interpreter
+     - Use state threads instead of `seq` in IO and ST.
      - Evaluate the program changeably.
      - Switch the interpreter to a lazy interpreter.
      - Separate random variables from modifiables.
