@@ -10,4 +10,4 @@ import Compiler.ST
 
 unsafeInterleaveIO x = LazyIO x
 
-unsafePerformIO f = snd (run_state 0 f)
+unsafePerformIO x = case run_state 0 x of (s',x') -> s' `seq` x'
