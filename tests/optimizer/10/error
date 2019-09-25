@@ -1,16 +1,16 @@
 size = 1   Test.#0 = Vector:unpack_cpp_string Test.#1 Test.#21
 size = 1   Test.#1 = "case: failed pattern match"
 size = 1   Test.#10 = Test.#8:Test.#3
-size = 1   Test.#1271 = Test.#7:Test.#10
-size = 1   Test.#1278 = 10
-size = 1   Test.#1280 = 2
+size = 1   Test.#1274 = Test.#7:Test.#10
+size = 1   Test.#1281 = 10
+size = 1   Test.#1283 = 2
 size = 1   Test.#2 = '!'
 size = 1   Test.#21 = 0
 size = 1   Test.#3 = Test.#2:[]
 size = 1   Test.#4 = Prelude:error Test.#0
 size = 1   Test.#7 = 'y'
 size = 1   Test.#8 = 'o'
-size = 1   Test.#9 = Prelude:error Test.#1271
-size = 1   Test.f = \#6 -> case #6 of {#1275:#1276 -> #1275; [] -> Test.#9; _ -> Test.#4}
-size = 3   Test.g = \#1276 -> let {#1277 = 10} in let {#1279 = case #1276 of {#1275:#1280 -> #1275; [] -> Test.#9; _ -> Test.#4}} in Prelude:add #1277 #1279
-size = 1   Test.h = Prelude:add Test.#1278 Test.#1280
+size = 1   Test.#9 = Prelude:error Test.#1274
+size = 1   Test.f = \#6 -> case #6 of {#1278:#1279 -> #1278; [] -> Test.#9; _ -> Test.#4}
+size = 3   Test.g = \#1279 -> let {#1280 = 10} in let {#1282 = case #1279 of {#1278:#1283 -> #1278; [] -> Test.#9; _ -> Test.#4}} in Prelude:add #1280 #1282
+size = 1   Test.h = Prelude:add Test.#1281 Test.#1283
