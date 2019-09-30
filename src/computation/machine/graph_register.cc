@@ -1518,6 +1518,19 @@ void reg_heap::check_used_regs() const
                 continue;
             }
 
+            // not reforce_step == all forced_regs have a result AND a forced_input edge to that result.
+            if (not reforce_step(r))
+            {
+                int S = step_index_for_reg(r);
+                for(auto forced_reg: steps[S].forced_regs)
+                {
+                    assert(reg_has_result_value(forced_reg));
+                    int forced_result = prog_results[forced_reg];
+                    assert(result_is_forced_by(S, forced_result));
+                }
+            }
+
+            // not unforced_step == all used and forced regs are forced.
             if (not unforced_step(r))
             {
                 auto& S = step_for_reg(r);
