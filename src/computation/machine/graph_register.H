@@ -87,6 +87,32 @@ struct Result
     Result(Result&&) noexcept;
 };
 
+
+struct Force
+{
+    int source_step = -1;
+
+    int source_result = -1;
+
+    int source_reg = -1;
+
+    /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
+    boost::container::small_vector< std::pair<int,int>, 2> forced_inputs;
+    boost::container::small_vector<std::pair<int,int>, 2> forced_by;
+
+    void clear();
+
+    void check_cleared();
+
+    Force& operator=(const Force&) = delete;
+    Force& operator=(Force&&) noexcept;
+
+    Force() = default;
+
+    Force(const Force&) = delete;
+    Force(Force&&) noexcept;
+};
+
 constexpr int non_computed_index = -1;
 
 constexpr int unforced_result_bit = (1<<0);
@@ -342,8 +368,9 @@ public:
         const auto& delta_result() const { return vm_result.delta(); }
         const auto& delta_step() const {return vm_step.delta(); }
 
-        mapping<int> vm_result;
         mapping<int> vm_step;
+        mapping<int> vm_result;
+        mapping<int> vm_force;
         mapping<char> vm_unforced;
 
         bool used = false;
@@ -360,6 +387,7 @@ private:
 
     std::vector<int> prog_steps;
     std::vector<int> prog_results;
+    std::vector<int> prog_force;
     std::vector<char> prog_unforced;
 
     mutable std::vector<std::bitset<8>> prog_temp;
