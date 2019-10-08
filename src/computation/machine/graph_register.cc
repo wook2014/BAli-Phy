@@ -1504,6 +1504,7 @@ void reg_heap::resize(int s)
     // Extend program.  Use regs.size() instead of size()
     prog_steps.resize(regs.size());
     prog_results.resize(regs.size());
+    prog_force.resize(regs.size());
     prog_unforced.resize(regs.size());
     prog_index.resize(regs.size());
     prog_temp.resize(regs.size());
@@ -1513,11 +1514,13 @@ void reg_heap::resize(int s)
     {
         prog_steps[i] = non_computed_index;
         prog_results[i] = non_computed_index;
+        prog_force[i] = non_computed_index;
         prog_unforced[i] = unforced_bits;
         prog_index[i] = no_index;
 
         assert(prog_steps[i] == non_computed_index);
         assert(prog_results[i] == non_computed_index);
+        assert(prog_force[i] == non_computed_index);
         assert(prog_unforced[i] == unforced_bits);
         assert(prog_index[i] == no_index);
         assert(prog_temp[i].none());
@@ -1746,6 +1749,7 @@ void reg_heap::check_used_regs() const
             // If we have no step, then we should have no result, and be completely unforced.
             if (not has_step(r))
             {
+                assert(prog_force[r] == non_computed_index);
                 assert(prog_unforced[r] == unforced_bits);
                 assert(not has_result(r));
                 continue;
@@ -2158,6 +2162,7 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
      P(new Program(L)),
      prog_steps(1, non_computed_index),
      prog_results(1, non_computed_index),
+     prog_force(1, non_computed_index),
      prog_unforced(1, unforced_bits),
      prog_temp(1),
      prog_index(1, no_index)
