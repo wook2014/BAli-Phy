@@ -190,6 +190,37 @@ Result::Result(Result&& R) noexcept
                          flags ( R.flags )
 { }
 
+void Force::clear()
+{
+    source_step = -1;
+    source_result = -1;
+    source_reg = -1;
+    truncate(forced_inputs);
+    truncate(forced_by);
+}
+
+void Force::check_cleared()
+{
+    assert(forced_inputs.empty());
+    assert(forced_by.empty());
+}
+
+Force& Force::operator=(Force&& F) noexcept
+{
+    source_step = F.source_step;
+    source_result = F.source_result;
+    source_reg = F.source_reg;
+    forced_inputs = std::move( F.forced_inputs );
+    forced_by = std::move( F.forced_by );
+
+    return *this;
+}
+
+Force::Force(Force&& F) noexcept
+{
+    operator=(std::move(F));
+}
+
 reg& reg::operator=(reg&& R) noexcept
 {
     C = std::move(R.C);
