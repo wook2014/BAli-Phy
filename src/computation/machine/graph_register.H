@@ -168,6 +168,8 @@ class reg_heap: public Object
 
     mutable pool<Result> results;
 
+    mutable pool<Force> forces;
+
     mutable int n_active_scratch_lists = 0;
     mutable std::vector< object_ptr<Vector<int> > > scratch_lists;
 
@@ -365,8 +367,9 @@ public:
         bool is_referenced() const {assert(n_context_refs >= 0); return n_context_refs > 0;}
     
         /// Mapping from closures to steps/results
-        const auto& delta_result() const { return vm_result.delta(); }
         const auto& delta_step() const {return vm_step.delta(); }
+        const auto& delta_result() const { return vm_result.delta(); }
+        const auto& delta_force() const { return vm_force.delta(); }
 
         mapping<int> vm_step;
         mapping<int> vm_result;
@@ -525,12 +528,14 @@ public:
     /*----- Virtual memory ------*/
     int step_index_for_reg(int r) const;
     int result_index_for_reg(int r) const;
+    int force_index_for_reg(int r) const;
     const Step& step_for_reg(int r) const ;
     Step& step_for_reg(int r);
     const Result& result_for_reg(int r) const ;
     Result& result_for_reg(int r);
     bool has_step(int r) const;
     bool has_result(int r) const;
+    bool has_force(int r) const;
     bool reg_has_value(int r) const;
     int follow_index_var(int r) const;
     bool reg_has_result_value(int r) const;
@@ -556,13 +561,16 @@ public:
 
     void clear_step(int r);
     void clear_result(int r);
+    void clear_force(int r);
 
     void clear_back_edges_for_reg(int r);
     void clear_back_edges_for_step(int s);
     void clear_back_edges_for_result(int rc);
+    void clear_back_edges_for_force(int f);
 
     void check_back_edges_cleared_for_step(int rc);
     void check_back_edges_cleared_for_result(int rc);
+    void check_back_edges_cleared_for_force(int rc);
 
     int value_for_reg(int r) const;
 

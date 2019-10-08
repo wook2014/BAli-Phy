@@ -14,10 +14,8 @@ long total_release_knuckle = 0;
 
 void reg_heap::destroy_all_computations_in_token(int t)
 {
-    auto& delta_step = tokens[t].delta_step();
-    auto& delta_result = tokens[t].delta_result();
-
     // Remove use back-edges
+    auto& delta_step = tokens[t].delta_step();
     for(auto p: delta_step)
     {
 	int s = p.second;
@@ -37,11 +35,20 @@ void reg_heap::destroy_all_computations_in_token(int t)
     }
 
     // Remove call back-edges
+    auto& delta_result = tokens[t].delta_result();
     for(auto p: delta_result)
     {
 	int rc = p.second;
 	if (rc > 0)
 	    clear_back_edges_for_result(rc);
+    }
+
+    // Remove force back-edges
+    auto& delta_force = tokens[t].delta_force();
+    for(auto [_,f]: delta_force)
+    {
+	if (f > 0)
+	    clear_back_edges_for_force(f);
     }
 
     for(auto p: delta_step)
@@ -59,6 +66,13 @@ void reg_heap::destroy_all_computations_in_token(int t)
 	    results.reclaim_used(rc);
     }
     tokens[t].vm_result.clear();
+
+    for(auto [_,f]: delta_force)
+    {
+	if (f > 0)
+	    forces.reclaim_used(f);
+    }
+    tokens[t].vm_force.clear();
 
     tokens[t].vm_unforced.clear();
 }
