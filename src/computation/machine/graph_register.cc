@@ -822,6 +822,12 @@ int reg_heap::result_index_for_reg(int r) const
     return prog_results[r];
 }
 
+int reg_heap::force_index_for_reg(int r) const
+{
+    assert(prog_force[r] != 0);
+    return prog_force[r];
+}
+
 const Step& reg_heap::step_for_reg(int r) const 
 { 
     int s = step_index_for_reg(r);
@@ -883,6 +889,11 @@ bool reg_heap::has_step(int r) const
 bool reg_heap::has_result(int r) const
 {
     return result_index_for_reg(r)>0;
+}
+
+bool reg_heap::has_force(int r) const
+{
+    return force_index_for_reg(r)>0;
 }
 
 bool reg_heap::unforced_step(int r) const
@@ -1875,6 +1886,12 @@ void reg_heap::check_back_edges_cleared_for_result(int res)
     assert(results.access_unused(res).call_edge.second == 0);
 }
 
+void reg_heap::check_back_edges_cleared_for_force(int f)
+{
+    for(auto& [res,index]: forces.access_unused(f).forced_inputs)
+        assert(index == 0);
+}
+
 void reg_heap::clear_back_edges_for_reg(int r)
 {
     assert(r > 0);
@@ -2020,8 +2037,69 @@ void reg_heap::clear_back_edges_for_result(int res)
     results[res].forced_by.clear(); // OK?
 }
 
+void reg_heap::clear_back_edges_for_force(int f)
+{
+    assert(f > 0);
+
+    for(auto& forward: forces[f].forced_inputs)
+    {
+        auto [f3,j] = forward;
+        auto& backward = forces[f3].forced_by;
+        assert(0 <= j and j < backward.size());
+
+        forward = {0,0};
+
+        if (j+1 < backward.size())
+        {
+            // erase the backward edge by moving another backward edge on top of it.
+            backward[j] = backward.back();
+            auto [f2,i2] = backward[j];
+            // adjust the forward edge for that backward edge
+            auto& forward2 = forces[f2].forced_inputs;
+            assert(0 <= i2 and i2 < forward2.size());
+            forward2[i2].second = j;
+
+            assert(forces[f2].forced_inputs[i2].second == j);
+            assert(forces[forward2[i2].first].forced_by[forward2[i2].second].second == i2);
+        }
+
+        backward.pop_back();
+    }
+    forces[f].forced_inputs.clear();
+
+    // If this Force is destroyed, the Force that forced it will NOT survive,
+    // Therefore, we DON'T need to clear these edges.
+    for(auto& backward: forces[f].forced_by)
+    {
+        auto [f3,j] = backward;
+        auto& forward = forces[f3].forced_inputs;
+        assert(0 <= j and j < forward.size());
+
+        // WHY?
+        backward = {0,0};
+
+        if (j+1 < forward.size())
+        {
+            //erase the forward edge by moving another forward edge on top of it.
+            forward[j] = forward.back();
+            auto [f2,i2] = forward[j];
+            // adjust the forward edge for that backward edge
+            auto& backward2 = forces[f2].forced_by;
+            assert( 0 <= i2 and i2 <= backward2.size());
+            backward2[i2].second = j;
+
+            assert(backward2[i2].first == f3);
+            assert(forces[f2].forced_by[i2].second == j);
+            assert(forces[backward2[i2].first].forced_inputs[backward2[i2].second].second == i2);
+        }
+        forward.pop_back();
+    }
+    forces[f].forced_by.clear(); // OK?
+}
+
 void reg_heap::clear_step(int r)
 {
+    assert(not has_force(r));
     assert(not has_result(r));
     int s = prog_steps[r];
     prog_steps[r] = non_computed_index;
@@ -2037,6 +2115,8 @@ void reg_heap::clear_step(int r)
 
 void reg_heap::clear_result(int r)
 {
+    assert(not has_force(r));
+
     int res = prog_results[r];
     prog_results[r] = non_computed_index;
 
@@ -2046,6 +2126,20 @@ void reg_heap::clear_result(int r)
         check_back_edges_cleared_for_result(res);
 #endif
         results.reclaim_used(res);
+    }
+}
+
+void reg_heap::clear_force(int r)
+{
+    int f = prog_force[r];
+    prog_force[r] = non_computed_index;
+
+    if (f > 0)
+    {
+#ifndef NDEBUG
+        check_back_edges_cleared_for_force(f);
+#endif
+        forces.reclaim_used(f);
     }
 }
 
@@ -2159,6 +2253,7 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
     :regs(1,[this](int s){resize(s);}, [this](){collect_garbage();} ),
      steps(1),
      results(1),
+     forces(1),
      P(new Program(L)),
      prog_steps(1, non_computed_index),
      prog_results(1, non_computed_index),
