@@ -101,6 +101,8 @@ void reg_heap::reroot_at(int t)
     std::swap(tokens[parent].vm_step, tokens[t].vm_step);
     pivot_mapping(prog_results, tokens[t].vm_result);
     std::swap(tokens[parent].vm_result, tokens[t].vm_result);
+    pivot_mapping(prog_force, tokens[t].vm_force);
+    std::swap(tokens[parent].vm_force, tokens[t].vm_force);
 
     pivot_mapping(prog_unforced, tokens[t].vm_unforced);
     std::swap(tokens[parent].vm_unforced, tokens[t].vm_unforced);
