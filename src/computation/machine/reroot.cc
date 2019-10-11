@@ -18,6 +18,7 @@ long total_results_pivoted = 0;
 long total_reroot = 0;
 long total_reroot_one = 0;
 long total_invalidate = 0;
+long total_forces_invalidated = 0;
 long total_steps_invalidated = 0;
 long total_results_invalidated = 0;
 long total_steps_scanned = 0;
@@ -192,18 +193,22 @@ void reg_heap::unshare_regs(int t)
 
     constexpr int result_bit = 0;
     constexpr int step_bit = 1;
+    constexpr int force_bit = 2;
   
-    auto& vm_result = tokens[t].vm_result;
-    auto& vm_step = tokens[t].vm_step;
+    auto& vm_step     = tokens[t].vm_step;
+    auto& vm_result   = tokens[t].vm_result;
+    auto& vm_force    = tokens[t].vm_force;
     auto& vm_unforced = tokens[t].vm_unforced;
 
     // find all regs in t that are not shared from the root
-    const auto& delta_result = vm_result.delta();
-    const auto& delta_step = vm_step.delta();
+    const auto& delta_step     = vm_step.delta();
+    const auto& delta_result   = vm_result.delta();
+    const auto& delta_force    = vm_force.delta();
     const auto& delta_unforced = vm_unforced.delta();
 
+    int n_delta_step0   = delta_step.size();
     int n_delta_result0 = delta_result.size();
-    int n_delta_step0 = delta_step.size();
+    int n_delta_force0  = delta_force.size();
 
     auto add_bits = [&](int r, unsigned int mask)
 			{
@@ -235,12 +240,22 @@ void reg_heap::unshare_regs(int t)
 				add_bits(r, unforced_result_bit);
 			    };
 
+    auto unshare_force = [&](int r)
+                             {
+                                 // This result is already unshared
+                                 if (prog_temp[r].test(force_bit)) return;
+
+                                 prog_temp[r].set(force_bit);
+                                 vm_force.add_value(r, non_computed_index);
+                             };
+
     auto unshare_result = [&](int r)
                               {
                                   // This result is already unshared
 				  if (prog_temp[r].test(result_bit)) return;
 
 				  unshare_unforced_result(r);
+                                  unshare_force(r);
 
 				  prog_temp[r].set(result_bit);
 				  vm_result.add_value(r, non_computed_index);
@@ -254,6 +269,7 @@ void reg_heap::unshare_regs(int t)
 				if (prog_temp[r].test(step_bit)) return;
 
                                 unshare_result(r);
+                                unshare_force(r);
 				unshare_reforce_step(r);
 
 				prog_temp[r].set(step_bit);
@@ -267,10 +283,15 @@ void reg_heap::unshare_regs(int t)
 	prog_index[r] = i;
     }
 
+    // All the regs in delta_force have forces invalidated in t
+    for(const auto& [r,f]: delta_force)
+        prog_temp[r].set(force_bit);
+
     // All the regs with delta_result set have results invalidated in t
     for(const auto& [r,result]: delta_result)
     {
         prog_temp[r].set(result_bit);
+        assert(prog_temp[r].test(force_bit));
 
 	assert(prog_index[r] != no_index);
 	if (result < 0)
@@ -282,6 +303,7 @@ void reg_heap::unshare_regs(int t)
     {
 	prog_temp[r].set(step_bit);
 	assert(prog_temp[r].test(result_bit));
+	assert(prog_temp[r].test(force_bit));
 
 	assert(prog_index[r] != no_index);
 	if (step < 0)
@@ -305,6 +327,7 @@ void reg_heap::unshare_regs(int t)
             auto t = regs.access(r2).type;
             if (t == reg::type_t::changeable or t == reg::type_t::unknown)
             {
+                assert(prog_temp[r2].test(force_bit));
                 assert(prog_temp[r2].test(result_bit));
                 assert(prog_temp[r2].test(step_bit));
 	        assert(prog_index[r2] != no_index);
@@ -366,6 +389,16 @@ void reg_heap::unshare_regs(int t)
 		unshare_unforced_step(r2);
     }
 
+    for(int k=0;k<delta_force.size();k++)
+        if (auto [r,_] = delta_force[k]; has_force(r))
+        {
+            const auto& Force = force_for_reg(r);
+
+	    // Look at steps that FORCE the root's result (that is overridden in t)
+	    for(auto& [f2,_]: Force.forced_by)
+		if (int r2 = forces[f2].source_reg; prog_force[r2] == f2)
+		    unshare_force(r2);
+	}
 
     // LOGIC: Any reg that uses or call a created reg must either
     //          (i) be another created reg, or
@@ -399,12 +432,21 @@ void reg_heap::unshare_regs(int t)
             auto t = regs.access(r2).type;
             if (t == reg::type_t::changeable or t == reg::type_t::unknown)
             {
+                assert(prog_temp[r2].test(force_bit));
                 assert(prog_temp[r2].test(result_bit));
                 assert(prog_temp[r2].test(step_bit));
             }
         }
     }
 #endif
+
+    // Erase the marks that we made on prog_temp for delta_force
+    for(const auto& [r,f]: delta_force)
+    {
+	prog_temp[r].reset(force_bit);
+	prog_temp[r].reset(result_bit);
+	prog_temp[r].reset(step_bit);
+    }
 
     // Erase the marks that we made on prog_temp.
     for(const auto& [r,res]: delta_result)
@@ -424,6 +466,7 @@ void reg_heap::unshare_regs(int t)
 
     total_results_invalidated += (delta_result.size() - n_delta_result0);
     total_steps_invalidated += (delta_step.size() - n_delta_step0);
+    total_forces_invalidated += (delta_force.size() - n_delta_force0);
 
     total_results_scanned += delta_result.size();
     total_steps_scanned += delta_step.size();
