@@ -656,6 +656,18 @@ Result& reg_heap::result_for_reg(int r)
     return results.access_unused(res);
 }
 
+const Force& reg_heap::force_for_reg(int r) const
+{
+    int f = force_index_for_reg(r);
+    return forces.access_unused(f);
+}
+
+Force& reg_heap::force_for_reg(int r)
+{
+    int f = force_index_for_reg(r);
+    return forces.access_unused(f);
+}
+
 const closure& reg_heap::access_value_for_reg(int R1) const
 {
     int R2 = value_for_reg(R1);
@@ -860,6 +872,32 @@ void reg_heap::set_forced_input(int s1, int R2, bool first_execution)
         steps[s1].forced_regs.push_back(R2);
 
     assert(result_is_forced_by(s1,res2));
+}
+
+void reg_heap::set_forced_input2(int f1, int R2)
+{
+    assert(reg_is_changeable(R2));
+
+    assert(regs.is_used(R2));
+
+    assert(closure_at(R2));
+
+    assert(has_force(R2));
+
+    // An index_var's value only changes if the thing the index-var points to also changes.
+    // So, we may as well forbid using an index_var as an input.
+    assert(not expression_at(R2).is_index_var());
+
+    int f2 = force_index_for_reg(R2);
+
+    int back_index = forces[f2].forced_by.size();
+    int forw_index = forces[f1].forced_inputs.size();
+    forces[f2].forced_by.push_back({f1,forw_index});
+    forces[f1].forced_inputs.push_back({f2,back_index});
+    // QUESTION: should we be tracking the forced_regs here, outside of the step?
+    //   Maybe that would allow us to have a constant with effects.
+
+    assert(force_is_forced_by(f1,f2));
 }
 
 void reg_heap::set_call(int R1, int R2)
@@ -1380,6 +1418,15 @@ bool reg_heap::result_is_forced_by(int s1, int res2) const
     return false;
 }
 
+bool reg_heap::force_is_forced_by(int f1, int f2) const
+{
+    for(auto& [f,index]: forces[f2].forced_by)
+        if (f == f1)
+            return true;
+
+    return false;
+}
+
 bool reg_heap::reg_is_used_by(int r1, int r2) const
 {
     int s1 = step_index_for_reg(r1);
@@ -1394,6 +1441,14 @@ bool reg_heap::reg_is_forced_by(int r1, int r2) const
     int res2 = result_index_for_reg(r2);
 
     return result_is_forced_by(s1,res2);
+}
+
+bool reg_heap::reg_is_forced_by2(int r1, int r2) const
+{
+    int f1 = force_index_for_reg(r1);
+    int f2 = force_index_for_reg(r2);
+
+    return force_is_forced_by(f1,f2);
 }
 
 void reg_heap::check_tokens() const
@@ -1665,6 +1720,41 @@ int reg_heap::add_shared_result(int r, int s)
     assert(res > 0);
 
     return res;
+}
+
+int reg_heap::get_shared_force(int r, int s, int res)
+{
+    // 1. Get a new force
+    int f = forces.allocate();
+    total_comp_allocations++;
+
+    // 2. Set the source of the force
+    forces[f].source_step = s;
+    forces[f].source_result = res;
+    forces[f].source_reg = r;
+
+    assert(f > 0);
+
+    return f;
+}
+
+/// Add a shared force at (t,r) -- assuming there isn't one already
+int reg_heap::add_shared_force(int r, int s, int res)
+{
+    assert(not has_force(r));
+    // There should already be a step, if there is a force
+    assert(has_step(r));
+    assert(has_result(r));
+
+    // Get a force
+    int f = get_shared_force(r,s,res);
+
+    // Link it in to the mapping
+    prog_force[r] = f;
+
+    assert(f > 0);
+
+    return f;
 }
 
 void reg_heap::check_back_edges_cleared_for_step(int s)

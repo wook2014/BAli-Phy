@@ -183,6 +183,9 @@ class reg_heap: public Object
     bool result_is_forced_by(int, int) const;
     bool reg_is_forced_by(int, int) const;
 
+    bool force_is_forced_by(int, int) const;
+    bool reg_is_forced_by2(int, int) const;
+
 public:
     const closure& closure_at(int r) const {assert(r); return regs.access(r).C;}
     const expression_ref& expression_at(int r) const {return closure_at(r).exp;}
@@ -210,6 +213,7 @@ public:
 
     void set_used_input(int s1, int R2);
     void set_forced_input(int s1, int R2, bool first_execution=true);
+    void set_forced_input2(int f1, int R2);
     void set_call(int R1, int R2);
     void set_call_from_step(int s, int R2);
     void destroy_all_computations_in_token(int t);
@@ -522,6 +526,8 @@ public:
     Step& step_for_reg(int r);
     const Result& result_for_reg(int r) const ;
     Result& result_for_reg(int r);
+    const Force& force_for_reg(int r) const ;
+    Force& force_for_reg(int r);
     bool has_step(int r) const;
     bool has_result(int r) const;
     bool has_force(int r) const;
@@ -544,9 +550,11 @@ public:
 
     int get_shared_step(int r);
     int get_shared_result(int r, int step);
+    int get_shared_force(int r, int step, int res);
 
     int add_shared_step(int r);
     int add_shared_result(int r, int step);
+    int add_shared_force(int r, int step, int res);
 
     void clear_step(int r);
     void clear_result(int r);
