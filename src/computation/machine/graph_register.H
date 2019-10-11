@@ -572,6 +572,7 @@ public:
     bool unforced_reg(int r) const;
     void force_step(int r);
     void force_result(int r);
+    void force_reg(int r);
 
     const closure& access_value_for_reg(int R1) const;
 
