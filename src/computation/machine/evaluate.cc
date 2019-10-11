@@ -94,6 +94,7 @@ class RegOperationArgs: public OperationArgs
 	    if (M.reg_is_changeable(R3))
 	    {
 		used_changeable = true;
+                M.set_forced_reg(S,R3);
                 used_an_unforced_reg = used_an_unforced_reg or memory().unforced_reg(R3);
 	    }
 
