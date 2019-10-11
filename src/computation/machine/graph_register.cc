@@ -1218,6 +1218,7 @@ int reg_heap::allocate_reg_from_step(int s, closure&& C)
 int reg_heap::allocate_reg_from_step_in_token(int s, int t)
 {
     int r = allocate_reg_from_step(s);
+    tokens[t].vm_force.add_value(r, non_computed_index);
     tokens[t].vm_result.add_value(r, non_computed_index);
     tokens[t].vm_step.add_value(r, non_computed_index);
     tokens[t].vm_unforced.add_value(r, unforced_bits);
@@ -1262,6 +1263,9 @@ void reg_heap::set_reg_value(int R, closure&& value, int t)
 
     assert(tokens[t].vm_result.empty());
     tokens[t].vm_result.add_value(R, non_computed_index);
+
+    assert(tokens[t].vm_force.empty());
+    tokens[t].vm_force.add_value(R, non_computed_index);
 
     assert(tokens[t].vm_unforced.empty());
     tokens[t].vm_unforced.add_value(R, forced_bits | unforced_result_bit);
