@@ -2244,6 +2244,7 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
     :regs(1,[this](int s){resize(s);}, [this](){collect_garbage();} ),
      steps(1),
      results(1),
+     forces(1),
      P(new Program(L)),
      prog_steps(1, non_computed_index),
      prog_results(1, non_computed_index),
