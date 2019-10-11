@@ -1482,15 +1482,29 @@ void reg_heap::check_used_regs_in_token(int t) const
 {
     assert(token_is_used(t));
 
+    constexpr int force_bit = 2;
+    constexpr int result_bit = 0;
+    constexpr int step_bit = 1;
+
+    for(auto [r,f]: tokens[t].delta_force())
+    {
+        assert(not prog_temp[r].test(force_bit));
+        prog_temp[r].set(force_bit);
+
+        // No results for constant regs
+        if (f > 0)
+            assert(not reg_is_constant(r));
+    }
+
     for(auto [r,res]: tokens[t].delta_result())
     {
-        assert(not prog_temp[r].test(0));
-        prog_temp[r].set(0);
+        assert(not prog_temp[r].test(result_bit));
+        prog_temp[r].set(result_bit);
 
         // No results for constant regs
         if (res > 0)
         {
-            assert(regs.access(r).type != reg::type_t::constant);
+            assert(not reg_is_constant(r));
             assert(not steps.is_free(results[res].source_step));
             int call = results[res].call_edge.first;
             if (call > 0)
@@ -1499,14 +1513,14 @@ void reg_heap::check_used_regs_in_token(int t) const
     }
     for(auto [r,step]: tokens[t].delta_step())
     {
-        assert(not prog_temp[r].test(1));
-        prog_temp[r].set(1);
+        assert(not prog_temp[r].test(step_bit));
+        prog_temp[r].set(step_bit);
 
         // If the step is unshared, the result must be unshared as well: this allows us to just walk unshared results.
-        assert(prog_temp[r].test(0) and prog_temp[r].test(1));
+        assert(prog_temp[r].test(result_bit) and prog_temp[r].test(step_bit));
         // No steps for constant regs
         if (step > 0)
-            assert(regs.access(r).type != reg::type_t::constant);
+            assert(not reg_is_constant(r));
     }
 
     // FIXME - nonlocal. The same result/step are not set in multiple places!
@@ -1544,25 +1558,25 @@ void reg_heap::check_used_regs_in_token(int t) const
         //FIXME! Check that source_step is in same token, for same reg
         int value = results[res].value;
 
-        if (results[res].flags.test(0))
+        if (results[res].flags.test(result_bit))
             assert(is_root_token(t));
 
-        if (results[res].flags.test(1))
+        if (results[res].flags.test(step_bit))
             assert(is_root_token(t));
 
         if (value)
             assert(call);
 
         if (call and value == call)
-            assert(regs.access(call).type == reg::type_t::constant);
+            assert(reg_is_constant(call));
 
-        if (call and value and regs.access(call).type == reg::type_t::constant)
+        if (call and value and reg_is_constant(call))
             assert(value == call);
 
         if (t != root_token) continue;
 
         // Regs with values should have back-references from their call.
-        if (value and regs.access(call).type != reg::type_t::constant)
+        if (value and not reg_is_constant(call))
         {
             assert( has_result(call) );
             int res2 = result_index_for_reg(call);
@@ -1574,16 +1588,29 @@ void reg_heap::check_used_regs_in_token(int t) const
             assert(reg_has_value(call));
     }
 
+    assert(tokens[t].delta_result().size() <= tokens[t].delta_force().size());
+
+    assert(tokens[t].delta_step().size() <= tokens[t].delta_result().size());
+
+    for(auto [reg,f]: tokens[t].delta_force())
+    {
+        prog_temp[reg].reset(result_bit);
+        prog_temp[reg].reset(step_bit);
+        prog_temp[reg].reset(force_bit);
+    }
+
     for(auto [reg,res]: tokens[t].delta_result())
     {
-        prog_temp[reg].reset(0);
-        prog_temp[reg].reset(1);
+        prog_temp[reg].reset(result_bit);
+        prog_temp[reg].reset(step_bit);
+        prog_temp[reg].reset(force_bit);
     }
 
     for(auto [reg,step]: tokens[t].delta_step())
     {
-        prog_temp[reg].reset(0);
-        prog_temp[reg].reset(1);
+        prog_temp[reg].reset(result_bit);
+        prog_temp[reg].reset(step_bit);
+        prog_temp[reg].reset(force_bit);
     }
 }
 
@@ -1620,7 +1647,23 @@ void reg_heap::check_used_regs() const
                 assert(prog_force[r] == non_computed_index);
                 assert(prog_unforced[r] == unforced_bits);
                 assert(not has_result(r));
+                assert(not has_force(r));
                 continue;
+            }
+
+            if (not has_result(r))
+            {
+                assert(not has_force(r));
+            }
+
+            if (has_force(r))
+            {
+                for(auto r2: step_for_reg(r).forced_regs)
+                    assert(has_force(r2));
+                for(auto r2: used_regs_for_reg(r))
+                    assert(has_force(r2));
+                if (reg_is_changeable(step_for_reg(r).call))
+                    assert(has_force(step_for_reg(r).call));
             }
 
             // not reforce_step == all forced_regs have a result AND a forced_input edge to that result.
