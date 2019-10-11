@@ -104,9 +104,6 @@ void reg_heap::reroot_at(int t)
     pivot_mapping(prog_force, tokens[t].vm_force);
     std::swap(tokens[parent].vm_force, tokens[t].vm_force);
 
-    pivot_mapping(prog_unforced, tokens[t].vm_unforced);
-    std::swap(tokens[parent].vm_unforced, tokens[t].vm_unforced);
-
     // 4. Alter the inheritance tree
     tokens[parent].parent = t;
     int index = remove_element(tokens[parent].children, t);
@@ -198,47 +195,15 @@ void reg_heap::unshare_regs(int t)
     auto& vm_step     = tokens[t].vm_step;
     auto& vm_result   = tokens[t].vm_result;
     auto& vm_force    = tokens[t].vm_force;
-    auto& vm_unforced = tokens[t].vm_unforced;
 
     // find all regs in t that are not shared from the root
     const auto& delta_step     = vm_step.delta();
     const auto& delta_result   = vm_result.delta();
     const auto& delta_force    = vm_force.delta();
-    const auto& delta_unforced = vm_unforced.delta();
 
     int n_delta_step0   = delta_step.size();
     int n_delta_result0 = delta_result.size();
     int n_delta_force0  = delta_force.size();
-
-    auto add_bits = [&](int r, unsigned int mask)
-			{
-			    int index = prog_index[r];
-			    // Clearly no invalidate bits are set
-			    if (index == no_index)
-			    {
-				prog_index[r] = vm_unforced.delta().size();
-				vm_unforced.add_value(r, prog_unforced[r] | mask);
-			    }
-			    // Update the bits.
-			    else
-				vm_unforced.delta()[index].second |= mask;
-			    // Later, we might need to move the reg ahead of k to do further invalidations.
-			    // However, adding more bits does not affect propagation, since ANY set bit means the reg is not fully forced.
-			    assert(prog_index[r] != no_index);
-			};
-    auto unshare_reforce_step = [&](int r)
-			    {
-				add_bits(r, reforce_step_bit | unforced_step_bit);
-			    };
-    auto unshare_unforced_step = [&](int r)
-			    {
-				add_bits(r, unforced_step_bit);
-			    };
-
-    auto unshare_unforced_result = [&](int r)
-			    {
-				add_bits(r, unforced_result_bit);
-			    };
 
     auto unshare_force = [&](int r)
                              {
@@ -254,13 +219,10 @@ void reg_heap::unshare_regs(int t)
                                   // This result is already unshared
 				  if (prog_temp[r].test(result_bit)) return;
 
-				  unshare_unforced_result(r);
                                   unshare_force(r);
 
 				  prog_temp[r].set(result_bit);
 				  vm_result.add_value(r, non_computed_index);
-				  assert(prog_index[r] != no_index);
-				  assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
                               };
 
     auto unshare_step = [&](int r)
@@ -270,18 +232,10 @@ void reg_heap::unshare_regs(int t)
 
                                 unshare_result(r);
                                 unshare_force(r);
-				unshare_reforce_step(r);
 
 				prog_temp[r].set(step_bit);
                                 vm_step.add_value(r, non_computed_index);
                             };
-
-    // All the regs with delta_result set have results invalidated in t
-    for(int i=0;i<delta_unforced.size();i++)
-    {
-	auto [r,_] = delta_unforced[i];
-	prog_index[r] = i;
-    }
 
     // All the regs in delta_force have forces invalidated in t
     for(const auto& [r,f]: delta_force)
@@ -292,10 +246,6 @@ void reg_heap::unshare_regs(int t)
     {
         prog_temp[r].set(result_bit);
         assert(prog_temp[r].test(force_bit));
-
-	assert(prog_index[r] != no_index);
-	if (result < 0)
-	    assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
     }
 
     // All the regs with delta_step set have steps (and results) invalidated in t
@@ -304,14 +254,6 @@ void reg_heap::unshare_regs(int t)
 	prog_temp[r].set(step_bit);
 	assert(prog_temp[r].test(result_bit));
 	assert(prog_temp[r].test(force_bit));
-
-	assert(prog_index[r] != no_index);
-	if (step < 0)
-	{
-	    assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
-	    assert(delta_unforced[prog_index[r]].second & unforced_step_bit);
-	    assert(delta_unforced[prog_index[r]].second & reforce_step_bit);
-	}
     }
 
 #ifndef NDEBUG
@@ -330,7 +272,6 @@ void reg_heap::unshare_regs(int t)
                 assert(prog_temp[r2].test(force_bit));
                 assert(prog_temp[r2].test(result_bit));
                 assert(prog_temp[r2].test(step_bit));
-	        assert(prog_index[r2] != no_index);
             }
         }
     }
@@ -352,42 +293,10 @@ void reg_heap::unshare_regs(int t)
             for(auto& [s2,_]: Result.used_by)
                 if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
                     unshare_step(r2);
-
-	    // Look at steps that FORCE the root's result (that is overridden in t)
-	    for(auto& [s2,_]: Result.forced_by)
-		if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
-		    unshare_reforce_step(r2);
 	}
 
     // LOGIC: Marking something unforced will never give it an invalid result.
     //        Therefore, this logic need not go into the former loop.
-
-    for(int k=0;k<delta_unforced.size();k++)
-    {
-	auto [r,_] = delta_unforced[k];
-
-	// If this has an invalid result then it will be handled above.
-	if (prog_temp[r].test(result_bit)) continue;
-
-	if (not has_result(r)) continue;
-
-	const auto& Result = result_for_reg(r);
-
-	// Look at results that call the root's result (that is overridden in t)
-	for(int res2: Result.called_by)
-	    if (int r2 = results[res2].source_reg; prog_results[r2] == res2)
-		unshare_unforced_result(r2);
-
-	// Look at steps that use the root's result (that is overridden in t)
-	for(auto& [s2,index]: Result.used_by)
-	    if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
-		unshare_unforced_step(r2);
-
-	// Look at steps that force the root's result (that is overridden in t)
-	for(auto& [s2,index]: Result.forced_by)
-	    if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
-		unshare_unforced_step(r2);
-    }
 
     for(int k=0;k<delta_force.size();k++)
         if (auto [r,_] = delta_force[k]; has_force(r))
@@ -447,22 +356,6 @@ void reg_heap::unshare_regs(int t)
 	prog_temp[r].reset(result_bit);
 	prog_temp[r].reset(step_bit);
     }
-
-    // Erase the marks that we made on prog_temp.
-    for(const auto& [r,res]: delta_result)
-    {
-	prog_temp[r].reset(result_bit);
-	prog_temp[r].reset(step_bit);
-
-	// check that all of the invalid results are also unforced results
-	assert(prog_index[r] != no_index);
-	if (res < 0)
-	    assert(delta_unforced[prog_index[r]].second & unforced_result_bit);
-    }
-
-    // Erase the marks that we made on prog_index
-    for(const auto& [r,_]: delta_unforced)
-	prog_index[r] = no_index;
 
     total_results_invalidated += (delta_result.size() - n_delta_result0);
     total_steps_invalidated += (delta_step.size() - n_delta_step0);
