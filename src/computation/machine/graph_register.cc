@@ -1019,6 +1019,17 @@ void reg_heap::set_used_input(int s1, int R2)
     assert(result_is_used_by(s1,res2));
 }
 
+void reg_heap::set_forced_reg(int s, int R2)
+{
+    assert(reg_is_changeable(R2));
+
+    assert(regs.is_used(R2));
+
+    assert(closure_at(R2));
+
+    steps[s].forced_regs.push_back(R2);
+}
+
 void reg_heap::set_forced_input2(int f1, int R2)
 {
     assert(reg_is_changeable(R2));
