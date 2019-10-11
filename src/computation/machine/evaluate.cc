@@ -94,7 +94,6 @@ class RegOperationArgs: public OperationArgs
 	    if (M.reg_is_changeable(R3))
 	    {
 		used_changeable = true;
-		M.set_forced_input(S, R3);
                 used_an_unforced_reg = used_an_unforced_reg or memory().unforced_reg(R3);
 	    }
 
@@ -258,9 +257,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
     assert(regs.is_valid_address(R));
     assert(regs.is_used(R));
     assert(has_step(R) or not has_result(R));
-    assert(has_result(R) or unforced_result(R));
-    assert(has_step(R) or (unforced_step(R) and reforce_step(R)));
-    assert(not reforce_step(R) or unforced_step(R));
     assert(has_result(R) or not has_force(R));
 
 #ifndef NDEBUG
@@ -289,9 +285,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
         {
             assert(not has_step(R));
             assert(not has_result(R));
-            assert(reforce_step(R));
-            assert(unforced_step(R));
-            assert(unforced_result(R));
             assert(not has_force(R));
             return {R,R};
         }
@@ -309,44 +302,14 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		if (value)
 		{
 		    total_changeable_eval_with_result++;
-                    assert(unforced_result(R) or not unforced_reg(call_for_reg(R)));
-                    if (not unforced_step(R))
-                        for(auto r2: step_for_reg(R).forced_regs)
-                        {
-                            assert(reg_has_result_value(r2));
-                            assert(not reforce_step(r2));
-                            assert(not unforced_step(r2));
-                            assert(not unforced_result(r2));
-                        }
+
                     if (force)
                     {
-                        if (unforced_step(R))
-                            force_step(R);
-
-                        if (unforced_result(R))
-                            force_result(R);
-
-                        assert(not reforce_step(R));
-                        assert(not unforced_step(R));
-                        assert(not unforced_result(R));
-
                         if (not has_force(R))
                             force_reg(R);
 
                         assert(has_force(R));
                     }
-                    if (not unforced_step(R))
-                        for(auto r2: step_for_reg(R).forced_regs)
-                        {
-                            assert(reg_has_result_value(r2));
-                            assert(not reforce_step(r2));
-                            assert(not unforced_step(r2));
-                            assert(not unforced_result(r2));
-                        }
-                    assert(not force or not reforce_step(R));
-                    assert(not force or not unforced_result(R));
-                    assert(not force or not unforced_step(R));
-                    assert(unforced_result(R) or not unforced_reg(call_for_reg(R)));
 
                     assert(not force or has_force(R));
 
@@ -358,10 +321,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    if (reg_has_call(R))
 	    {
 		assert(not has_result(R));
-		assert(unforced_result(R));
-
-		// Force the step if we need to.
-		if (force and unforced_step(R)) force_step(R);
 
                 // Evaluate S, looking through unchangeable redirections
 		auto [call, value] = incremental_evaluate(call_for_reg(R), force);
@@ -377,23 +336,11 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		// R gets its value from S.
 		set_result_value_for_reg( R);
 
+                // FIXME - move this into RegOperationArgs
                 if (force and not has_force(R)) force_reg(R);
-		assert(not force or not unforced_step(R));
 
 		total_changeable_eval_with_call++;
 
-                assert(not force or not reforce_step(R));
-		assert(not force or not unforced_result(R));
-		assert(not force or not unforced_step(R));
-                if (not unforced_step(R))
-                    for(auto r2: step_for_reg(R).forced_regs)
-                    {
-                        assert(reg_has_result_value(r2));
-                        assert(not reforce_step(r2));
-                        assert(not unforced_step(r2));
-                        assert(not unforced_result(r2));
-                    }
-                assert(unforced_result(R) == unforced_reg(call));
 		return {R, value};
 	    }
 	}
@@ -427,9 +374,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    // Return the end of the index_var chain.
 	    // We used to update the index_var to point to the end of the chain.
 
-	    assert(reforce_step(R));
-	    assert(unforced_step(R));
-	    assert(unforced_result(R));
 	    assert(not has_force(R));
 
 	    return incremental_evaluate(R2, force);
@@ -444,10 +388,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    if (s > 0)
 		clear_back_edges_for_step(s);
 	    clear_step(R);
-
-	    assert(reforce_step(R));
-	    assert(unforced_step(R));
-	    assert(unforced_result(R));
             clear_force(R);
 
 	    return {R,R};
@@ -463,10 +403,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	// 3. Reduction: Operation (includes @, case, +, etc.)
 	else
 	{
-	    assert(reforce_step(R));
-	    assert(unforced_step(R));
-	    assert(unforced_result(R));
-
 	    // We keep the (same) computation here, until we prove that we don't need one.
 	    // We don't need one if we evaluate to WHNF, and then we remove it.
 	    if (not has_step(R))
@@ -517,20 +453,11 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 
 		    auto [r3,value] = incremental_evaluate(r2, force);
 
-                    // Since we are going to re-execute all forces and uses, we clear the reforce_step bit.
-                    // We may want to keep the unforced_step or unforced_result bit.  See below.
 		    set_call(R, r3);
-                    prog_unforced[R] &= (~reforce_step_bit);
 		    set_result_value_for_reg(R);
-                    if (force) force_reg(R);
-                    if (not Args.used_an_unforced_reg)
-                        prog_unforced[R] &= (~unforced_step_bit);
-                    assert(not reforce_step(R));
-                    assert(not force or not unforced_result(R));
-                    assert(not force or not unforced_step(R));
-                    assert(not force or has_force(R));
 
-                    assert(unforced_result(R) == unforced_reg(call_for_reg(R)));
+                    if (force) force_reg(R);
+
 		    return {R, value};
 		}
 	    }

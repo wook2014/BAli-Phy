@@ -28,7 +28,6 @@ struct Step
 
     /// Which reg's were used to reduce this expression?
     boost::container::small_vector< std::pair<int,int>, 2 > used_inputs;
-    boost::container::small_vector< std::pair<int,int>, 2 > forced_inputs;
     boost::container::small_vector< int, 2> forced_regs;
     boost::container::small_vector< int, 2 > created_regs;
 
@@ -65,9 +64,6 @@ struct Result
   
     /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
     boost::container::small_vector<std::pair<int,int>, 2> used_by;
-
-    /// Which pairs (reg,slot) FORCED the reduction value of C (via an operation)?
-    boost::container::small_vector<std::pair<int,int>, 2> forced_by;
 
     /// Which reduction values made use of the value of this expression (via call)
     boost::container::small_vector<int, 5> called_by;
@@ -114,20 +110,6 @@ struct Force
 };
 
 constexpr int non_computed_index = -1;
-
-constexpr int unforced_result_bit = (1<<0);
-
-constexpr int unforced_step_bit = (1<<1);
-
-constexpr int reforce_step_bit = (1<<2);
-
-constexpr int non_zero_bit = (1<<3);
-
-constexpr int unforced_bits = unforced_result_bit | unforced_step_bit | reforce_step_bit | non_zero_bit;
-
-constexpr int forced_bits = non_zero_bit;
-
-constexpr int no_index = -1;
 
 class reg
 {
@@ -184,9 +166,6 @@ class reg_heap: public Object
     bool result_is_used_by(int, int) const;
     bool reg_is_used_by(int, int) const;
 
-    bool result_is_forced_by(int, int) const;
-    bool reg_is_forced_by(int, int) const;
-
     bool force_is_forced_by(int, int) const;
     bool reg_is_forced_by2(int, int) const;
 
@@ -216,7 +195,6 @@ public:
     void make_reg_changeable(int r);
 
     void set_used_input(int s1, int R2);
-    void set_forced_input(int s1, int R2, bool first_execution=true);
     void set_forced_input2(int f1, int R2);
     void set_call(int R1, int R2);
     void set_call_from_step(int s, int R2);
@@ -378,7 +356,6 @@ public:
         mapping<int> vm_step;
         mapping<int> vm_result;
         mapping<int> vm_force;
-        mapping<char> vm_unforced;
 
         bool used = false;
         long version = 0;
@@ -395,10 +372,8 @@ private:
     std::vector<int> prog_steps;
     std::vector<int> prog_results;
     std::vector<int> prog_force;
-    std::vector<char> prog_unforced;
 
     mutable std::vector<std::bitset<8>> prog_temp;
-    mutable std::vector<int> prog_index;
   
 public:
     /// Is a particular token unused?
@@ -548,12 +523,7 @@ public:
     int result_value_for_reg(int r) const;
     bool reg_has_call(int r) const;
     int call_for_reg(int r) const;
-    bool unforced_result(int r) const;
-    bool unforced_step(int r) const;
-    bool reforce_step(int r) const;
     bool unforced_reg(int r) const;
-    void force_step(int r);
-    void force_result(int r);
     void force_reg(int r);
 
     const closure& access_value_for_reg(int R1) const;
