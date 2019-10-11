@@ -724,6 +724,50 @@ bool reg_heap::reforce_step(int r) const
     return prog_unforced[r] & reforce_step_bit;
 }
 
+void reg_heap::force_reg(int r)
+{
+    assert(reg_is_changeable(r));
+    assert(has_step(r));
+    assert(has_result(r));
+    assert(not has_force(r));
+
+    int s = step_index_for_reg(r);
+    int res = result_index_for_reg(r);
+
+    int f = add_shared_force(r, s, res);
+
+    const auto& S = steps.access(s);
+
+    for(auto& [result,_]: S.used_inputs)
+    {
+        int r2 = results.access(result).source_reg;
+        incremental_evaluate(r2, true);
+        set_forced_input2(f,r2);
+    }
+
+    for(auto r2: S.forced_regs)
+    {
+        incremental_evaluate(r2, true);
+        assert(has_force(r2));
+        assert(reg_has_result_value(r2));
+
+        set_forced_input2(f,r2);
+    }
+
+    assert(S.call > 0);
+
+    incremental_evaluate(S.call, true);
+
+    // If R2 is WHNF then we are done
+    if (not reg_is_constant(S.call))
+    {
+        assert(reg_is_changeable(S.call));
+        set_forced_input2(f, S.call);
+    }
+
+    assert(force_for_reg(r).forced_inputs.size() >= S.forced_regs.size());
+}
+
 void reg_heap::force_step(int r)
 {
     int s = step_index_for_reg(r);
