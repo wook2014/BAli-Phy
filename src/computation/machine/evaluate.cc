@@ -261,6 +261,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
     assert(has_result(R) or unforced_result(R));
     assert(has_step(R) or (unforced_step(R) and reforce_step(R)));
     assert(not reforce_step(R) or unforced_step(R));
+    assert(has_result(R) or not has_force(R));
 
 #ifndef NDEBUG
     if (reg_has_value(R))
@@ -291,6 +292,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
             assert(reforce_step(R));
             assert(unforced_step(R));
             assert(unforced_result(R));
+            assert(not has_force(R));
             return {R,R};
         }
 
@@ -428,6 +430,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    assert(reforce_step(R));
 	    assert(unforced_step(R));
 	    assert(unforced_result(R));
+	    assert(not has_force(R));
 
 	    return incremental_evaluate(R2, force);
 	}
@@ -445,6 +448,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    assert(reforce_step(R));
 	    assert(unforced_step(R));
 	    assert(unforced_result(R));
+            clear_force(R);
 
 	    return {R,R};
 	}
