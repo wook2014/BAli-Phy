@@ -10,8 +10,6 @@
 #include "computation/operations.H"
 #include "effect.H"
 
-#define DEBUG_MACHINE 2
-
 using std::string;
 using std::vector;
 using std::pair;

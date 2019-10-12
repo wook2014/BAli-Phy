@@ -4,8 +4,6 @@
 #include "util/range.H"
 #include "mapping.H"
 
-#define DEBUG_MACHINE 2
-
 using std::string;
 using std::vector;
 using std::pair;
