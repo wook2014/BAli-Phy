@@ -1846,6 +1846,9 @@ int reg_heap::get_shared_force(int r)
 {
     // 1. Get a new force
     int f = forces.allocate();
+#ifndef NDEBUG
+    forces[f].check_cleared();
+#endif
     total_force_allocations++;
 
     // 2. Set the source of the force
