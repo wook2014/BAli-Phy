@@ -20,9 +20,8 @@ void reg_heap::destroy_all_computations_in_token(int t)
 
     // Remove use back-edges
     auto& delta_step = tokens[t].delta_step();
-    for(auto p: delta_step)
+    for(auto [_,s]: delta_step)
     {
-	int s = p.second;
 	if (s > 0)
 	{
 	    for(int r: steps[s].created_regs)
@@ -40,11 +39,10 @@ void reg_heap::destroy_all_computations_in_token(int t)
 
     // Remove call back-edges
     auto& delta_result = tokens[t].delta_result();
-    for(auto p: delta_result)
+    for(auto [_,res]: delta_result)
     {
-	int rc = p.second;
-	if (rc > 0)
-	    clear_back_edges_for_result(rc);
+	if (res > 0)
+	    clear_back_edges_for_result(res);
     }
 
     // Remove force back-edges
@@ -55,19 +53,17 @@ void reg_heap::destroy_all_computations_in_token(int t)
 	    clear_back_edges_for_force(f);
     }
 
-    for(auto p: delta_step)
+    for(auto [_,s]: delta_step)
     {
-	int s = p.second;
 	if (s > 0)
 	    steps.reclaim_used(s);
     }
     tokens[t].vm_step.clear();
 
-    for(auto p: delta_result)
+    for(auto [_,res]: delta_result)
     {
-	int rc = p.second;
-	if (rc > 0)
-	    results.reclaim_used(rc);
+	if (res > 0)
+	    results.reclaim_used(res);
     }
     tokens[t].vm_result.clear();
 
