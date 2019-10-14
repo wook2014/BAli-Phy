@@ -306,7 +306,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 
                     if (force and not has_force(R)) force_reg(R);
 
-                    assert(not force or has_force(R));
+                    assert(not force or not unforced_reg(R));
 
                     return {R, value};
 		}
