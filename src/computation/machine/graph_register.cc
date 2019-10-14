@@ -104,6 +104,16 @@ void Step::mark_with_nonforce_effect()
     flags.set(6);
 }
 
+bool Step::has_force_effects() const
+{
+    return flags.test(5);
+}
+
+void Step::mark_with_force_effects()
+{
+    flags.set(5);
+}
+
 void Step::clear()
 {
     source_reg = -1;
@@ -147,6 +157,16 @@ Step::Step(Step&& S) noexcept
  flags ( S.flags )
 { }
 
+bool Result::has_force_effects() const
+{
+    return flags.test(5);
+}
+
+void Result::mark_with_force_effects()
+{
+    flags.set(5);
+}
+
 void Result::clear()
 {
     source_step = -1;
@@ -156,8 +176,9 @@ void Result::clear()
     truncate(used_by);
     truncate(called_by);
 
+    flags.reset();
     // This should already be cleared.
-    assert(flags.none());
+    // assert(flags.none());
 }
 
 void Result::check_cleared()
@@ -886,6 +907,8 @@ void reg_heap::set_result_value_for_reg(int r1)
     assert(res1 > 0);
     auto& RES1 = results[res1];
     RES1.value = value;
+    if (step_for_reg(r1).has_force_effects())
+        RES1.mark_with_force_effects();
 
     // If R2 is WHNF then we are done
     if (regs.access(call).type == reg::type_t::constant) return;
@@ -896,8 +919,11 @@ void reg_heap::set_result_value_for_reg(int r1)
     // Add a called-by edge to R2.
     int res2 = result_index_for_reg(call);
     int back_index = results[res2].called_by.size();
-    results[res2].called_by.push_back(res1);
+    auto& RES2 = results[res2];
+    RES2.called_by.push_back(res1);
     RES1.call_edge = {res2, back_index};
+    if (RES2.has_force_effects())
+        RES1.mark_with_force_effects();
 }
 
 void reg_heap::set_used_input(int s1, int R2)
@@ -919,8 +945,12 @@ void reg_heap::set_used_input(int s1, int R2)
 
     int back_index = results[res2].used_by.size();
     int forw_index = steps[s1].used_inputs.size();
-    results[res2].used_by.push_back({s1,forw_index});
-    steps[s1].used_inputs.push_back({res2,back_index});
+    auto& RES2 = results[res2];
+    RES2.used_by.push_back({s1,forw_index});
+    auto& S1 = steps[s1];
+    S1.used_inputs.push_back({res2,back_index});
+    if (RES2.has_force_effects())
+        S1.mark_with_force_effects();
 
     assert(result_is_used_by(s1,res2));
 }
@@ -934,6 +964,7 @@ void reg_heap::set_forced_reg(int s, int R2)
     assert(closure_at(R2));
 
     steps[s].forced_regs.push_back(R2);
+    steps[s].mark_with_force_effects();
 }
 
 void reg_heap::set_forced_input2(int f1, int R2)
