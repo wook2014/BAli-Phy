@@ -379,6 +379,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    regs.access(R).type = reg::type_t::constant;
 	    clear_result(R);
 	    int s = step_index_for_reg(R);
+            // Why do we need to clear back-edges here?
 	    if (s > 0)
 		clear_back_edges_for_step(s);
 	    clear_step(R);
