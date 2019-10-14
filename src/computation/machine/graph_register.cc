@@ -940,7 +940,7 @@ void reg_heap::force_reg(int r)
         int r2 = results.access(result).source_reg;
         if (not has_force(r2))
             incremental_evaluate(r2, true);
-        set_forced_input2(f,r2);
+        set_forced_input2(f, r2, false);
     }
 
     for(auto r2: S.forced_regs)
@@ -950,7 +950,7 @@ void reg_heap::force_reg(int r)
         assert(has_force(r2));
         assert(reg_has_result_value(r2));
 
-        set_forced_input2(f,r2);
+        set_forced_input2(f, r2, true);
     }
 
     assert(S.call > 0);
@@ -962,7 +962,7 @@ void reg_heap::force_reg(int r)
             incremental_evaluate(S.call, true);
 
         assert(reg_is_changeable(S.call));
-        set_forced_input2(f, S.call);
+        set_forced_input2(f, S.call, false);
     }
 
     assert(force_for_reg(r).forced_inputs.size() >= S.forced_regs.size());
@@ -1066,7 +1066,7 @@ void reg_heap::set_forced_reg(int s, int R2)
     steps[s].mark_with_force_effects();
 }
 
-void reg_heap::set_forced_input2(int f1, int R2)
+void reg_heap::set_forced_input2(int f1, int R2, bool is_force)
 {
     assert(reg_is_changeable(R2));
 
@@ -1074,11 +1074,27 @@ void reg_heap::set_forced_input2(int f1, int R2)
 
     assert(closure_at(R2));
 
-    assert(has_force(R2));
-
     // An index_var's value only changes if the thing the index-var points to also changes.
     // So, we may as well forbid using an index_var as an input.
     assert(not expression_at(R2).is_index_var());
+
+    if (not result_for_reg(R2).has_force_effects())
+    {
+        assert(not has_force(R2) or not force_for_reg(R2).forced_by.empty());
+        assert(not has_force(R2) or force_for_reg(R2).forced_inputs.empty());
+
+        // USE and CALL operations don't need back edges from regs with no effects.
+        //    The force of R2 will be invalidated only if the result of R2 is invalidated, and
+        //    this will invalidate f1 by invalidating the step or result at R1.
+        // FORCE operations can be invalidated by the lack of a result, so we do need a back-edge.
+        if (not is_force) return;
+
+        // We can avoid creating a force at regs with no effects until something forces them directly.
+        if (not has_force(R2))
+            add_shared_force(R2, step_index_for_reg(R2), result_index_for_reg(R2));
+    }
+
+    assert(has_force(R2));
 
     int f2 = force_index_for_reg(R2);
 
