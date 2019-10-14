@@ -231,8 +231,6 @@ Result::Result(Result&& R) noexcept
 
 void Force::clear()
 {
-    source_step = -1;
-    source_result = -1;
     source_reg = -1;
     truncate(forced_inputs);
     truncate(forced_by);
@@ -246,8 +244,6 @@ void Force::check_cleared()
 
 Force& Force::operator=(Force&& F) noexcept
 {
-    source_step = F.source_step;
-    source_result = F.source_result;
     source_reg = F.source_reg;
     forced_inputs = std::move( F.forced_inputs );
     forced_by = std::move( F.forced_by );
@@ -926,9 +922,8 @@ void reg_heap::force_reg(int r)
     assert(not has_force(r));
 
     int s = step_index_for_reg(r);
-    int res = result_index_for_reg(r);
 
-    int f = add_shared_force(r, s, res);
+    int f = add_shared_force(r);
 
     const auto& S = steps.access(s);
     assert(reg_is_constant(S.call) or reg_is_changeable(S.call));
@@ -1091,7 +1086,7 @@ void reg_heap::set_forced_input2(int f1, int R2, bool is_force)
 
         // We can avoid creating a force at regs with no effects until something forces them directly.
         if (not has_force(R2))
-            add_shared_force(R2, step_index_for_reg(R2), result_index_for_reg(R2));
+            add_shared_force(R2);
     }
 
     assert(has_force(R2));
@@ -1836,10 +1831,24 @@ void reg_heap::check_used_regs() const
                 continue;
             }
 
+            auto& S = step_for_reg(r);
+            {
+                bool b = not S.forced_regs.empty();
+                for(auto r2: S.forced_regs)
+                    b = b or result_for_reg(r2).has_force_effects();
+                for(auto r2: used_regs_for_reg(r))
+                    b = b or result_for_reg(r2).has_force_effects();
+                assert(S.has_force_effects() == b);
+            }
+
             if (not has_result(r))
             {
                 assert(not has_force(r));
             }
+
+            auto& RES = result_for_reg(r);
+            if (not RES.has_force_effects())
+                assert(not has_force(r) or force_for_reg(r).forced_inputs.empty());
 
             if (has_force(r))
             {
@@ -1857,6 +1866,9 @@ int reg_heap::get_shared_step(int r)
 {
     // 1. Get a new computation
     int s = steps.allocate();
+#ifndef NDEBUG
+    steps[s].check_cleared();
+#endif
     total_step_allocations++;
   
     // 2. Set the source of the computation
@@ -1887,6 +1899,9 @@ int reg_heap::get_shared_result(int r, int s)
 {
     // 1. Get a new result
     int res = results.allocate();
+#ifndef NDEBUG
+    results[res].check_cleared();
+#endif
     total_result_allocations++;
   
     // 2. Set the source of the result
@@ -1916,15 +1931,13 @@ int reg_heap::add_shared_result(int r, int s)
     return res;
 }
 
-int reg_heap::get_shared_force(int r, int s, int res)
+int reg_heap::get_shared_force(int r)
 {
     // 1. Get a new force
     int f = forces.allocate();
     total_force_allocations++;
 
     // 2. Set the source of the force
-    forces[f].source_step = s;
-    forces[f].source_result = res;
     forces[f].source_reg = r;
 
     assert(f > 0);
@@ -1933,7 +1946,7 @@ int reg_heap::get_shared_force(int r, int s, int res)
 }
 
 /// Add a shared force at (t,r) -- assuming there isn't one already
-int reg_heap::add_shared_force(int r, int s, int res)
+int reg_heap::add_shared_force(int r)
 {
     assert(not has_force(r));
     // There should already be a step, if there is a force
@@ -1941,7 +1954,7 @@ int reg_heap::add_shared_force(int r, int s, int res)
     assert(has_result(r));
 
     // Get a force
-    int f = get_shared_force(r,s,res);
+    int f = get_shared_force(r);
 
     // Link it in to the mapping
     prog_force[r] = f;

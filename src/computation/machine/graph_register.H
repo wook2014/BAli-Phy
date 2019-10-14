@@ -100,10 +100,6 @@ struct Result
 
 struct Force
 {
-    int source_step = -1;
-
-    int source_result = -1;
-
     int source_reg = -1;
 
     /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
@@ -559,11 +555,11 @@ public:
 
     int get_shared_step(int r);
     int get_shared_result(int r, int step);
-    int get_shared_force(int r, int step, int res);
+    int get_shared_force(int r);
 
     int add_shared_step(int r);
     int add_shared_result(int r, int step);
-    int add_shared_force(int r, int step, int res);
+    int add_shared_force(int r);
 
     void clear_step(int r);
     void clear_result(int r);
