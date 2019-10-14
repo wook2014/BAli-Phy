@@ -965,7 +965,13 @@ void reg_heap::force_reg(int r)
 
 bool reg_heap::unforced_reg(int r) const
 {
-    return reg_is_changeable(r) and (not has_force(r));
+    if (not reg_is_changeable(r)) return false;
+
+    if (not reg_has_result_value(r)) return true;
+
+    if (not result_for_reg(r).has_force_effects()) return false;
+
+    return (not has_force(r));
 }
 
 int reg_heap::value_for_reg(int r) const 
