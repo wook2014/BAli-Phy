@@ -942,8 +942,8 @@ void reg_heap::force_reg(int r)
     {
         if (not has_force(r2))
             incremental_evaluate(r2, true);
-        assert(has_force(r2));
         assert(reg_has_result_value(r2));
+        assert(not unforced_reg(r2));
 
         set_forced_input2(f, r2, true);
     }
@@ -1861,9 +1861,9 @@ void reg_heap::check_used_regs() const
                 for(auto r2: step_for_reg(r).forced_regs)
                     assert(has_force(r2));
                 for(auto r2: used_regs_for_reg(r))
-                    assert(has_force(r2));
+                    assert(not unforced_reg(r2));
                 if (reg_is_changeable(step_for_reg(r).call))
-                    assert(has_force(step_for_reg(r).call));
+                    assert(not unforced_reg(step_for_reg(r).call));
             }
         }
 }
