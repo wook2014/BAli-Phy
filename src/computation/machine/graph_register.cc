@@ -1751,6 +1751,7 @@ void reg_heap::check_used_regs() const
             if (not has_result(r))
             {
                 assert(not has_force(r));
+                continue;
             }
 
             auto& RES = result_for_reg(r);
