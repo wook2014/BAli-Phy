@@ -909,17 +909,22 @@ void reg_heap::force_reg(int r)
     int f = add_shared_force(r, s, res);
 
     const auto& S = steps.access(s);
+    assert(reg_is_constant(S.call) or reg_is_changeable(S.call));
+    if (reg_is_changeable(S.call))
+        assert(reg_has_result_value(S.call));
 
     for(auto& [result,_]: S.used_inputs)
     {
         int r2 = results.access(result).source_reg;
-        incremental_evaluate(r2, true);
+        if (not has_force(r2))
+            incremental_evaluate(r2, true);
         set_forced_input2(f,r2);
     }
 
     for(auto r2: S.forced_regs)
     {
-        incremental_evaluate(r2, true);
+        if (not has_force(r2))
+            incremental_evaluate(r2, true);
         assert(has_force(r2));
         assert(reg_has_result_value(r2));
 
@@ -928,11 +933,12 @@ void reg_heap::force_reg(int r)
 
     assert(S.call > 0);
 
-    incremental_evaluate(S.call, true);
-
     // If R2 is WHNF then we are done
     if (not reg_is_constant(S.call))
     {
+        if (not has_force(S.call))
+            incremental_evaluate(S.call, true);
+
         assert(reg_is_changeable(S.call));
         set_forced_input2(f, S.call);
     }
