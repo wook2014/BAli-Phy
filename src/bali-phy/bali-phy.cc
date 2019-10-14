@@ -213,7 +213,8 @@ void show_ending_messages(bool show_only)
         extern long total_changeable_eval_with_call;
         extern long total_changeable_reductions;
         extern long total_reg_allocations;
-        extern long total_comp_allocations;
+        extern long total_force_allocations;
+        extern long total_result_allocations;
         extern long total_step_allocations;
         extern long total_destroy_token;
         extern long total_release_knuckle;
@@ -247,7 +248,7 @@ void show_ending_messages(bool show_only)
         {
             cout<<"total changeable evals         = "<<total_changeable_eval<<endl;
             cout<<"  with result                  = "<<total_changeable_eval_with_result<<endl;
-            cout<<"  with call but not result     = "<<total_changeable_eval_with_call<<endl;
+            cout<<"  with step but no result      = "<<total_changeable_eval_with_call<<endl;
             cout<<"total reduction steps          = "<<total_reductions<<endl;
             cout<<"  changeable reduction steps   = "<<total_changeable_reductions<<endl;
             cout<<"  unchangeable reduction steps = "<<total_reductions-total_changeable_reductions<<endl;
@@ -256,8 +257,9 @@ void show_ending_messages(bool show_only)
             cout<<"  op:index                     = "<<total_index_op<<endl;
             cout<<"\ntotal garbage collection runs  = "<<total_gc<<endl;
             cout<<"total register allocations     = "<<total_reg_allocations<<endl;
-            cout<<"total computation allocations  = "<<total_comp_allocations<<endl;
             cout<<"total step allocations         = "<<total_step_allocations<<endl;
+            cout<<"total result allocations       = "<<total_result_allocations<<endl;
+            cout<<"total force allocations        = "<<total_force_allocations<<endl;
             cout<<"total regs                     = "<<total_regs<<endl;
             cout<<"total steps                    = "<<total_steps<<endl;
             cout<<"total computations             = "<<total_comps<<endl;

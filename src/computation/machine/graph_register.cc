@@ -20,7 +20,8 @@ using std::optional;
 
 long total_reg_allocations = 0;
 long total_step_allocations = 0;
-long total_comp_allocations = 0;
+long total_result_allocations = 0;
+long total_force_allocations = 0;
 long total_set_reg_value = 0;
 long total_get_reg_value = 0;
 long total_get_reg_value_non_const = 0;
@@ -1740,7 +1741,7 @@ int reg_heap::get_shared_result(int r, int s)
 {
     // 1. Get a new result
     int res = results.allocate();
-    total_comp_allocations++;
+    total_result_allocations++;
   
     // 2. Set the source of the result
     results[res].source_step = s;
@@ -1773,7 +1774,7 @@ int reg_heap::get_shared_force(int r, int s, int res)
 {
     // 1. Get a new force
     int f = forces.allocate();
-    total_comp_allocations++;
+    total_force_allocations++;
 
     // 2. Set the source of the force
     forces[f].source_step = s;
