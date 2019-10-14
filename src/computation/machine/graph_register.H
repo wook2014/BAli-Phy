@@ -43,6 +43,10 @@ struct Step
 
     void clear_pending_nonforce_effect();
 
+    bool has_force_effects() const;
+
+    void mark_with_force_effects();
+
     void clear();
 
     void check_cleared();
@@ -75,6 +79,10 @@ struct Result
     boost::container::small_vector<int, 5> called_by;
 
     std::bitset<8> flags;
+
+    bool has_force_effects() const;
+
+    void mark_with_force_effects();
 
     void clear();
 
