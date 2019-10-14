@@ -824,6 +824,9 @@ void reg_heap::force_reg(int r)
 
     int s = step_index_for_reg(r);
 
+    // Don't allocate a force or do any work if there are no effects.
+    if (not result_for_reg(r).has_force_effects()) return;
+
     int f = add_shared_force(r);
 
     const auto& S = steps.access(s);
