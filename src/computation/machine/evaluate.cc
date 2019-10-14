@@ -295,7 +295,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 	    total_changeable_eval++;
 	    int rc = result_index_for_reg(R);
 
-	    // If we have a value, then we are done.
+	    // If we have a result, then we are done.
 	    if (rc > 0)
 	    {
 		int value = results[rc].value;
@@ -304,13 +304,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		{
 		    total_changeable_eval_with_result++;
 
-                    if (force)
-                    {
-                        if (not has_force(R))
-                            force_reg(R);
-
-                        assert(has_force(R));
-                    }
+                    if (force and not has_force(R)) force_reg(R);
 
                     assert(not force or has_force(R));
 
@@ -318,7 +312,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		}
 	    }
 
-	    // If we know what to call, then call it and use it to set the value
+	    // If we have a step but no result, then call it and use it to set the value
 	    if (reg_has_call(R))
 	    {
 		assert(not has_result(R));
@@ -337,7 +331,6 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		// R gets its value from S.
 		set_result_value_for_reg( R);
 
-                // FIXME - move this into RegOperationArgs
                 if (force and not has_force(R)) force_reg(R);
 
 		total_changeable_eval_with_call++;
