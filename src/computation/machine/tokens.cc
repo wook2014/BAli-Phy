@@ -50,8 +50,12 @@ void reg_heap::destroy_all_computations_in_token(int t)
     for(auto [_,f]: delta_force)
     {
 	if (f > 0)
+        {
 	    clear_back_edges_for_force(f);
+	    forces.reclaim_used(f);
+        }
     }
+    tokens[t].vm_force.clear();
 
     for(auto [_,s]: delta_step)
     {
@@ -66,13 +70,6 @@ void reg_heap::destroy_all_computations_in_token(int t)
 	    results.reclaim_used(res);
     }
     tokens[t].vm_result.clear();
-
-    for(auto [_,f]: delta_force)
-    {
-	if (f > 0)
-	    forces.reclaim_used(f);
-    }
-    tokens[t].vm_force.clear();
 }
 
 void reg_heap::release_tip_token(int t)

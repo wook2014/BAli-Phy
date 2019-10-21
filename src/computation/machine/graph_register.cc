@@ -1998,6 +1998,7 @@ void reg_heap::clear_back_edges_for_force(int f)
     for(auto& forward: forces[f].forced_inputs)
     {
         auto [f3,j] = forward;
+        if (forces.is_free(f3)) continue;
         auto& backward = forces[f3].forced_by;
         assert(0 <= j and j < backward.size());
 
@@ -2020,35 +2021,6 @@ void reg_heap::clear_back_edges_for_force(int f)
         backward.pop_back();
     }
     forces[f].forced_inputs.clear();
-
-    // If this Force is destroyed, the Force that forced it will NOT survive,
-    // Therefore, we DON'T need to clear these edges.
-    for(auto& backward: forces[f].forced_by)
-    {
-        auto [f3,j] = backward;
-        auto& forward = forces[f3].forced_inputs;
-        assert(0 <= j and j < forward.size());
-
-        // WHY?
-        backward = {0,0};
-
-        if (j+1 < forward.size())
-        {
-            //erase the forward edge by moving another forward edge on top of it.
-            forward[j] = forward.back();
-            auto [f2,i2] = forward[j];
-            // adjust the forward edge for that backward edge
-            auto& backward2 = forces[f2].forced_by;
-            assert( 0 <= i2 and i2 <= backward2.size());
-            backward2[i2].second = j;
-
-            assert(backward2[i2].first == f3);
-            assert(forces[f2].forced_by[i2].second == j);
-            assert(forces[backward2[i2].first].forced_inputs[backward2[i2].second].second == i2);
-        }
-        forward.pop_back();
-    }
-    forces[f].forced_by.clear(); // OK?
 }
 
 void reg_heap::clear_step(int r)
