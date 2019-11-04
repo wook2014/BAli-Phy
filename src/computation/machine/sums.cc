@@ -76,18 +76,14 @@ log_double_t reg_heap::prior_for_context(int c)
     {
 	int r_pdf = (*this)[r].reg_for_slot(1);
 
-        /* For now, let's require priors to exist in all contexts.
-
-           We could skip priors for contexts that don't have them, but we have
-           no way of eliminating random variables registered by contexts that
-           no longer exist.
-        */
         assert(reg_exists(r_pdf));
 
-	const auto& x = get_reg_value_in_context(r_pdf, c);
+        r_pdf = follow_index_var(r_pdf);
+        assert(reg_has_value(r_pdf));
+
         assert(random_variables_.size() == num_rvs);
 
-	log_double_t X = x.as_log_double();
+	log_double_t X = access_value_for_reg(r_pdf).exp.as_log_double();
 
 	double t;
 	if (std::abs(X.log()) > std::abs(log_pr))
@@ -139,7 +135,11 @@ log_double_t reg_heap::likelihood_for_context(int c)
     double C = 0.0;
     for(int r: likelihood_heads)
     {
-	const auto& x = get_reg_value_in_context(r, c);
+        assert(reg_exists(r));
+        r = follow_index_var(r);
+        assert(reg_has_value(r));
+
+	const auto& x = access_value_for_reg(r).exp;
 	log_double_t X = x.as_log_double();
 
 	double t;
