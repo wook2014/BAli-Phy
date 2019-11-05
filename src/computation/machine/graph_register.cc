@@ -1084,7 +1084,9 @@ void reg_heap::set_forced_input2(int f1, int R2, bool is_force)
 
     if (not result_for_reg(R2).has_force_effects())
     {
-        assert(not has_force(R2) or not force_for_reg(R2).forced_by.empty());
+        // We can't assert that regs with has_force=true are forced.
+        // They could have been forced in the past, but their forcer is deleted.
+
         assert(not has_force(R2) or force_for_reg(R2).forced_inputs.empty());
 
         // USE and CALL operations don't need back edges from regs with no effects.
