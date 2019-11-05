@@ -501,7 +501,6 @@ void context_ref::collect_garbage() const
 
 void context_ref::show_graph() const
 {
-    prior();
     collect_garbage();
     int t = memory()->token_for_context(context_index);
     dot_graph_for_token(*memory(), t);
