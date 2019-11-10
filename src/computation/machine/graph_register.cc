@@ -928,12 +928,11 @@ void reg_heap::force_reg(int r)
 
     int f = add_shared_force(r);
 
-    const auto& S = steps.access(s);
-    assert(reg_is_constant(S.call) or reg_is_changeable(S.call));
-    if (reg_is_changeable(S.call))
-        assert(reg_has_result_value(S.call));
+    assert(reg_is_constant(steps[s].call) or reg_is_changeable(steps[s].call));
+    if (reg_is_changeable(steps[s].call))
+        assert(reg_has_result_value(steps[s].call));
 
-    for(auto& [result,_]: S.used_inputs)
+    for(auto& [result,_]: steps[s].used_inputs)
     {
         int r2 = results.access(result).source_reg;
         if (not has_force(r2))
@@ -941,7 +940,7 @@ void reg_heap::force_reg(int r)
         set_forced_input2(f, r2, false);
     }
 
-    for(auto r2: S.forced_regs)
+    for(auto r2: steps[s].forced_regs)
     {
         if (not has_force(r2))
             incremental_evaluate(r2, true);
@@ -951,19 +950,19 @@ void reg_heap::force_reg(int r)
         set_forced_input2(f, r2, true);
     }
 
-    assert(S.call > 0);
+    assert(steps[s].call > 0);
 
     // If R2 is WHNF then we are done
-    if (not reg_is_constant(S.call))
+    if (not reg_is_constant(steps[s].call))
     {
-        if (not has_force(S.call))
-            incremental_evaluate(S.call, true);
+        if (not has_force(steps[s].call))
+            incremental_evaluate(steps[s].call, true);
 
-        assert(reg_is_changeable(S.call));
-        set_forced_input2(f, S.call, false);
+        assert(reg_is_changeable(steps[s].call));
+        set_forced_input2(f, steps[s].call, false);
     }
 
-    assert(force_for_reg(r).forced_inputs.size() >= S.forced_regs.size());
+    assert(force_for_reg(r).forced_inputs.size() >= steps[s].forced_regs.size());
 }
 
 bool reg_heap::unforced_reg(int r) const
