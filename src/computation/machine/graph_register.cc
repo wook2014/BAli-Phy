@@ -192,7 +192,6 @@ void Result::clear()
     source_step = -1;
     source_reg = -1;
     value = 0;
-    truncate(used_by);
 
     flags.reset();
     // This should already be cleared.
@@ -202,7 +201,6 @@ void Result::clear()
 void Result::check_cleared()
 {
     assert(not value);
-    assert(used_by.empty());
     assert(flags.none());
 }
 
@@ -211,7 +209,6 @@ Result& Result::operator=(Result&& R) noexcept
     value = R.value;
     source_step = R.source_step;
     source_reg = R.source_reg;
-    used_by = std::move( R.used_by );
     flags = R.flags;
 
     return *this;
@@ -221,7 +218,6 @@ Result::Result(Result&& R) noexcept
     :source_step(R.source_step),
      source_reg(R.source_reg),
      value (R.value),
-     used_by ( std::move( R.used_by) ),
      flags ( R.flags )
 { }
 
@@ -258,6 +254,8 @@ reg& reg::operator=(reg&& R) noexcept
 
     type = R.type;
 
+    used_by = std::move( R.used_by );
+
     called_by = std::move( R.called_by );
 
     created_by = std::move(R.created_by);
@@ -270,6 +268,7 @@ reg& reg::operator=(reg&& R) noexcept
 reg::reg(reg&& R) noexcept
     :C( std::move(R.C) ),
      type ( R.type ),
+     used_by ( std::move( R.used_by) ),
      called_by ( std::move( R.called_by) ),
      created_by( std::move(R.created_by) ),
      flags ( R.flags )
@@ -279,6 +278,7 @@ void reg::clear()
 {
     C.clear();
     type = type_t::unknown;
+    truncate(used_by);
     truncate(called_by);
     created_by = {0,0};
     flags.reset();
@@ -288,6 +288,7 @@ void reg::check_cleared()
 {
     assert(not C);
     assert(type == type_t::unknown);
+    assert(used_by.empty());
     assert(called_by.empty());
     assert(created_by.first == 0);
     assert(created_by.second == 0);
@@ -933,9 +934,8 @@ void reg_heap::force_reg(int r)
     if (reg_is_changeable(steps[s].call))
         assert(reg_has_result_value(steps[s].call));
 
-    for(auto& [result,_]: steps[s].used_inputs)
+    for(auto& [r2,_]: steps[s].used_inputs)
     {
-        int r2 = results.access(result).source_reg;
         if (not has_force(r2))
             incremental_evaluate(r2, true);
         set_forced_input2(f, r2, false);
@@ -1029,33 +1029,32 @@ void reg_heap::set_result_value_for_reg(int r1)
     }
 }
 
-void reg_heap::set_used_input(int s1, int R2)
+void reg_heap::set_used_input(int s1, int r2)
 {
-    assert(reg_is_changeable(R2));
+    assert(reg_is_changeable(r2));
 
-    assert(regs.is_used(R2));
+    assert(regs.is_used(r2));
 
-    assert(closure_at(R2));
+    assert(closure_at(r2));
 
-    assert(has_result(R2));
-    assert(result_value_for_reg(R2));
+    assert(has_result(r2));
+    assert(result_value_for_reg(r2));
 
     // An index_var's value only changes if the thing the index-var points to also changes.
     // So, we may as well forbid using an index_var as an input.
-    assert(not expression_at(R2).is_index_var());
+    assert(not expression_at(r2).is_index_var());
 
-    int res2 = result_index_for_reg(R2);
-
-    int back_index = results[res2].used_by.size();
-    int forw_index = steps[s1].used_inputs.size();
-    auto& RES2 = results[res2];
-    RES2.used_by.push_back({s1,forw_index});
     auto& S1 = steps[s1];
-    S1.used_inputs.push_back({res2,back_index});
-    if (RES2.has_force_effects())
+    auto& R2 = regs[r2];
+    int back_index = R2.used_by.size();
+    int forw_index = S1.used_inputs.size();
+    R2.used_by.push_back({s1,forw_index});
+    S1.used_inputs.push_back({r2,back_index});
+
+    if (result_for_reg(r2).has_force_effects())
         S1.mark_with_force_effects();
 
-    assert(result_is_used_by(s1,res2));
+    assert(reg_is_used_by(s1,r2));
 }
 
 void reg_heap::set_forced_reg(int s, int R2)
@@ -1409,8 +1408,8 @@ std::vector<int> reg_heap::used_regs_for_reg(int r) const
     vector<int> U;
     if (not has_step(r)) return U;
 
-    for(const auto& [res,index]: step_for_reg(r).used_inputs)
-        U.push_back(results[res].source_reg);
+    for(const auto& [r2,_]: step_for_reg(r).used_inputs)
+        U.push_back(r2);
 
     return U;
 }
@@ -1653,9 +1652,9 @@ bool reg_heap::reg_is_called_by(int r1, int s1) const
     return false;
 }
 
-bool reg_heap::result_is_used_by(int s1, int res2) const
+bool reg_heap::reg_is_used_by(int s1, int r2) const
 {
-    for(auto& [s,index]: results[res2].used_by)
+    for(auto& [s,_]: regs[r2].used_by)
         if (s == s1)
             return true;
 
@@ -1669,14 +1668,6 @@ bool reg_heap::force_is_forced_by(int f1, int f2) const
             return true;
 
     return false;
-}
-
-bool reg_heap::reg_is_used_by(int r1, int r2) const
-{
-    int s1 = step_index_for_reg(r1);
-    int res2 = result_index_for_reg(r2);
-
-    return result_is_used_by(s1,res2);
 }
 
 bool reg_heap::reg_is_forced_by2(int r1, int r2) const
@@ -1758,21 +1749,17 @@ void reg_heap::check_used_regs_in_token(int t) const
     {
         if (step < 0) continue;
         
-        for(const auto& [res2,index2]: steps[step].used_inputs)
+        for(const auto& [r2,_]: steps[step].used_inputs)
         {
             // Used regs should have back-references to R
-            assert( result_is_used_by(step, res2) );
+            assert( reg_is_used_by(step, r2) );
 
             // Used computations should be mapped computation for the current token, if we are at the root
-            int R2 = results[res2].source_reg;
-            assert(reg_is_changeable(R2));
+            assert(reg_is_changeable(r2));
 
             // The used result should be referenced somewhere more root-ward
             // so that this result can be invalidated, and the used result won't be GC-ed.
             // FIXME - nonlocal.  assert(is_modifiable(expression_at(R2)) or result_is_referenced(t,res2));
-      
-            // Used results should have values
-            assert(results[res2].value);
         }
     }
 
@@ -2014,7 +2001,7 @@ int reg_heap::add_shared_force(int r)
 
 void reg_heap::check_back_edges_cleared_for_step(int s)
 {
-    for(auto& [res,index]: steps.access_unused(s).used_inputs)
+    for(auto& [_,index]: steps.access_unused(s).used_inputs)
         assert(index == 0);
 
     assert(steps[s].call_edge.first == 0);
@@ -2066,12 +2053,13 @@ void reg_heap::clear_back_edges_for_reg(int r)
 
 void reg_heap::clear_back_edges_for_step(int s)
 {
-    // 1a. When destroying a step, remove edge from steps[r] <---used_by--- results[res]
+    // 1a. When destroying a step, remove edge from steps[s] <---used_by--- reg[r]
     assert(s > 0);
     for(auto& forward: steps[s].used_inputs)
     {
-        auto [res,j] = forward;
-        auto& backward = results[res].used_by;
+        auto [r,j] = forward;
+        if (regs.is_free(r)) continue;
+        auto& backward = regs[r].used_by;
         assert(0 <= j and j < backward.size());
 
         forward = {0,0};
@@ -2087,7 +2075,7 @@ void reg_heap::clear_back_edges_for_step(int s)
             forward2[i2].second = j;
 
             assert(steps[s2].used_inputs[i2].second == j);
-            assert(results[forward2[i2].first].used_by[forward2[i2].second].second == i2);
+            assert(regs[forward2[i2].first].used_by[forward2[i2].second].second == i2);
         }
 
         backward.pop_back();
