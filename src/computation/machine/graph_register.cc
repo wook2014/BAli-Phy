@@ -136,6 +136,7 @@ void Step::clear()
     call = 0;
     truncate(used_inputs);
     truncate(forced_regs);
+    truncate(call_edge);
     assert(created_regs.empty());
 
     flags.reset();
@@ -148,6 +149,7 @@ void Step::check_cleared()
     assert(not call);
     assert(used_inputs.empty());
     assert(forced_regs.empty());
+    assert(not call_edge.first);
     assert(created_regs.empty());
     assert(flags.none());
 }
@@ -158,6 +160,7 @@ Step& Step::operator=(Step&& S) noexcept
     call = S.call;
     used_inputs  = std::move( S.used_inputs );
     forced_regs  = std::move( S.forced_regs );
+    call_edge = S.call_edge;
     created_regs  = std::move( S.created_regs );
     flags = S.flags;
 
@@ -165,12 +168,13 @@ Step& Step::operator=(Step&& S) noexcept
 }
 
 Step::Step(Step&& S) noexcept
-:source_reg( S.source_reg),
- call ( S.call ),
- used_inputs ( std::move(S.used_inputs) ),
- forced_regs (std::move(S.forced_regs) ),
- created_regs ( std::move(S.created_regs) ),
- flags ( S.flags )
+    :source_reg( S.source_reg),
+     call ( S.call ),
+     used_inputs ( std::move(S.used_inputs) ),
+     forced_regs (std::move(S.forced_regs) ),
+     call_edge (S.call_edge),
+     created_regs ( std::move(S.created_regs) ),
+     flags ( S.flags )
 { }
 
 bool Result::has_force_effects() const
@@ -188,9 +192,7 @@ void Result::clear()
     source_step = -1;
     source_reg = -1;
     value = 0;
-    truncate(call_edge);
     truncate(used_by);
-    truncate(called_by);
 
     flags.reset();
     // This should already be cleared.
@@ -200,8 +202,6 @@ void Result::clear()
 void Result::check_cleared()
 {
     assert(not value);
-    assert(not call_edge.first);
-    assert(called_by.empty());
     assert(used_by.empty());
     assert(flags.none());
 }
@@ -211,22 +211,18 @@ Result& Result::operator=(Result&& R) noexcept
     value = R.value;
     source_step = R.source_step;
     source_reg = R.source_reg;
-    call_edge = R.call_edge;
     used_by = std::move( R.used_by );
-    called_by = std::move( R.called_by );
     flags = R.flags;
 
     return *this;
 }
 
 Result::Result(Result&& R) noexcept
-:source_step(R.source_step),
-                         source_reg(R.source_reg),
-                         value (R.value), 
-                         call_edge (R.call_edge),
-                         used_by ( std::move( R.used_by) ),
-                         called_by ( std::move( R.called_by) ),
-                         flags ( R.flags )
+    :source_step(R.source_step),
+     source_reg(R.source_reg),
+     value (R.value),
+     used_by ( std::move( R.used_by) ),
+     flags ( R.flags )
 { }
 
 void Force::clear()
@@ -262,6 +258,8 @@ reg& reg::operator=(reg&& R) noexcept
 
     type = R.type;
 
+    called_by = std::move( R.called_by );
+
     created_by = std::move(R.created_by);
 
     flags = R.flags;
@@ -270,16 +268,18 @@ reg& reg::operator=(reg&& R) noexcept
 }
 
 reg::reg(reg&& R) noexcept
-:C( std::move(R.C) ),
- type ( R.type ),
- created_by( std::move(R.created_by) ),
- flags ( R.flags )
+    :C( std::move(R.C) ),
+     type ( R.type ),
+     called_by ( std::move( R.called_by) ),
+     created_by( std::move(R.created_by) ),
+     flags ( R.flags )
 { }
 
 void reg::clear()
 {
     C.clear();
     type = type_t::unknown;
+    truncate(called_by);
     created_by = {0,0};
     flags.reset();
 }
@@ -288,6 +288,7 @@ void reg::check_cleared()
 {
     assert(not C);
     assert(type == type_t::unknown);
+    assert(called_by.empty());
     assert(created_by.first == 0);
     assert(created_by.second == 0);
     assert(flags.none());
@@ -995,37 +996,37 @@ int reg_heap::result_value_for_reg(int r) const
 
 void reg_heap::set_result_value_for_reg(int r1)
 {
-    int call = call_for_reg(r1);
+    // 1. Find step object for current reg
+    int s1 = step_index_for_reg(r1);
+    auto& S1 = steps[s1];
 
-    assert(call);
-
-    int value = value_for_reg(call);
-
-    assert(value);
-
+    // 2. Find result object for current reg
     int res1 = result_index_for_reg(r1);
     if (res1 < 0)
-        res1 = add_shared_result(r1, step_index_for_reg(r1));
+        res1 = add_shared_result(r1, s1);
     assert(res1 > 0);
     auto& RES1 = results[res1];
-    RES1.value = value;
+
+    // 3. Find called reg
+    int r2 = S1.call;
+    assert(r2);
+    assert(reg_is_constant(r2) or reg_is_changeable(r2));
+
+    // 4. Set the result value for the current reg
+    RES1.value = value_for_reg(r2);
+    assert(RES1.value);
+
+    // 5. Copy force effects mark from S1 -> RES1
     if (step_for_reg(r1).has_force_effects())
         RES1.mark_with_force_effects();
 
-    // If R2 is WHNF then we are done
-    if (regs.access(call).type == reg::type_t::constant) return;
-
-    // If R2 doesn't have a result, add one to hold the called-by edge.
-    assert(has_result(call));
-
-    // Add a called-by edge to R2.
-    int res2 = result_index_for_reg(call);
-    int back_index = results[res2].called_by.size();
-    auto& RES2 = results[res2];
-    RES2.called_by.push_back(res1);
-    RES1.call_edge = {res2, back_index};
-    if (RES2.has_force_effects())
-        RES1.mark_with_force_effects();
+    if (reg_is_changeable(r2))
+    {
+        // 6. Copy force effects mark from RES2 -> RES1
+        assert(has_result(r2));
+        if (result_for_reg(r2).has_force_effects())
+            RES1.mark_with_force_effects();
+    }
 }
 
 void reg_heap::set_used_input(int s1, int R2)
@@ -1115,11 +1116,11 @@ void reg_heap::set_forced_input2(int f1, int R2, bool is_force)
 
 void reg_heap::set_call(int R1, int R2)
 {
-    assert(reg_is_changeable(R1));
-    // R2 might be of UNKNOWN changeableness
-
     // Check that R1 is legal
     assert(regs.is_used(R1));
+
+    // R1 should be changeable
+    assert(reg_is_changeable(R1));
 
     // Only modify the call for the current context;
     assert(has_step(R1));
@@ -1134,26 +1135,66 @@ void reg_heap::set_call(int R1, int R2)
     set_call_from_step(step_index_for_reg(R1), R2);
 }
 
-void reg_heap::set_call_from_step(int s, int R2)
+void reg_heap::set_call_from_step(int s1, int r2)
 {
     // Check that step s is legal
-    assert(steps.is_used(s));
+    assert(steps.is_used(s1));
 
     // Check that R2 is legal
-    assert(regs.is_used(R2));
+    assert(regs.is_used(r2));
+
+    // R2 could be unevaluated if we are setting the value of a modifiable.
+
+    // R2 shouldn't have an index var.
+    assert(not expression_at(r2).is_index_var());
 
     // Don't override an *existing* call
-    assert(steps[s].call == 0);
+    assert(steps[s1].call == 0);
 
-    assert(not expression_at(R2).is_index_var());
+    auto& S1 = steps[s1];
 
     // Set the call
-    steps[s].call = R2;
+    S1.call = r2;
+
+    if (not reg_is_constant(r2))
+    {
+        // 6. Add a call edge from to R2.
+        auto& R2 = regs[r2];
+        int back_index = R2.called_by.size();
+        R2.called_by.push_back(s1);
+        S1.call_edge = {r2, back_index};
+    }
 }
 
 void reg_heap::clear_call(int s)
 {
-    steps.access_unused(s).call = 0;
+    auto& S = steps[s];
+    int call = S.call;
+    assert(call > 0);
+
+    // 1. Remove the edge from step[s] <--- regs[call]
+    if (S.call_edge.first > 0 and not regs.is_free(call))
+    {
+        auto [r2,j] = S.call_edge;
+        assert(call == r2);
+        auto& backward = regs[call].called_by;
+        assert(0 <= j and j < backward.size());
+
+        // Move the last element to the hole, and adjust index of correspond forward edge.
+        if (j+1 < backward.size())
+        {
+            backward[j] = backward.back();
+            auto& forward2 = steps[backward[j]];
+            forward2.call_edge.second = j;
+
+            assert(steps[backward[j]].call_edge.second == j);
+        }
+        backward.pop_back();
+    }
+
+    // 2. Clear the forward edge from steps[s] -> regs[call]
+    S.call = 0;
+    S.call_edge = {0, 0};
 }
 
 void reg_heap::clear_call_for_reg(int R)
@@ -1603,10 +1644,10 @@ void reg_heap::make_reg_changeable(int r)
     regs.access(r).type = reg::type_t::changeable;
 }
 
-bool reg_heap::result_is_called_by(int res1, int res2) const
+bool reg_heap::reg_is_called_by(int r1, int s1) const
 {
-    for(int res: results[res2].called_by)
-        if (res == res1)
+    for(int s: regs[r1].called_by)
+        if (s == s1)
             return true;
 
     return false;
@@ -1697,9 +1738,6 @@ void reg_heap::check_used_regs_in_token(int t) const
         {
             assert(not reg_is_constant(r));
             assert(not steps.is_free(results[res].source_step));
-            int call = results[res].call_edge.first;
-            if (call > 0)
-                assert(not results.is_free(call));
         }
     }
     for(auto [r,step]: tokens[t].delta_step())
@@ -1770,8 +1808,7 @@ void reg_heap::check_used_regs_in_token(int t) const
         if (value and not reg_is_constant(call))
         {
             assert( has_result(call) );
-            int res2 = result_index_for_reg(call);
-            assert( result_is_called_by(res, res2) );
+            assert( reg_is_called_by(reg, step) );
         }
 
         // If we have a value, then our call should have a value
@@ -1824,9 +1861,6 @@ void reg_heap::check_used_regs() const
     for(const auto& result: results)
     {
         assert(not steps.is_free(result.source_step));
-        int call = result.call_edge.first;
-        if (call > 0)
-            assert(not results.is_free(call));
     }
 
     for(int r=regs.n_null();r<regs.size();r++)
@@ -1982,6 +2016,10 @@ void reg_heap::check_back_edges_cleared_for_step(int s)
 {
     for(auto& [res,index]: steps.access_unused(s).used_inputs)
         assert(index == 0);
+
+    assert(steps[s].call_edge.first == 0);
+    assert(steps[s].call_edge.second == 0);
+
     for(auto& r: steps.access_unused(s).created_regs)
     {
         auto [step, index] = regs.access(r).created_by;
@@ -1992,7 +2030,6 @@ void reg_heap::check_back_edges_cleared_for_step(int s)
 
 void reg_heap::check_back_edges_cleared_for_result(int res)
 {
-    assert(results.access_unused(res).call_edge.second == 0);
 }
 
 void reg_heap::check_back_edges_cleared_for_force(int f)
@@ -2029,6 +2066,7 @@ void reg_heap::clear_back_edges_for_reg(int r)
 
 void reg_heap::clear_back_edges_for_step(int s)
 {
+    // 1a. When destroying a step, remove edge from steps[r] <---used_by--- results[res]
     assert(s > 0);
     for(auto& forward: steps[s].used_inputs)
     {
@@ -2054,8 +2092,15 @@ void reg_heap::clear_back_edges_for_step(int s)
 
         backward.pop_back();
     }
+    // 1b. Clear list of used_inputs.
     steps[s].used_inputs.clear();
 
+
+    // 2. Clear edges from steps[s] <---> reg[call]
+    if (steps[s].call > 0)
+        clear_call(s);
+
+    // 3. Clear list of created regs.
     for(auto& r: steps[s].created_regs)
         regs.access(r).created_by = {0,{}};
     steps[s].created_regs.clear();
@@ -2064,31 +2109,6 @@ void reg_heap::clear_back_edges_for_step(int s)
 void reg_heap::clear_back_edges_for_result(int res)
 {
     assert(res > 0);
-    // FIXME! If there is a value, set, there should be a call_edge
-    //        Should we unmap all values with no .. value/call_edge?
-    auto [call,j] = results[res].call_edge;
-    if (call)
-    {
-        assert(results[res].value);
-
-        auto& backward = results[call].called_by;
-        int j = results[res].call_edge.second;
-        assert(0 <= j and j < backward.size());
-
-        // Clear the forward edge.
-        results[res].call_edge = {0, 0};
-
-        // Move the last element to the hole, and adjust index of correspond forward edge.
-        if (j+1 < backward.size())
-        {
-            backward[j] = backward.back();
-            auto& forward2 = results[backward[j]];
-            forward2.call_edge.second = j;
-
-            assert(results[backward[j]].call_edge.second == j);
-        }
-        backward.pop_back();
-    }
 }
 
 void reg_heap::clear_back_edges_for_force(int f)
