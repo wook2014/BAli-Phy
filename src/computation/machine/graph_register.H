@@ -29,6 +29,9 @@ struct Step
     /// Which reg's were used to reduce this expression?
     boost::container::small_vector< std::pair<int,int>, 2 > used_inputs;
 
+    /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
+    boost::container::small_vector< std::pair<int,int>, 2> forced_inputs;
+
     boost::container::small_vector< int, 2> forced_regs;
 
     /// Does C reduce to another reg that we need to evaluate to get the true value?
@@ -97,9 +100,6 @@ struct Result
 struct Force
 {
     int source_reg = -1;
-
-    /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
-    boost::container::small_vector< std::pair<int,int>, 2> forced_inputs;
 
     void clear();
 

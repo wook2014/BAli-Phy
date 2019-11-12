@@ -315,8 +315,8 @@ void reg_heap::unshare_regs(int t)
         if (auto [r,_] = delta_force[k]; has_force(r))
         {
 	    // Look at steps that FORCE the root's result (that is overridden in t)
-	    for(auto& [f2,_]: regs[r].forced_by)
-		if (int r2 = forces[f2].source_reg; prog_force[r2] == f2)
+	    for(auto& [s2,_]: regs[r].forced_by)
+		if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
 		    unshare_force(r2);
 	}
 

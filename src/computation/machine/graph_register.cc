@@ -135,6 +135,7 @@ void Step::clear()
     source_reg = -1;
     call = 0;
     truncate(used_inputs);
+    truncate(forced_inputs);
     truncate(forced_regs);
     truncate(call_edge);
     assert(created_regs.empty());
@@ -148,6 +149,7 @@ void Step::check_cleared()
 {
     assert(not call);
     assert(used_inputs.empty());
+    assert(forced_inputs.empty());
     assert(forced_regs.empty());
     assert(not call_edge.first);
     assert(created_regs.empty());
@@ -159,6 +161,7 @@ Step& Step::operator=(Step&& S) noexcept
     source_reg = S.source_reg;
     call = S.call;
     used_inputs  = std::move( S.used_inputs );
+    forced_inputs = std::move( S.forced_inputs );
     forced_regs  = std::move( S.forced_regs );
     call_edge = S.call_edge;
     created_regs  = std::move( S.created_regs );
@@ -171,6 +174,7 @@ Step::Step(Step&& S) noexcept
     :source_reg( S.source_reg),
      call ( S.call ),
      used_inputs ( std::move(S.used_inputs) ),
+     forced_inputs ( std::move(S.forced_inputs) ),
      forced_regs (std::move(S.forced_regs) ),
      call_edge (S.call_edge),
      created_regs ( std::move(S.created_regs) ),
@@ -224,18 +228,15 @@ Result::Result(Result&& R) noexcept
 void Force::clear()
 {
     source_reg = -1;
-    truncate(forced_inputs);
 }
 
 void Force::check_cleared()
 {
-    assert(forced_inputs.empty());
 }
 
 Force& Force::operator=(Force&& F) noexcept
 {
     source_reg = F.source_reg;
-    forced_inputs = std::move( F.forced_inputs );
 
     return *this;
 }
@@ -930,7 +931,7 @@ void reg_heap::force_reg(int r)
     // Don't allocate a force or do any work if there are no effects.
     if (not result_for_reg(r).has_force_effects()) return;
 
-    int f = add_shared_force(r);
+    add_shared_force(r);
 
     assert(reg_is_constant(steps[s].call) or reg_is_changeable(steps[s].call));
     if (reg_is_changeable(steps[s].call))
@@ -940,7 +941,7 @@ void reg_heap::force_reg(int r)
     {
         if (not has_force(r2))
             incremental_evaluate(r2, true);
-        set_forced_input2(f, r2, false);
+        set_forced_input2(s, r2, false);
     }
 
     for(auto r2: steps[s].forced_regs)
@@ -950,7 +951,7 @@ void reg_heap::force_reg(int r)
         assert(reg_has_result_value(r2));
         assert(not unforced_reg(r2));
 
-        set_forced_input2(f, r2, true);
+        set_forced_input2(s, r2, true);
     }
 
     assert(steps[s].call > 0);
@@ -962,10 +963,10 @@ void reg_heap::force_reg(int r)
             incremental_evaluate(steps[s].call, true);
 
         assert(reg_is_changeable(steps[s].call));
-        set_forced_input2(f, steps[s].call, false);
+        set_forced_input2(s, steps[s].call, false);
     }
 
-    assert(force_for_reg(r).forced_inputs.size() >= steps[s].forced_regs.size());
+    assert(steps[s].forced_inputs.size() >= steps[s].forced_regs.size());
 }
 
 bool reg_heap::unforced_reg(int r) const
@@ -1071,7 +1072,7 @@ void reg_heap::set_forced_reg(int s, int R2)
     steps[s].mark_with_force_effects();
 }
 
-void reg_heap::set_forced_input2(int f1, int r2, bool is_force)
+void reg_heap::set_forced_input2(int s1, int r2, bool is_force)
 {
     assert(reg_is_changeable(r2));
 
@@ -1088,7 +1089,7 @@ void reg_heap::set_forced_input2(int f1, int r2, bool is_force)
         // We can't assert that regs with has_force=true are forced.
         // They could have been forced in the past, but their forcer is deleted.
 
-        assert(not has_force(r2) or force_for_reg(r2).forced_inputs.empty());
+        assert(not has_force(r2) or step_for_reg(r2).forced_inputs.empty());
 
         // USE and CALL operations don't need back edges from regs with no effects.
         //    The force of r2 will be invalidated only if the result of r2 is invalidated, and
@@ -1103,17 +1104,17 @@ void reg_heap::set_forced_input2(int f1, int r2, bool is_force)
 
     assert(has_force(r2));
 
-    auto& F1 = forces[f1];
+    auto& S1 = steps[s1];
     auto& R2 = regs[r2];
 
     int back_index = R2.forced_by.size();
-    int forw_index = F1.forced_inputs.size();
-    R2.forced_by.push_back({f1,forw_index});
-    F1.forced_inputs.push_back({r2,back_index});
+    int forw_index = S1.forced_inputs.size();
+    R2.forced_by.push_back({s1,forw_index});
+    S1.forced_inputs.push_back({r2,back_index});
 
     // Maybe putting forced_regs on the reg that would allow us to have a constant with effects?
 
-    assert(reg_is_forced_by(f1,r2));
+    assert(reg_is_forced_by(s1,r2));
 }
 
 void reg_heap::set_call(int R1, int R2)
@@ -1882,7 +1883,7 @@ void reg_heap::check_used_regs() const
 
             auto& RES = result_for_reg(r);
             if (not RES.has_force_effects())
-                assert(not has_force(r) or force_for_reg(r).forced_inputs.empty());
+                assert(not has_force(r) or step_for_reg(r).forced_inputs.empty());
 
             if (has_force(r))
             {
@@ -2006,6 +2007,9 @@ void reg_heap::check_back_edges_cleared_for_step(int s)
     for(auto& [_,index]: steps.access_unused(s).used_inputs)
         assert(index == 0);
 
+    for(auto& [res,index]: steps.access_unused(s).forced_inputs)
+        assert(index == 0);
+
     assert(steps[s].call_edge.first == 0);
     assert(steps[s].call_edge.second == 0);
 
@@ -2021,10 +2025,8 @@ void reg_heap::check_back_edges_cleared_for_result(int)
 {
 }
 
-void reg_heap::check_back_edges_cleared_for_force(int f)
+void reg_heap::check_back_edges_cleared_for_force(int)
 {
-    for(auto& [res,index]: forces.access_unused(f).forced_inputs)
-        assert(index == 0);
 }
 
 void reg_heap::clear_back_edges_for_reg(int r)
@@ -2085,12 +2087,42 @@ void reg_heap::clear_back_edges_for_step(int s)
     // 1b. Clear list of used_inputs.
     steps[s].used_inputs.clear();
 
+    // 2a. When destroying a step, remove edge from steps[s] <---forced_by--- reg[r]
+    assert(s > 0);
+    for(auto& forward: steps[s].forced_inputs)
+    {
+        auto [r,j] = forward;
+        if (regs.is_free(r)) continue;
+        auto& backward = regs[r].forced_by;
+        assert(0 <= j and j < backward.size());
 
-    // 2. Clear edges from steps[s] <---> reg[call]
+        forward = {0,0};
+
+        if (j+1 < backward.size())
+        {
+            // erase the backward edge by moving another backward edge on top of it.
+            backward[j] = backward.back();
+            auto [s2,i2] = backward[j];
+            // adjust the forward edge for that backward edge
+            auto& forward2 = steps[s2].forced_inputs;
+            assert(0 <= i2 and i2 < forward2.size());
+            forward2[i2].second = j;
+
+            assert(steps[s2].forced_inputs[i2].second == j);
+            assert(regs[forward2[i2].first].forced_by[forward2[i2].second].second == i2);
+        }
+
+        backward.pop_back();
+    }
+    // 2b. Clear list of forced_inputs.
+    steps[s].forced_inputs.clear();
+
+
+    // 3. Clear edges from steps[s] <---> reg[call]
     if (steps[s].call > 0)
         clear_call(s);
 
-    // 3. Clear list of created regs.
+    // 4. Clear list of created regs.
     for(auto& r: steps[s].created_regs)
         regs.access(r).created_by = {0,{}};
     steps[s].created_regs.clear();
@@ -2104,35 +2136,6 @@ void reg_heap::clear_back_edges_for_result(int res)
 void reg_heap::clear_back_edges_for_force(int f)
 {
     assert(f > 0);
-
-    for(auto& forward: forces[f].forced_inputs)
-    {
-        auto [r3,j] = forward;
-        if (regs.is_free(r3)) continue;
-        auto& backward = regs[r3].forced_by;
-        assert(0 <= j and j < backward.size());
-
-        forward = {0,0};
-
-        if (j+1 < backward.size())
-        {
-            // erase the backward edge by moving another backward edge on top of it.
-            backward[j] = backward.back();
-            auto [f2,i2] = backward[j];
-            // adjust the forward edge for that backward edge
-            auto& forward2 = forces[f2].forced_inputs;
-            assert(0 <= i2 and i2 < forward2.size());
-            forward2[i2].second = j;
-
-
-            assert(forces[f2].forced_inputs[i2].first == r3);
-            assert(forces[f2].forced_inputs[i2].second == j);
-            assert(regs[forward2[i2].first].forced_by[forward2[i2].second].second == i2);
-        }
-
-        backward.pop_back();
-    }
-    forces[f].forced_inputs.clear();
 }
 
 void reg_heap::clear_step(int r)
