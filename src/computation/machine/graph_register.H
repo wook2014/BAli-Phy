@@ -51,10 +51,6 @@ struct Step
 
     void clear_pending_nonforce_effect();
 
-    bool has_force_effects() const;
-
-    void mark_with_force_effects();
-
     void clear();
 
     void check_cleared();
@@ -78,10 +74,6 @@ struct Result
     int value = 0;
 
     std::bitset<8> flags;
-
-    bool has_force_effects() const;
-
-    void mark_with_force_effects();
 
     void clear();
 

@@ -120,16 +120,6 @@ void Step::clear_pending_nonforce_effect()
     flags.set(5,false);
 }
 
-bool Step::has_force_effects() const
-{
-    return flags.test(4);
-}
-
-void Step::mark_with_force_effects()
-{
-    flags.set(4);
-}
-
 void Step::clear()
 {
     source_reg = -1;
@@ -180,16 +170,6 @@ Step::Step(Step&& S) noexcept
      created_regs ( std::move(S.created_regs) ),
      flags ( S.flags )
 { }
-
-bool Result::has_force_effects() const
-{
-    return flags.test(5);
-}
-
-void Result::mark_with_force_effects()
-{
-    flags.set(5);
-}
 
 void Result::clear()
 {
@@ -928,9 +908,6 @@ void reg_heap::force_reg(int r)
 
     int s = step_index_for_reg(r);
 
-    // Don't allocate a force or do any work if there are no effects.
-    if (not result_for_reg(r).has_force_effects()) return;
-
     add_shared_force(r);
 
     assert(reg_is_constant(steps[s].call) or reg_is_changeable(steps[s].call));
@@ -968,10 +945,6 @@ void reg_heap::force_reg(int r)
 bool reg_heap::unforced_reg(int r) const
 {
     if (not reg_is_changeable(r)) return false;
-
-    if (not reg_has_result_value(r)) return true;
-
-    if (not result_for_reg(r).has_force_effects()) return false;
 
     return (not has_force(r));
 }
@@ -1014,18 +987,6 @@ void reg_heap::set_result_value_for_reg(int r1)
     // 4. Set the result value for the current reg
     RES1.value = value_for_reg(r2);
     assert(RES1.value);
-
-    // 5. Copy force effects mark from S1 -> RES1
-    if (step_for_reg(r1).has_force_effects())
-        RES1.mark_with_force_effects();
-
-    if (reg_is_changeable(r2))
-    {
-        // 6. Copy force effects mark from RES2 -> RES1
-        assert(has_result(r2));
-        if (result_for_reg(r2).has_force_effects())
-            RES1.mark_with_force_effects();
-    }
 }
 
 void reg_heap::set_used_input(int s1, int r2)
@@ -1050,9 +1011,6 @@ void reg_heap::set_used_input(int s1, int r2)
     R2.used_by.push_back({s1,forw_index});
     S1.used_inputs.push_back({r2,back_index});
 
-    if (result_for_reg(r2).has_force_effects())
-        S1.mark_with_force_effects();
-
     assert(reg_is_used_by(s1,r2));
 }
 
@@ -1065,7 +1023,6 @@ void reg_heap::set_forced_reg(int s, int R2)
     assert(closure_at(R2));
 
     steps[s].forced_regs.push_back(R2);
-    steps[s].mark_with_force_effects();
 }
 
 void reg_heap::set_forced_input2(int s1, int r2, bool is_force)
@@ -1080,23 +1037,6 @@ void reg_heap::set_forced_input2(int s1, int r2, bool is_force)
     // So, we may as well forbid using an index_var as an input.
     assert(not expression_at(r2).is_index_var());
 
-    if (not result_for_reg(r2).has_force_effects())
-    {
-        // We can't assert that regs with has_force=true are forced.
-        // They could have been forced in the past, but their forcer is deleted.
-
-        assert(not has_force(r2) or step_for_reg(r2).forced_inputs.empty());
-
-        // USE and CALL operations don't need back edges from regs with no effects.
-        //    The force of r2 will be invalidated only if the result of r2 is invalidated, and
-        //    this will invalidate f1 by invalidating the step or result at R1.
-        // FORCE operations can be invalidated by the lack of a result, so we do need a back-edge.
-        if (not is_force) return;
-
-        // We can avoid creating a force at regs with no effects until something forces them directly.
-        if (not has_force(r2))
-            add_shared_force(r2);
-    }
 
     assert(has_force(r2));
 
@@ -1861,16 +1801,6 @@ void reg_heap::check_used_regs() const
                 continue;
             }
 
-            auto& S = step_for_reg(r);
-            {
-                bool b = not S.forced_regs.empty();
-                for(auto r2: S.forced_regs)
-                    b = b or result_for_reg(r2).has_force_effects();
-                for(auto r2: used_regs_for_reg(r))
-                    b = b or result_for_reg(r2).has_force_effects();
-                assert(S.has_force_effects() == b);
-            }
-
             if (not has_result(r))
             {
                 assert(not has_force(r));
@@ -1878,8 +1808,6 @@ void reg_heap::check_used_regs() const
             }
 
             auto& RES = result_for_reg(r);
-            if (not RES.has_force_effects())
-                assert(not has_force(r) or step_for_reg(r).forced_inputs.empty());
 
             if (has_force(r))
             {
