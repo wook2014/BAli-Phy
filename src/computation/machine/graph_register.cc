@@ -134,7 +134,7 @@ void Step::clear()
     // assert(flags.none());
 }
 
-void Step::check_cleared()
+void Step::check_cleared() const
 {
     assert(not call);
     assert(used_inputs.empty());
@@ -178,7 +178,7 @@ void Result::clear()
     // assert(flags.none());
 }
 
-void Result::check_cleared()
+void Result::check_cleared() const
 {
     assert(not value);
     assert(flags.none());
@@ -206,7 +206,7 @@ void Force::clear()
     source_reg = -1;
 }
 
-void Force::check_cleared()
+void Force::check_cleared() const
 {
 }
 
@@ -233,7 +233,7 @@ void reg::clear()
     flags.reset();
 }
 
-void reg::check_cleared()
+void reg::check_cleared() const
 {
     assert(not C);
     assert(type == type_t::unknown);
