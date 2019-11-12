@@ -201,27 +201,6 @@ Result::Result(Result&& R) noexcept
      flags ( R.flags )
 { }
 
-void Force::clear()
-{
-    source_reg = -1;
-}
-
-void Force::check_cleared() const
-{
-}
-
-Force& Force::operator=(Force&& F) noexcept
-{
-    source_reg = F.source_reg;
-
-    return *this;
-}
-
-Force::Force(Force&& F) noexcept
-{
-    operator=(std::move(F));
-}
-
 void reg::clear()
 {
     C.clear();
@@ -1868,7 +1847,7 @@ int reg_heap::add_shared_result(int r, int s)
     return res;
 }
 
-int reg_heap::get_shared_force(int r)
+int reg_heap::get_shared_force()
 {
     // 1. Get a new force
     int f = forces.allocate();
@@ -1876,9 +1855,6 @@ int reg_heap::get_shared_force(int r)
     forces[f].check_cleared();
 #endif
     total_force_allocations++;
-
-    // 2. Set the source of the force
-    forces[f].source_reg = r;
 
     assert(f > 0);
 
@@ -1894,7 +1870,7 @@ int reg_heap::add_shared_force(int r)
     assert(has_result(r));
 
     // Get a force
-    int f = get_shared_force(r);
+    int f = get_shared_force();
 
     // Link it in to the mapping
     prog_force[r] = f;

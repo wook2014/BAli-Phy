@@ -89,19 +89,9 @@ struct Result
 
 struct Force
 {
-    int source_reg = -1;
+    void clear() {}
 
-    void clear();
-
-    void check_cleared() const;
-
-    Force& operator=(const Force&) = delete;
-    Force& operator=(Force&&) noexcept;
-
-    Force() = default;
-
-    Force(const Force&) = delete;
-    Force(Force&&) noexcept;
+    void check_cleared() const {};
 };
 
 constexpr int non_computed_index = -1;
@@ -547,7 +537,7 @@ public:
 
     int get_shared_step(int r);
     int get_shared_result(int r, int step);
-    int get_shared_force(int r);
+    int get_shared_force();
 
     int add_shared_step(int r);
     int add_shared_result(int r, int step);
