@@ -941,7 +941,6 @@ void reg_heap::force_reg(int r)
     {
         if (not has_force(r2))
             incremental_evaluate(r2, true);
-        set_forced_input2(s, r2, false);
     }
 
     for(auto r2: steps[s].forced_regs)
