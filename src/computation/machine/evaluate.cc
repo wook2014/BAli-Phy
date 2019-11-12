@@ -471,7 +471,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R, bool force)
 		    set_call(R, r3);
 		    set_result_value_for_reg(R);
 
-                    if (force) force_reg(R);
+                    if (force) add_shared_force(R);
 
 		    return {R, value};
 		}
