@@ -172,16 +172,11 @@ void Result::clear()
     source_step = -1;
     source_reg = -1;
     value = 0;
-
-    flags.reset();
-    // This should already be cleared.
-    // assert(flags.none());
 }
 
 void Result::check_cleared() const
 {
     assert(not value);
-    assert(flags.none());
 }
 
 Result& Result::operator=(Result&& R) noexcept
@@ -189,7 +184,6 @@ Result& Result::operator=(Result&& R) noexcept
     value = R.value;
     source_step = R.source_step;
     source_reg = R.source_reg;
-    flags = R.flags;
 
     return *this;
 }
@@ -197,8 +191,7 @@ Result& Result::operator=(Result&& R) noexcept
 Result::Result(Result&& R) noexcept
     :source_step(R.source_step),
      source_reg(R.source_reg),
-     value (R.value),
-     flags ( R.flags )
+     value (R.value)
 { }
 
 void reg::clear()
@@ -1659,12 +1652,6 @@ void reg_heap::check_used_regs_in_token(int t) const
         assert(steps[step].source_reg == reg);
         //FIXME! Check that source_step is in same token, for same reg
         int value = results[res].value;
-
-        if (results[res].flags.test(result_bit))
-            assert(is_root_token(t));
-
-        if (results[res].flags.test(step_bit))
-            assert(is_root_token(t));
 
         if (value)
             assert(call);
