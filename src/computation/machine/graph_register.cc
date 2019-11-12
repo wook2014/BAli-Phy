@@ -1936,14 +1936,6 @@ void reg_heap::check_back_edges_cleared_for_step(int s)
     }
 }
 
-void reg_heap::check_back_edges_cleared_for_result(int)
-{
-}
-
-void reg_heap::check_back_edges_cleared_for_force(int)
-{
-}
-
 void reg_heap::clear_back_edges_for_reg(int r)
 {
     assert(r > 0);
@@ -2043,16 +2035,6 @@ void reg_heap::clear_back_edges_for_step(int s)
     steps[s].created_regs.clear();
 }
 
-void reg_heap::clear_back_edges_for_result(int res)
-{
-    assert(res > 0);
-}
-
-void reg_heap::clear_back_edges_for_force(int f)
-{
-    assert(f > 0);
-}
-
 void reg_heap::clear_step(int r)
 {
     assert(not has_force(r));
@@ -2077,12 +2059,7 @@ void reg_heap::clear_result(int r)
     prog_results[r] = non_computed_index;
 
     if (res > 0)
-    {
-#ifndef NDEBUG
-        check_back_edges_cleared_for_result(res);
-#endif
         results.reclaim_used(res);
-    }
 }
 
 void reg_heap::clear_force(int r)
@@ -2091,12 +2068,7 @@ void reg_heap::clear_force(int r)
     prog_force[r] = non_computed_index;
 
     if (f > 0)
-    {
-#ifndef NDEBUG
-        check_back_edges_cleared_for_force(f);
-#endif
         forces.reclaim_used(f);
-    }
 }
 
 const expression_ref& reg_heap::get_parameter_value_in_context(int p, int c)

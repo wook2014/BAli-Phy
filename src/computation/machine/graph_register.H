@@ -560,12 +560,8 @@ public:
 
     void clear_back_edges_for_reg(int r);
     void clear_back_edges_for_step(int s);
-    void clear_back_edges_for_result(int rc);
-    void clear_back_edges_for_force(int f);
 
     void check_back_edges_cleared_for_step(int rc);
-    void check_back_edges_cleared_for_result(int rc);
-    void check_back_edges_cleared_for_force(int rc);
 
     int value_for_reg(int r) const;
 

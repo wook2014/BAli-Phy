@@ -33,43 +33,34 @@ void reg_heap::destroy_all_computations_in_token(int t)
 		reclaim_used(r);
 	    }
 	    steps[s].created_regs.clear();
-	    clear_back_edges_for_step(s);
 	}
     }
-
-    // Remove call back-edges
-    auto& delta_result = tokens[t].delta_result();
-    for(auto [_,res]: delta_result)
-    {
-	if (res > 0)
-	    clear_back_edges_for_result(res);
-    }
-
-    // Remove force back-edges
-    auto& delta_force = tokens[t].delta_force();
-    for(auto [_,f]: delta_force)
-    {
-	if (f > 0)
-        {
-	    clear_back_edges_for_force(f);
-	    forces.reclaim_used(f);
-        }
-    }
-    tokens[t].vm_force.clear();
 
     for(auto [_,s]: delta_step)
     {
 	if (s > 0)
+        {
+	    clear_back_edges_for_step(s);
 	    steps.reclaim_used(s);
+        }
     }
     tokens[t].vm_step.clear();
 
+    auto& delta_result = tokens[t].delta_result();
     for(auto [_,res]: delta_result)
     {
 	if (res > 0)
 	    results.reclaim_used(res);
     }
     tokens[t].vm_result.clear();
+
+    auto& delta_force = tokens[t].delta_force();
+    for(auto [_,f]: delta_force)
+    {
+	if (f > 0)
+	    forces.reclaim_used(f);
+    }
+    tokens[t].vm_force.clear();
 }
 
 void reg_heap::release_tip_token(int t)
