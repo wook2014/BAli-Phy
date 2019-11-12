@@ -918,6 +918,7 @@ void reg_heap::force_reg(int r)
     {
         if (not has_force(r2))
             incremental_evaluate(r2, true);
+        assert(not unforced_reg(r2));
     }
 
     for(auto r2: steps[s].forced_regs)
@@ -926,8 +927,6 @@ void reg_heap::force_reg(int r)
             incremental_evaluate(r2, true);
         assert(reg_has_result_value(r2));
         assert(not unforced_reg(r2));
-
-        set_forced_input2(s, r2, true);
     }
 
     assert(steps[s].call > 0);
@@ -938,6 +937,7 @@ void reg_heap::force_reg(int r)
         if (not has_force(steps[s].call))
             incremental_evaluate(steps[s].call, true);
     }
+    assert(not unforced_reg(steps[s].call));
 
     assert(steps[s].forced_inputs.size() >= steps[s].forced_regs.size());
 }
@@ -1023,6 +1023,8 @@ void reg_heap::set_forced_reg(int s, int R2)
     assert(closure_at(R2));
 
     steps[s].forced_regs.push_back(R2);
+
+    set_forced_input2(s, R2, true);
 }
 
 void reg_heap::set_forced_input2(int s1, int r2, bool is_force)
@@ -1036,9 +1038,6 @@ void reg_heap::set_forced_input2(int s1, int r2, bool is_force)
     // An index_var's value only changes if the thing the index-var points to also changes.
     // So, we may as well forbid using an index_var as an input.
     assert(not expression_at(r2).is_index_var());
-
-
-    assert(has_force(r2));
 
     auto& S1 = steps[s1];
     auto& R2 = regs[r2];
@@ -1812,7 +1811,7 @@ void reg_heap::check_used_regs() const
             if (has_force(r))
             {
                 for(auto r2: step_for_reg(r).forced_regs)
-                    assert(has_force(r2));
+                    assert(not unforced_reg(r2));
                 for(auto r2: used_regs_for_reg(r))
                     assert(not unforced_reg(r2));
                 if (reg_is_changeable(step_for_reg(r).call))
