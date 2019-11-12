@@ -32,8 +32,6 @@ struct Step
     /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
     boost::container::small_vector< std::pair<int,int>, 2> forced_inputs;
 
-    boost::container::small_vector< int, 2> forced_regs;
-
     /// Does C reduce to another reg that we need to evaluate to get the true value?
     std::pair<int,int> call_edge;
 

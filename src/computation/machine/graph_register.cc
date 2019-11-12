@@ -126,7 +126,6 @@ void Step::clear()
     call = 0;
     truncate(used_inputs);
     truncate(forced_inputs);
-    truncate(forced_regs);
     truncate(call_edge);
     assert(created_regs.empty());
 
@@ -140,7 +139,6 @@ void Step::check_cleared()
     assert(not call);
     assert(used_inputs.empty());
     assert(forced_inputs.empty());
-    assert(forced_regs.empty());
     assert(not call_edge.first);
     assert(created_regs.empty());
     assert(flags.none());
@@ -152,7 +150,6 @@ Step& Step::operator=(Step&& S) noexcept
     call = S.call;
     used_inputs  = std::move( S.used_inputs );
     forced_inputs = std::move( S.forced_inputs );
-    forced_regs  = std::move( S.forced_regs );
     call_edge = S.call_edge;
     created_regs  = std::move( S.created_regs );
     flags = S.flags;
@@ -165,7 +162,6 @@ Step::Step(Step&& S) noexcept
      call ( S.call ),
      used_inputs ( std::move(S.used_inputs) ),
      forced_inputs ( std::move(S.forced_inputs) ),
-     forced_regs (std::move(S.forced_regs) ),
      call_edge (S.call_edge),
      created_regs ( std::move(S.created_regs) ),
      flags ( S.flags )
@@ -921,7 +917,7 @@ void reg_heap::force_reg(int r)
         assert(not unforced_reg(r2));
     }
 
-    for(auto r2: steps[s].forced_regs)
+    for(auto [r2,_]: steps[s].forced_inputs)
     {
         if (not has_force(r2))
             incremental_evaluate(r2, true);
@@ -938,8 +934,6 @@ void reg_heap::force_reg(int r)
             incremental_evaluate(steps[s].call, true);
     }
     assert(not unforced_reg(steps[s].call));
-
-    assert(steps[s].forced_inputs.size() >= steps[s].forced_regs.size());
 }
 
 bool reg_heap::unforced_reg(int r) const
@@ -1021,8 +1015,6 @@ void reg_heap::set_forced_reg(int s, int R2)
     assert(regs.is_used(R2));
 
     assert(closure_at(R2));
-
-    steps[s].forced_regs.push_back(R2);
 
     set_forced_input2(s, R2, true);
 }
@@ -1358,8 +1350,8 @@ std::vector<int> reg_heap::forced_regs_for_reg(int r) const
     vector<int> U;
     if (not has_step(r)) return U;
 
-    for(int r: step_for_reg(r).forced_regs)
-        U.push_back(r);
+    for(const auto& [r2,_]: step_for_reg(r).forced_inputs)
+        U.push_back(r2);
 
     return U;
 }
@@ -1810,7 +1802,7 @@ void reg_heap::check_used_regs() const
 
             if (has_force(r))
             {
-                for(auto r2: step_for_reg(r).forced_regs)
+                for(auto r2: forced_regs_for_reg(r))
                     assert(not unforced_reg(r2));
                 for(auto r2: used_regs_for_reg(r))
                     assert(not unforced_reg(r2));
