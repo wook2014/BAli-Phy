@@ -225,20 +225,17 @@ void Force::clear()
 {
     source_reg = -1;
     truncate(forced_inputs);
-    truncate(forced_by);
 }
 
 void Force::check_cleared()
 {
     assert(forced_inputs.empty());
-    assert(forced_by.empty());
 }
 
 Force& Force::operator=(Force&& F) noexcept
 {
     source_reg = F.source_reg;
     forced_inputs = std::move( F.forced_inputs );
-    forced_by = std::move( F.forced_by );
 
     return *this;
 }
@@ -253,6 +250,7 @@ void reg::clear()
     C.clear();
     type = type_t::unknown;
     truncate(used_by);
+    truncate(forced_by);
     truncate(called_by);
     created_by = {0,0};
     flags.reset();
@@ -263,6 +261,7 @@ void reg::check_cleared()
     assert(not C);
     assert(type == type_t::unknown);
     assert(used_by.empty());
+    assert(forced_by.empty());
     assert(called_by.empty());
     assert(created_by.first == 0);
     assert(created_by.second == 0);
@@ -277,6 +276,8 @@ reg& reg::operator=(reg&& R) noexcept
 
     used_by = std::move( R.used_by );
 
+    forced_by = std::move( R.forced_by );
+
     called_by = std::move( R.called_by );
 
     created_by = std::move(R.created_by);
@@ -290,8 +291,9 @@ reg::reg(reg&& R) noexcept
     :C( std::move(R.C) ),
      type ( R.type ),
      used_by ( std::move( R.used_by) ),
+     forced_by ( std::move( R.forced_by) ),
      called_by ( std::move( R.called_by) ),
-     created_by( std::move(R.created_by) ),
+     created_by( std::move( R.created_by) ),
      flags ( R.flags )
 { }
 
@@ -1069,48 +1071,49 @@ void reg_heap::set_forced_reg(int s, int R2)
     steps[s].mark_with_force_effects();
 }
 
-void reg_heap::set_forced_input2(int f1, int R2, bool is_force)
+void reg_heap::set_forced_input2(int f1, int r2, bool is_force)
 {
-    assert(reg_is_changeable(R2));
+    assert(reg_is_changeable(r2));
 
-    assert(regs.is_used(R2));
+    assert(regs.is_used(r2));
 
-    assert(closure_at(R2));
+    assert(closure_at(r2));
 
     // An index_var's value only changes if the thing the index-var points to also changes.
     // So, we may as well forbid using an index_var as an input.
-    assert(not expression_at(R2).is_index_var());
+    assert(not expression_at(r2).is_index_var());
 
-    if (not result_for_reg(R2).has_force_effects())
+    if (not result_for_reg(r2).has_force_effects())
     {
         // We can't assert that regs with has_force=true are forced.
         // They could have been forced in the past, but their forcer is deleted.
 
-        assert(not has_force(R2) or force_for_reg(R2).forced_inputs.empty());
+        assert(not has_force(r2) or force_for_reg(r2).forced_inputs.empty());
 
         // USE and CALL operations don't need back edges from regs with no effects.
-        //    The force of R2 will be invalidated only if the result of R2 is invalidated, and
+        //    The force of r2 will be invalidated only if the result of r2 is invalidated, and
         //    this will invalidate f1 by invalidating the step or result at R1.
         // FORCE operations can be invalidated by the lack of a result, so we do need a back-edge.
         if (not is_force) return;
 
         // We can avoid creating a force at regs with no effects until something forces them directly.
-        if (not has_force(R2))
-            add_shared_force(R2);
+        if (not has_force(r2))
+            add_shared_force(r2);
     }
 
-    assert(has_force(R2));
+    assert(has_force(r2));
 
-    int f2 = force_index_for_reg(R2);
+    auto& F1 = forces[f1];
+    auto& R2 = regs[r2];
 
-    int back_index = forces[f2].forced_by.size();
-    int forw_index = forces[f1].forced_inputs.size();
-    forces[f2].forced_by.push_back({f1,forw_index});
-    forces[f1].forced_inputs.push_back({f2,back_index});
-    // QUESTION: should we be tracking the forced_regs here, outside of the step?
-    //   Maybe that would allow us to have a constant with effects.
+    int back_index = R2.forced_by.size();
+    int forw_index = F1.forced_inputs.size();
+    R2.forced_by.push_back({f1,forw_index});
+    F1.forced_inputs.push_back({r2,back_index});
 
-    assert(force_is_forced_by(f1,f2));
+    // Maybe putting forced_regs on the reg that would allow us to have a constant with effects?
+
+    assert(reg_is_forced_by(f1,r2));
 }
 
 void reg_heap::set_call(int R1, int R2)
@@ -1661,9 +1664,9 @@ bool reg_heap::reg_is_used_by(int s1, int r2) const
     return false;
 }
 
-bool reg_heap::force_is_forced_by(int f1, int f2) const
+bool reg_heap::reg_is_forced_by(int f1, int r2) const
 {
-    for(auto& [f,index]: forces[f2].forced_by)
+    for(auto& [f,_]: regs[r2].forced_by)
         if (f == f1)
             return true;
 
@@ -1673,9 +1676,8 @@ bool reg_heap::force_is_forced_by(int f1, int f2) const
 bool reg_heap::reg_is_forced_by2(int r1, int r2) const
 {
     int f1 = force_index_for_reg(r1);
-    int f2 = force_index_for_reg(r2);
 
-    return force_is_forced_by(f1,f2);
+    return reg_is_forced_by(f1,r2);
 }
 
 void reg_heap::check_tokens() const
@@ -2105,9 +2107,9 @@ void reg_heap::clear_back_edges_for_force(int f)
 
     for(auto& forward: forces[f].forced_inputs)
     {
-        auto [f3,j] = forward;
-        if (forces.is_free(f3)) continue;
-        auto& backward = forces[f3].forced_by;
+        auto [r3,j] = forward;
+        if (regs.is_free(r3)) continue;
+        auto& backward = regs[r3].forced_by;
         assert(0 <= j and j < backward.size());
 
         forward = {0,0};
@@ -2122,8 +2124,10 @@ void reg_heap::clear_back_edges_for_force(int f)
             assert(0 <= i2 and i2 < forward2.size());
             forward2[i2].second = j;
 
+
+            assert(forces[f2].forced_inputs[i2].first == r3);
             assert(forces[f2].forced_inputs[i2].second == j);
-            assert(forces[forward2[i2].first].forced_by[forward2[i2].second].second == i2);
+            assert(regs[forward2[i2].first].forced_by[forward2[i2].second].second == i2);
         }
 
         backward.pop_back();

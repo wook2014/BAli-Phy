@@ -100,7 +100,6 @@ struct Force
 
     /// Which pairs (reg,slot) USED the reduction value of C (via an operation)?
     boost::container::small_vector< std::pair<int,int>, 2> forced_inputs;
-    boost::container::small_vector<std::pair<int,int>, 2> forced_by;
 
     void clear();
 
@@ -129,6 +128,9 @@ public:
 
     /// Which steps (step,index) USE this reg?
     boost::container::small_vector<std::pair<int,int>, 2> used_by;
+
+    /// Which force (force,index)
+    boost::container::small_vector<std::pair<int,int>, 2> forced_by;
 
     /// Which reduction values made use of the value of this expression (via call)
     boost::container::small_vector<int, 5> called_by;
@@ -177,7 +179,7 @@ class reg_heap: public Object
 
     bool reg_is_used_by(int, int) const;
 
-    bool force_is_forced_by(int, int) const;
+    bool reg_is_forced_by(int, int) const;
     bool reg_is_forced_by2(int, int) const;
 
 public:

@@ -314,10 +314,8 @@ void reg_heap::unshare_regs(int t)
     for(int k=0;k<delta_force.size();k++)
         if (auto [r,_] = delta_force[k]; has_force(r))
         {
-            const auto& Force = force_for_reg(r);
-
 	    // Look at steps that FORCE the root's result (that is overridden in t)
-	    for(auto& [f2,_]: Force.forced_by)
+	    for(auto& [f2,_]: regs[r].forced_by)
 		if (int r2 = forces[f2].source_reg; prog_force[r2] == f2)
 		    unshare_force(r2);
 	}
