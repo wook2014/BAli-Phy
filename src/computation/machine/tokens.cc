@@ -54,12 +54,7 @@ void reg_heap::destroy_all_computations_in_token(int t)
     }
     tokens[t].vm_result.clear();
 
-    auto& delta_force = tokens[t].delta_force();
-    for(auto [_,f]: delta_force)
-    {
-	if (f > 0)
-	    forces.reclaim_used(f);
-    }
+    // We can clear this without doing any reclamation.
     tokens[t].vm_force.clear();
 }
 

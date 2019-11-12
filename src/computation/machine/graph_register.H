@@ -87,13 +87,6 @@ struct Result
 };
 
 
-struct Force
-{
-    void clear() {}
-
-    void check_cleared() const {};
-};
-
 constexpr int non_computed_index = -1;
 
 class reg
@@ -143,8 +136,6 @@ class reg_heap: public Object
     mutable pool<Step> steps;
 
     mutable pool<Result> results;
-
-    mutable pool<Force> forces;
 
     mutable int n_active_scratch_lists = 0;
     mutable std::vector< object_ptr<Vector<int> > > scratch_lists;
@@ -517,8 +508,6 @@ public:
     Step& step_for_reg(int r);
     const Result& result_for_reg(int r) const ;
     Result& result_for_reg(int r);
-    const Force& force_for_reg(int r) const ;
-    Force& force_for_reg(int r);
     bool has_step(int r) const;
     bool has_result(int r) const;
     bool has_force(int r) const;
@@ -537,11 +526,10 @@ public:
 
     int get_shared_step(int r);
     int get_shared_result(int r, int step);
-    int get_shared_force();
 
     int add_shared_step(int r);
     int add_shared_result(int r, int step);
-    int add_shared_force(int r);
+    void add_shared_force(int r);
 
     void clear_step(int r);
     void clear_result(int r);

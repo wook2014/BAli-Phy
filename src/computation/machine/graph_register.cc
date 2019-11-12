@@ -818,18 +818,6 @@ Result& reg_heap::result_for_reg(int r)
     return results.access_unused(res);
 }
 
-const Force& reg_heap::force_for_reg(int r) const
-{
-    int f = force_index_for_reg(r);
-    return forces.access_unused(f);
-}
-
-Force& reg_heap::force_for_reg(int r)
-{
-    int f = force_index_for_reg(r);
-    return forces.access_unused(f);
-}
-
 const closure& reg_heap::access_value_for_reg(int R1) const
 {
     int R2 = value_for_reg(R1);
@@ -1847,37 +1835,16 @@ int reg_heap::add_shared_result(int r, int s)
     return res;
 }
 
-int reg_heap::get_shared_force()
-{
-    // 1. Get a new force
-    int f = forces.allocate();
-#ifndef NDEBUG
-    forces[f].check_cleared();
-#endif
-    total_force_allocations++;
-
-    assert(f > 0);
-
-    return f;
-}
-
 /// Add a shared force at (t,r) -- assuming there isn't one already
-int reg_heap::add_shared_force(int r)
+void reg_heap::add_shared_force(int r)
 {
     assert(not has_force(r));
     // There should already be a step, if there is a force
     assert(has_step(r));
     assert(has_result(r));
 
-    // Get a force
-    int f = get_shared_force();
-
-    // Link it in to the mapping
-    prog_force[r] = f;
-
-    assert(f > 0);
-
-    return f;
+    // Mark the reg forced.
+    prog_force[r] = 1;
 }
 
 void reg_heap::check_back_edges_cleared_for_step(int s)
@@ -2027,11 +1994,7 @@ void reg_heap::clear_result(int r)
 
 void reg_heap::clear_force(int r)
 {
-    int f = prog_force[r];
     prog_force[r] = non_computed_index;
-
-    if (f > 0)
-        forces.reclaim_used(f);
 }
 
 const expression_ref& reg_heap::get_parameter_value_in_context(int p, int c)
@@ -2144,7 +2107,6 @@ reg_heap::reg_heap(const std::shared_ptr<module_loader>& L)
     :regs(1,[this](int s){resize(s);}, [this](){collect_garbage();} ),
      steps(1),
      results(1),
-     forces(1),
      P(new Program(L)),
      prog_steps(1, non_computed_index),
      prog_results(1, non_computed_index),
