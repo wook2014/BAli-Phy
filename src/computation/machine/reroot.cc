@@ -318,6 +318,11 @@ void reg_heap::unshare_regs(int t)
 	    for(auto& [s2,_]: regs[r].forced_by)
 		if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
 		    unshare_force(r2);
+
+	    // Look at steps that FORCE the root's result (that is overridden in t)
+	    for(auto& s2: regs[r].called_by)
+		if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
+		    unshare_force(r2);
 	}
 
     // LOGIC: Any reg that uses or call a created reg must either

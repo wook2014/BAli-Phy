@@ -961,9 +961,6 @@ void reg_heap::force_reg(int r)
     {
         if (not has_force(steps[s].call))
             incremental_evaluate(steps[s].call, true);
-
-        assert(reg_is_changeable(steps[s].call));
-        set_forced_input2(s, steps[s].call, false);
     }
 
     assert(steps[s].forced_inputs.size() >= steps[s].forced_regs.size());
