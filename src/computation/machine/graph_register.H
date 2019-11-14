@@ -145,10 +145,12 @@ public:
     void collect_garbage();
     void trace(std::vector<int>& remap);
     void trace_and_reclaim_unreachable();
+    bool reg_is_unknown(int r) const;
     bool reg_is_changeable(int r) const;
     bool reg_is_constant(int r) const;
     void make_reg_changeable(int r);
 
+    void set_fixed_used_reg(int r1, int r2);
     void set_used_input(int s1, int R2);
     void set_forced_input(int s1, int R2);
     void set_call(int R1, int R2);

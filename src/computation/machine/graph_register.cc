@@ -855,6 +855,34 @@ void reg_heap::set_used_input(int s1, int r2)
     assert(reg_is_used_by(s1,r2));
 }
 
+void reg_heap::set_fixed_used_reg(int r1, int r2)
+{
+    assert(regs.is_used(r1));
+
+    assert(reg_is_unknown(r1));
+
+    assert(reg_is_changeable(r2));
+
+    assert(regs.is_used(r2));
+
+    assert(closure_at(r2));
+
+    assert(has_result(r2));
+
+    // An index_var's value only changes if the thing the index-var points to also changes.
+    // So, we may as well forbid using an index_var as an input.
+    assert(not expression_at(r2).is_index_var());
+
+    auto& R1 = regs[r1];
+    auto& R2 = regs[r2];
+    int back_index = R2.fixed_used_by_regs.size();
+    int forw_index = R1.fixed_used_regs.size();
+    R2.fixed_used_by_regs.push_back({r1,forw_index});
+    R1.fixed_used_regs.push_back({r2,back_index});
+
+    assert(reg_is_used_by(r1,r2));
+}
+
 void reg_heap::set_forced_input(int s1, int R2)
 {
     assert(reg_is_changeable(R2));
@@ -1354,6 +1382,11 @@ void reg_heap::resize(int s)
 	assert(prog_results[i] == non_computed_index);
 	assert(prog_temp[i].none());
     }
+}
+
+bool reg_heap::reg_is_unknown(int r) const
+{
+    return regs.access(r).type == reg::type_t::unknown;
 }
 
 bool reg_heap::reg_is_constant(int r) const
