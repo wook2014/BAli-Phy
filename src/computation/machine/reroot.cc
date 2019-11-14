@@ -250,6 +250,10 @@ void reg_heap::unshare_regs(int t)
             for(auto& [s2,_]: R.used_by)
                 if (int r2 = steps[s2].source_reg; prog_steps[r2] == s2)
                     unshare_step(r2);
+
+	    // Look at steps that USE the reg in the root (that has overridden result in t)
+            for(auto& [r2,_]: R.fixed_used_by_regs)
+                unshare_step(r2);
         }
 
 //  int j = delta_step.size();
