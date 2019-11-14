@@ -1536,6 +1536,35 @@ void reg_heap::check_back_edges_cleared_for_step(int s)
 
 void reg_heap::clear_back_edges_for_reg(int r)
 {
+    // 1. When destroying a reg, remove edge from regs[r] <--- fixed_used_by_reg --- reg[r3]
+    assert(r > 0);
+    for(auto& forward: regs[r].fixed_used_regs)
+    {
+        auto [r3,j] = forward;
+        if (regs.is_free(r3)) continue;
+        auto& backward = regs[r3].fixed_used_by_regs;
+	assert(0 <= j and j < backward.size());
+
+	forward = {0,0};
+
+	if (j+1 < backward.size())
+	{
+	    // erase the backward edge by moving another backward edge on top of it.
+	    backward[j] = backward.back();
+	    auto [r2,i2] = backward[j];
+	    // adjust the forward edge for that backward edge
+	    auto& forward2 = regs[r2].fixed_used_regs;
+	    assert(0 <= i2 and i2 < forward2.size());
+	    forward2[i2].second = j;
+
+	    assert(regs[r2].fixed_used_regs[i2].second == j);
+            assert(regs[forward2[i2].first].fixed_used_by_regs[forward2[i2].second].second == i2);
+	}
+
+	backward.pop_back();
+    }
+
+    // 2. When destroying a reg, remove edge from steps[s] <--- created_by --- reg[r]
     assert(r > 0);
     auto& created_by = regs.access(r).created_by;
     auto [s,j] = created_by;
@@ -1589,7 +1618,6 @@ void reg_heap::clear_back_edges_for_step(int s)
 
 	backward.pop_back();
     }
-    // 1b. Clear list of used_inputs.
 
     // 2. Clear edges from steps[s] <---> reg[call]
     if (steps[s].call > 0)
