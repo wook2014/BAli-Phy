@@ -170,6 +170,8 @@ void reg::clear()
 {
     C.clear();
     type = type_t::unknown;
+    truncate(fixed_used_regs);
+    truncate(fixed_used_by_regs);
     truncate(used_by);
     truncate(called_by);
     created_by = {0,0};
@@ -180,6 +182,8 @@ void reg::check_cleared() const
 {
     assert(not C);
     assert(type == type_t::unknown);
+    assert(fixed_used_regs.empty());
+    assert(fixed_used_by_regs.empty());
     assert(used_by.empty());
     assert(called_by.empty());
     assert(created_by.first == 0);
@@ -192,6 +196,10 @@ reg& reg::operator=(reg&& R) noexcept
     C = std::move(R.C);
 
     type = R.type;
+
+    fixed_used_regs = std::move( R.fixed_used_regs );
+
+    fixed_used_by_regs = std::move( R.fixed_used_by_regs );
 
     used_by = std::move( R.used_by );
 
@@ -207,7 +215,9 @@ reg& reg::operator=(reg&& R) noexcept
 reg::reg(reg&& R) noexcept
     :C( std::move(R.C) ),
      type ( R.type ),
-     used_by ( std::move( R.used_by) ),
+     fixed_used_regs ( std::move( R.fixed_used_regs) ),
+     fixed_used_by_regs ( std::move( R.fixed_used_by_regs) ),
+     used_by ( std::move( R.used_by ) ),
      called_by ( std::move( R.called_by) ),
      created_by( std::move(R.created_by) ),
      flags ( R.flags )

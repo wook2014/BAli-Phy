@@ -75,6 +75,10 @@ public:
 
     type_t type = type_t::unknown;
 
+    /// Which regs (reg,index) USE this reg?
+    boost::container::small_vector<std::pair<int,int>, 2> fixed_used_regs;
+    boost::container::small_vector<std::pair<int,int>, 2> fixed_used_by_regs;
+
     /// Which steps (step,index) USE this reg?
     boost::container::small_vector<std::pair<int,int>, 2> used_by;
 
