@@ -27,6 +27,7 @@
 #include "math/exponential.H"
 #include "math/eigenvalue.H"
 
+#include <unsupported/Eigen/MatrixFunctions>
 
 // The approach used in this file works because of general properties
 // of the transition matrix of reversible (continuous time) markov
@@ -216,4 +217,37 @@ Matrix exp(const EigenValues& eigensystem, const vector<double>& pi, const doubl
         return exp_small(eigensystem, pi, t);
     else
         return exp_large(eigensystem, pi, t);
+}
+
+Matrix exp_scaling_and_squaring(const Matrix& M, double t)
+{
+    int n = M.size1();
+    assert(M.size1() == M.size2());
+
+    // 1. Make an eigen matrix M2 from M
+    Eigen::MatrixXd M2(n,n);
+    for(int i=0;i<n;i++)
+        for(int j=0;j<n;j++)
+            M2(i,j) = M(i,j)*t;
+
+    // 2. Compute exp(M2)
+    Eigen::MatrixXd Exp2 = M2.exp();
+
+    // 3. Make an Matrix Exp from Exp2
+    Matrix Exp(n,n);
+    for(int i=0;i<n;i++)
+        for(int j=0;j<n;j++)
+            Exp(i,j) = Exp2(i,j);
+
+#ifndef NDEBUG
+    for(int i=0;i<Exp.size1();i++)
+    {
+        double sum = 0;
+	for(int j=0;j<Exp.size2();j++)
+            sum += Exp(i,j);
+        assert(std::abs(sum - 1.0) < 1.0e-10*Exp.size1());
+    }
+#endif
+
+    return Exp;
 }

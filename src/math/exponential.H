@@ -32,4 +32,6 @@ along with BAli-Phy; see the file COPYING.  If not see
 class EigenValues;
 Matrix exp(const EigenValues& eigensystem,const std::vector<double>& D,double t);
 
+Matrix exp_scaling_and_squaring(const Matrix& M, double t);
+
 #endif

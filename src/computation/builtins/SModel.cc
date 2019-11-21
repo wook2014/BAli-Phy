@@ -19,6 +19,19 @@ using std::cerr;
 using std::endl;
 using std::abs;
 
+extern "C" closure builtin_function_exp_scaling_and_squaring(OperationArgs& Args)
+{
+    double t = Args.evaluate(1).as_double();
+
+    auto arg0 = Args.evaluate(0);
+    const Matrix& Q = arg0.as_< Box<Matrix> >();
+
+    auto M = new Box<Matrix>;
+    *M = exp_scaling_and_squaring(Q, t);
+    return M;
+}
+
+
 extern "C" closure builtin_function_lExp(OperationArgs& Args)
 {
     auto L = Args.evaluate(0);

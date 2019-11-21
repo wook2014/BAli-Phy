@@ -6,6 +6,7 @@ import Data.Matrix
 
 builtin get_equilibrium_rate 4 "get_equilibrium_rate" "SModel"
 builtin get_eigensystem 2 "get_eigensystem" "SModel"
+builtin exp_ss 2 "exp_scaling_and_squaring" "SModel"
 builtin lExp 3 "lExp" "SModel"
 builtin builtin_gtr_sym 2 "gtr_sym" "SModel"
 builtin fixup_diagonal_rates 1 "fixup_diagonal_rates" "SModel"
@@ -13,7 +14,8 @@ builtin %*% 2 "elementwise_multiply" "SModel"
 
 data ReversibleMarkov = ReversibleMarkov a b c d e f g
 
-qExp (ReversibleMarkov a s q pi l t r) = lExp l pi t
+-- qExp (ReversibleMarkov a s q pi l t r) = lExp l pi t
+qExp (ReversibleMarkov a s q pi l t r) = exp_ss q t
 
 get_q (ReversibleMarkov _ _ q _ _ t _) = scaleMatrix t q
 
