@@ -1277,36 +1277,6 @@ void reg_heap::check_used_regs() const
 
 }
 
-int reg_heap::get_shared_step(int r)
-{
-    // 1. Get a new computation
-    int s = steps.allocate();
-    total_step_allocations++;
-  
-    // 2. Set the source of the computation
-    steps[s].source_reg = r;
-
-    assert(s > 0);
-    
-    return s;
-}
-
-/// Add a shared step at (t,r) -- assuming there isn't one already
-int reg_heap::add_shared_step(int r)
-{
-    assert(not has_step(r));
-
-    // Allocate a step
-    int s = get_shared_step(r);
-
-    // Link it in to the mapping
-    prog_steps[r] = s;
-
-    assert(s > 0);
-
-    return s;
-}
-
 void reg_heap::check_back_edges_cleared_for_step(int s) const
 {
     assert(steps[s].call_edge.first == 0);
