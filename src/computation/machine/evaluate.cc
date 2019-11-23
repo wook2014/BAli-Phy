@@ -9,6 +9,8 @@
 #include "computation/expression/let.H"
 #include "computation/expression/trim.H"
 #include "computation/expression/index_var.H"
+#include "computation/expression/reg_var.H"
+#include "computation/expression/modifiable.H"
 #include "computation/operations.H"
 
 using std::string;
@@ -240,6 +242,28 @@ pair<int,int> reg_heap::incremental_evaluate(int R)
     return result;
 }
 
+bool fast_is_WHNF(const expression_ref& E)
+{
+    int type = E.head().type();
+    if (not E)
+        return false;
+    else if (E.size())
+    {
+        assert(type != lambda_type);
+	if (type == lambda2_type or type == constructor_type) 
+	    return true;
+	else
+	    return false;
+    }
+    else
+    {
+        assert(not is_modifiable(E));
+        assert(not is_var(E));
+        assert(not is_reg_var(E));
+        return not E.is_index_var();
+    }
+}
+
 // Perhaps rewrite the expression system to
 // (a) DONE: Separate the head (object_ref) from the other args (expression_ref)
 // (b) Make a constructor take some number of arguments.
@@ -346,7 +370,7 @@ pair<int,int> reg_heap::incremental_evaluate_(int R)
 	}
 
 	// Check for WHNF *OR* heap variables
-	else if (is_WHNF(expression_at(R)))
+	else if (fast_is_WHNF(expression_at(R)))
 	{
 	    regs.access(R).type = reg::type_t::constant;
 	    clear_result(R);
@@ -562,7 +586,7 @@ int reg_heap::incremental_evaluate_unchangeable_(int R)
 	}
 
 	// Check for WHNF *OR* heap variables
-	else if (is_WHNF(expression_at(R)))
+	else if (fast_is_WHNF(expression_at(R)))
 	    regs.access(R).type = reg::type_t::constant;
 
 #ifndef NDEBUG
