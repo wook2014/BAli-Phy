@@ -3,6 +3,7 @@
 
 #include "computation/object.H"
 #include "computation/closure.H"
+#include "computation/machine/graph_register.H"
 
 class expression_ref;
 class reg_heap;
@@ -79,5 +80,19 @@ public:
 
     virtual ~OperationArgs();
 };
+
+inline int OperationArgs::allocate(closure&& C)
+{
+    int r = allocate_reg();
+    M.set_C(r, std::move(C));
+    return r;
+}
+
+inline int OperationArgs::allocate_reg()
+{
+    int r = M.push_temp_head();
+    n_allocated++;
+    return r;
+}
 
 #endif

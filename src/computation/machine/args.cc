@@ -92,20 +92,6 @@ void OperationArgs::stack_pop()
     M.stack_pop();
 }
 
-int OperationArgs::allocate(closure&& C)
-{
-    int r = allocate_reg();
-    M.set_C(r, std::move(C));
-    return r;
-}
-
-int OperationArgs::allocate_reg()
-{
-    int r = M.push_temp_head();
-    n_allocated++;
-    return r;
-}
-
 void OperationArgs::set_effect(int r)
 {
     auto& M = memory();

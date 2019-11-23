@@ -16,6 +16,7 @@
 #include "kahan.H"
 #include "mcmc/prob_ratios.H"
 #include "mapping.H"
+#include "util/truncate.H"
 
 struct Step
 {
@@ -557,5 +558,236 @@ extern long total_reg_allocations;
 extern long total_comp_allocations;
 extern long total_reroot;
 extern long total_tokens;
+
+inline int reg_heap::step_index_for_reg(int r) const 
+{
+    assert(prog_steps[r] != 0);
+    return prog_steps[r];
+}
+
+inline const Step& reg_heap::step_for_reg(int r) const 
+{ 
+    int s = step_index_for_reg(r);
+    return steps.access_unused(s);
+}
+
+inline Step& reg_heap::step_for_reg(int r)
+{ 
+    int s = step_index_for_reg(r);
+    return steps.access_unused(s);
+}
+
+inline const closure& reg_heap::access_value_for_reg(int R1) const
+{
+    int R2 = value_for_reg(R1);
+    return closure_at(R2);
+}
+
+inline bool reg_heap::reg_has_value(int r) const
+{
+    if (regs.access(r).type == reg::type_t::constant)
+        return true;
+    else
+        return has_result(r);
+}
+
+inline bool reg_heap::reg_has_call(int r) const
+{
+    return has_step(r) and call_for_reg(r);
+}
+
+inline int reg_heap::call_for_reg(int r) const
+{
+    return step_for_reg(r).call;
+}
+
+inline bool reg_heap::has_step(int r) const
+{
+    return step_index_for_reg(r)>0;
+}
+
+inline bool reg_heap::has_result(int r) const
+{
+    return result_for_reg(r)>0;
+}
+
+inline int reg_heap::value_for_reg(int r) const 
+{
+    assert(not expression_at(r).is_index_var());
+    if (reg_is_changeable(r))
+        return result_for_reg(r);
+    else
+    {
+        assert(reg_is_constant(r));
+        return r;
+    }
+}
+
+inline int reg_heap::result_for_reg(int r) const 
+{
+    assert(prog_results[r] != 0);
+    return prog_results[r];
+}
+
+inline void reg_heap::set_result_for_reg(int r1)
+{
+    // 1. Find called reg
+    int r2 = step_for_reg(r1).call;
+    assert(reg_is_constant(r2) or reg_is_changeable(r2));
+
+    // 2. Set the result value for the current reg
+    prog_results[r1] = value_for_reg(r2);
+    assert(prog_results[r1] > 0);
+}
+
+inline bool reg_heap::reg_is_constant(int r) const
+{
+    return regs.access(r).type == reg::type_t::constant;
+}
+
+inline bool reg_heap::reg_is_changeable(int r) const
+{
+    return regs.access(r).type == reg::type_t::changeable;
+}
+
+inline bool reg_heap::reg_is_unknown(int r) const
+{
+    return regs.access(r).type == reg::type_t::unknown;
+}
+
+inline void reg_heap::make_reg_changeable(int r)
+{
+    assert( regs.access(r).type == reg::type_t::changeable or regs.access(r).type == reg::type_t::unknown );
+
+    regs.access(r).type = reg::type_t::changeable;
+}
+
+inline void reg_heap::set_call(int R1, int R2)
+{
+    // Check that R1 is legal
+    assert(regs.is_used(R1));
+
+    // R1 should be changeable
+    assert(reg_is_changeable(R1));
+
+    // Only modify the call for the current context;
+    assert(has_step(R1));
+
+    // Don't override an *existing* call
+    assert(not reg_has_call(R1));
+
+    // Check that we aren't overriding an existing *value*
+    assert(not reg_has_value(R1));
+
+    // Set the call
+    set_call_from_step(step_index_for_reg(R1), R2);
+}
+
+inline void reg_heap::set_call_from_step(int s1, int r2)
+{
+    // Check that step s is legal
+    assert(steps.is_used(s1));
+
+    // Check that R2 is legal
+    assert(regs.is_used(r2));
+
+    // R2 could be unevaluated if we are setting the value of a modifiable.
+
+    // R2 shouldn't have an index var.
+    assert(not expression_at(r2).is_index_var());
+
+    // Don't override an *existing* call
+    assert(steps[s1].call == 0);
+
+    auto& S1 = steps[s1];
+
+    // Set the call
+    S1.call = r2;
+
+    if (not reg_is_constant(r2))
+    {
+        // 6. Add a call edge from to R2.
+        auto& R2 = regs[r2];
+        int back_index = R2.called_by.size();
+        R2.called_by.push_back(s1);
+        S1.call_edge = {r2, back_index};
+    }
+}
+
+inline void reg_heap::clear_step(int r)
+{
+    assert(not has_result(r));
+    int s = prog_steps[r];
+  
+    if (s > 0)
+    {
+#ifndef NDEBUG
+        check_back_edges_cleared_for_step(s);
+#endif
+        steps.reclaim_used(s);
+    }
+
+    prog_steps[r] = non_computed_index;
+}
+
+inline void reg_heap::clear_result(int r)
+{
+    prog_results[r] = non_computed_index;
+}
+
+inline void reg_heap::set_C(int R, closure&& C)
+{
+    assert(C);
+    assert(not C.exp.head().is_a<expression>());
+    clear_C(R);
+
+    regs.access(R).C = std::move(C);
+#ifndef NDEBUG
+    for(int r: closure_at(R).Env)
+        assert(regs.is_valid_address(r));
+#endif
+}
+
+inline void reg_heap::clear_C(int R)
+{
+    truncate(regs.access_unused(R).C);
+}
+
+inline int reg_heap::push_temp_head()
+{
+    int R = allocate();
+
+    temp.push_back(R);
+
+    return R;
+}
+
+inline int reg_heap::push_temp_head(closure&& C)
+{
+    int R = push_temp_head();
+
+    set_C(R, std::move(C));
+
+    return R;
+}
+
+inline void reg_heap::pop_temp_head()
+{
+//    int R = temp.back();
+
+    temp.pop_back();
+}
+
+inline void reg_heap::mark_reg_created_by_step(int r, int s)
+{
+    assert(r > 0);
+    assert(s > 0);
+
+    int index = steps[s].created_regs.size();
+    steps[s].created_regs.push_back(r);
+    assert(regs.access(r).created_by.first == 0);
+    assert(regs.access(r).created_by.second == 0);
+    regs.access(r).created_by = {s,index};
+}
 
 #endif
