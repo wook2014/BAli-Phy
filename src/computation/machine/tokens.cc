@@ -5,6 +5,7 @@
 
 using std::vector;
 using std::pair;
+using std::optional;
 
 using std::cerr;
 using std::endl;
@@ -48,6 +49,62 @@ std::ostream& operator<<(std::ostream& o, token_type type)
 }
 
 
+optional<int> reg_heap::unset_previous_program_token(int t1)
+{
+    // Only use on active tokens
+    assert(tokens[t1].used);
+
+    assert(tokens[t1].n_context_refs > 0);
+
+    auto t2 = tokens[t1].previous_program_token;
+
+    // Unset the previous value.
+    if (t2)
+    {
+        assert(tokens[*t2].used);
+
+        assert(tokens[*t2].is_referenced());
+
+        assert(tokens[*t2].n_previous_program_refs > 0);
+
+        tokens[*t2].n_previous_program_refs--;
+
+        tokens[t1].previous_program_token = {};
+    }
+
+    assert(not tokens[t1].previous_program_token);
+
+    // This can't release t1, because t1 is referenced.
+    if (t2)
+        release_unreferenced_tips(*t2);
+
+    return t2;
+}
+
+void reg_heap::set_previous_program_token(int t1, std::optional<int> t2)
+{
+    // Only use on active tokens
+    assert(tokens[t1].used);
+
+    // If token t1 is unreferenced, then we shouldn't be setting (or unsetting) references to other tokens.
+    assert(tokens[t1].n_context_refs > 0);
+
+    assert(not tokens[t1].previous_program_token);
+
+    if (t2)
+    {
+        assert(tokens[*t2].used);
+
+        tokens[t1].previous_program_token = t2;
+
+        tokens[*t2].n_previous_program_refs++;
+
+        assert(tokens[*t2].is_referenced());
+
+        assert(tokens[*t2].n_previous_program_refs > 0);
+    }
+}
+
 void reg_heap::destroy_all_computations_in_token(int t)
 {
     auto& delta_step = tokens[t].delta_step();
@@ -82,6 +139,8 @@ void reg_heap::release_tip_token(int t)
     assert(tokens[t].children.empty());
     assert(not tokens[t].is_referenced());
     assert(tokens[t].used);
+    // This should have been unset before we got here.
+    assert(not tokens[t].previous_program_token);
 
     total_destroy_token++;
 
@@ -108,7 +167,6 @@ void reg_heap::release_tip_token(int t)
     }
 
     // 2. Set the token to unused
-
     tokens[t].parent = -1;
     tokens[t].used = false;
     tokens[t].type = token_type::none;
@@ -354,6 +412,8 @@ int reg_heap::make_child_token(int t, token_type type)
 
     tokens[t2].version = tokens[t].version;
 
+    assert(not tokens[t2].previous_program_token);
+
 #ifdef DEBUG_MACHINE
     check_used_regs();
 #endif
@@ -385,6 +445,7 @@ int reg_heap::switch_to_child_token(int c, token_type type)
     int t1 = token_for_context(c);
     int t2 = make_child_token(t1, type);
     switch_to_token(c, t2);
+    set_previous_program_token(t2, tokens[t1].previous_program_token);
 
     check_tokens();
 
@@ -408,6 +469,12 @@ int reg_heap::unset_token_for_context(int c)
     assert(t != -1);
     assert(tokens[t].is_referenced());
 
+    // 1. Remove reference from this token to its previous_program_token,
+    //    if this token is about to become unreferenced.
+    if (tokens[t].n_context_refs == 1)
+        unset_previous_program_token(t);
+
+    // 2. Remove reference to this token from context c
     token_for_context_[c] = -1;
     tokens[t].n_context_refs--;
     assert(tokens[t].n_context_refs >= 0);

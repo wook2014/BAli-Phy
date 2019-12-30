@@ -436,6 +436,11 @@ expression_ref reg_heap::evaluate_program(int c)
 
     register_pending_effects();
 
+    int t = token_for_context(c);
+
+    unset_previous_program_token(t);
+    set_previous_program_token(t,t);
+
     return result;
 }
 
@@ -1673,6 +1678,7 @@ pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c)
         tokens[t1].type = token_type::reverse_execute;
         root_token = t2;
         switch_to_token(c,t2);
+        set_previous_program_token(t2, tokens[t1].previous_program_token);
         assert(execution_allowed());
     }
 

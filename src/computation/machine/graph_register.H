@@ -314,7 +314,14 @@ public:
         token_type type = token_type::none;
         bool used = false;
         long version = 0;
+        std::optional<int> previous_program_token;
     };
+
+
+    std::optional<int> unset_previous_program_token(int t1);
+
+    void set_previous_program_token(int t1, std::optional<int> t2);
+
 private:
     int root_token = -1;
 
