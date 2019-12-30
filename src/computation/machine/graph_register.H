@@ -296,7 +296,13 @@ public:
 
         // Contexts that point here
         int n_context_refs = 0;
-        bool is_referenced() const {assert(n_context_refs >= 0); return n_context_refs > 0;}
+        int n_previous_program_refs = 0;
+        bool is_referenced() const
+        {
+            assert(n_context_refs >= 0);
+            assert(n_previous_program_refs >= 0);
+            return n_context_refs + n_previous_program_refs > 0;
+        }
     
         /// Mapping from closures to steps/results
         const auto& delta_result() const { return vm_result.delta(); }
