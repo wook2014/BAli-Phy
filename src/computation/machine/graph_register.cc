@@ -1646,9 +1646,17 @@ void reg_heap::set_reg_value_in_context(int P, closure&& C, int c)
     set_reg_value(P, std::move(C), t);
 }
 
+bool reg_heap::is_program_execution_token(int t) const
+{
+    return (tokens[t].previous_program_token and *tokens[t].previous_program_token == t);
+}
+
 bool reg_heap::execution_allowed() const
 {
     if (root_token < 0) return false;
+
+    // Don't allow further execution in a program_execution token
+    if (is_program_execution_token(root_token)) return false;
 
     if (tokens[root_token].children.size() == 0) return true;
 

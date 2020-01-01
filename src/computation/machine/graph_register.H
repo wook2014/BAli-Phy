@@ -303,7 +303,7 @@ public:
             assert(n_previous_program_refs >= 0);
             return n_context_refs + n_previous_program_refs > 0;
         }
-    
+
         /// Mapping from closures to steps/results
         const auto& delta_result() const { return vm_result.delta(); }
         const auto& delta_step() const {return vm_step.delta(); }
@@ -317,6 +317,7 @@ public:
         std::optional<int> previous_program_token;
     };
 
+    bool is_program_execution_token(int ) const;
 
     std::optional<int> unset_previous_program_token(int t1);
 
