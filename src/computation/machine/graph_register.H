@@ -387,6 +387,8 @@ public:
     /// Make a child of the current token, point to the child, and unreference the current token.
     int switch_to_child_token(int c, token_type type);
 
+    void swap_contexts(int c1, int c2);
+
     void merge_split_mappings(const std::vector<int>&);
 
     /*------------- Stuff for context indices -----------*/

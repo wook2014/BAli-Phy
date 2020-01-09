@@ -482,6 +482,14 @@ int reg_heap::unset_token_for_context(int c)
     return t;
 }
 
+void reg_heap::swap_contexts(int c1, int c2)
+{
+    assert(token_for_context_[c1] != -1);
+    assert(token_for_context_[c2] != -1);
+
+    std::swap(token_for_context_[c1], token_for_context_[c2]);
+}
+
 void reg_heap::set_token_for_context(int c, int t)
 {
     assert(token_for_context(c) == -1);
