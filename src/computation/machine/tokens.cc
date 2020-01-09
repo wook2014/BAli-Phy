@@ -438,18 +438,43 @@ void reg_heap::switch_to_context(int c1, int c2)
     check_tokens();
 }
 
-int reg_heap::switch_to_child_token(int c, token_type type)
+int reg_heap::make_child_context(int c1, token_type type)
 {
     check_tokens();
 
-    int t1 = token_for_context(c);
+    int t1 = token_for_context(c1);
+
+    int c2 = get_new_context();
     int t2 = make_child_token(t1, type);
-    switch_to_token(c, t2);
+    set_token_for_context(c2,t2);
     set_previous_program_token(t2, tokens[t1].previous_program_token);
 
     check_tokens();
 
-    return t2;
+    return c2;
+}
+
+int reg_heap::switch_to_child_token(int c1, token_type type)
+{
+    check_tokens();
+
+#ifndef NDEBUG
+    auto p = tokens[token_for_context(c1)].previous_program_token;
+#endif
+
+    // Make sure we keep the original token referenced,
+    // to avoid losing its previous_program_token.
+    int c2 = make_child_context(c1, type);
+    swap_contexts(c1,c2);
+    release_context(c2);
+
+#ifndef NDEBUG
+    assert(tokens[token_for_context(c1)].previous_program_token == p);
+#endif
+
+    check_tokens();
+
+    return token_for_context(c1);
 }
 
 int reg_heap::get_n_contexts() const
