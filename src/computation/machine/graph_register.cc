@@ -1680,6 +1680,9 @@ pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c)
     {
         int t1 = token_for_context(c);
         assert(t1 == root_token);
+#ifndef NDEBUG
+        auto p = tokens[t1].previous_program_token;
+#endif
         int t2 = get_unused_token(token_type::root);
         tokens[t2].children.push_back(t1);
         tokens[t1].parent = t2;
@@ -1687,6 +1690,9 @@ pair<int,int> reg_heap::incremental_evaluate_in_context(int R, int c)
         root_token = t2;
         switch_to_token(c,t2);
         set_previous_program_token(t2, tokens[t1].previous_program_token);
+#ifndef NDEBUG
+        assert(tokens[t2].previous_program_token == p);
+#endif
         assert(execution_allowed());
     }
 
