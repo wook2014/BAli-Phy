@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.4.2.
+// A Bison parser, made by GNU Bison 3.5.1.
 
 // Skeleton interface for Bison LALR(1) parsers in C++
 
-// Copyright (C) 2002-2015, 2018-2019 Free Software Foundation, Inc.
+// Copyright (C) 2002-2015, 2018-2020 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@
 
 #ifndef YY_YY_PARSER_HH_INCLUDED
 # define YY_YY_PARSER_HH_INCLUDED
-// //                    "%code requires" blocks.
+// "%code requires" blocks.
 #line 11 "parser.y"
 
   # include <string>
@@ -150,28 +150,26 @@
 #endif
 # include "location.hh"
 #include <typeinfo>
-#ifndef YYASSERT
+#ifndef YY_ASSERT
 # include <cassert>
-# define YYASSERT assert
+# define YY_ASSERT assert
 #endif
 
 
-#ifndef YY_ATTRIBUTE
-# if (defined __GNUC__                                               \
-      && (2 < __GNUC__ || (__GNUC__ == 2 && 96 <= __GNUC_MINOR__)))  \
-     || defined __SUNPRO_C && 0x5110 <= __SUNPRO_C
-#  define YY_ATTRIBUTE(Spec) __attribute__(Spec)
+#ifndef YY_ATTRIBUTE_PURE
+# if defined __GNUC__ && 2 < __GNUC__ + (96 <= __GNUC_MINOR__)
+#  define YY_ATTRIBUTE_PURE __attribute__ ((__pure__))
 # else
-#  define YY_ATTRIBUTE(Spec) /* empty */
+#  define YY_ATTRIBUTE_PURE
 # endif
 #endif
 
-#ifndef YY_ATTRIBUTE_PURE
-# define YY_ATTRIBUTE_PURE   YY_ATTRIBUTE ((__pure__))
-#endif
-
 #ifndef YY_ATTRIBUTE_UNUSED
-# define YY_ATTRIBUTE_UNUSED YY_ATTRIBUTE ((__unused__))
+# if defined __GNUC__ && 2 < __GNUC__ + (7 <= __GNUC_MINOR__)
+#  define YY_ATTRIBUTE_UNUSED __attribute__ ((__unused__))
+# else
+#  define YY_ATTRIBUTE_UNUSED
+# endif
 #endif
 
 /* Suppress unused-variable warnings by "using" E.  */
@@ -183,11 +181,11 @@
 
 #if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN \
-    _Pragma ("GCC diagnostic push") \
-    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")\
+# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                            \
+    _Pragma ("GCC diagnostic push")                                     \
+    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")              \
     _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-# define YY_IGNORE_MAYBE_UNINITIALIZED_END \
+# define YY_IGNORE_MAYBE_UNINITIALIZED_END      \
     _Pragma ("GCC diagnostic pop")
 #else
 # define YY_INITIAL_VALUE(Value) Value
@@ -200,6 +198,27 @@
 # define YY_INITIAL_VALUE(Value) /* Nothing. */
 #endif
 
+#if defined __cplusplus && defined __GNUC__ && ! defined __ICC && 6 <= __GNUC__
+# define YY_IGNORE_USELESS_CAST_BEGIN                          \
+    _Pragma ("GCC diagnostic push")                            \
+    _Pragma ("GCC diagnostic ignored \"-Wuseless-cast\"")
+# define YY_IGNORE_USELESS_CAST_END            \
+    _Pragma ("GCC diagnostic pop")
+#endif
+#ifndef YY_IGNORE_USELESS_CAST_BEGIN
+# define YY_IGNORE_USELESS_CAST_BEGIN
+# define YY_IGNORE_USELESS_CAST_END
+#endif
+
+# ifndef YY_CAST
+#  ifdef __cplusplus
+#   define YY_CAST(Type, Val) static_cast<Type> (Val)
+#   define YY_REINTERPRET_CAST(Type, Val) reinterpret_cast<Type> (Val)
+#  else
+#   define YY_CAST(Type, Val) ((Type) (Val))
+#   define YY_REINTERPRET_CAST(Type, Val) ((Type) (Val))
+#  endif
+# endif
 # ifndef YY_NULLPTR
 #  if defined __cplusplus
 #   if 201103L <= __cplusplus
@@ -218,7 +237,7 @@
 #endif
 
 namespace yy {
-#line 222 "parser.hh"
+#line 241 "parser.hh"
 
 
 
@@ -250,14 +269,14 @@ namespace yy {
     semantic_type (YY_RVREF (T) t)
       : yytypeid_ (&typeid (T))
     {
-      YYASSERT (sizeof (T) <= size);
+      YY_ASSERT (sizeof (T) <= size);
       new (yyas_<T> ()) T (YY_MOVE (t));
     }
 
     /// Destruction, allowed only if empty.
     ~semantic_type () YY_NOEXCEPT
     {
-      YYASSERT (!yytypeid_);
+      YY_ASSERT (!yytypeid_);
     }
 
 # if 201103L <= YY_CPLUSPLUS
@@ -266,8 +285,8 @@ namespace yy {
     T&
     emplace (U&&... u)
     {
-      YYASSERT (!yytypeid_);
-      YYASSERT (sizeof (T) <= size);
+      YY_ASSERT (!yytypeid_);
+      YY_ASSERT (sizeof (T) <= size);
       yytypeid_ = & typeid (T);
       return *new (yyas_<T> ()) T (std::forward <U>(u)...);
     }
@@ -277,8 +296,8 @@ namespace yy {
     T&
     emplace ()
     {
-      YYASSERT (!yytypeid_);
-      YYASSERT (sizeof (T) <= size);
+      YY_ASSERT (!yytypeid_);
+      YY_ASSERT (sizeof (T) <= size);
       yytypeid_ = & typeid (T);
       return *new (yyas_<T> ()) T ();
     }
@@ -288,8 +307,8 @@ namespace yy {
     T&
     emplace (const T& t)
     {
-      YYASSERT (!yytypeid_);
-      YYASSERT (sizeof (T) <= size);
+      YY_ASSERT (!yytypeid_);
+      YY_ASSERT (sizeof (T) <= size);
       yytypeid_ = & typeid (T);
       return *new (yyas_<T> ()) T (t);
     }
@@ -318,9 +337,9 @@ namespace yy {
     T&
     as () YY_NOEXCEPT
     {
-      YYASSERT (yytypeid_);
-      YYASSERT (*yytypeid_ == typeid (T));
-      YYASSERT (sizeof (T) <= size);
+      YY_ASSERT (yytypeid_);
+      YY_ASSERT (*yytypeid_ == typeid (T));
+      YY_ASSERT (sizeof (T) <= size);
       return *yyas_<T> ();
     }
 
@@ -329,9 +348,9 @@ namespace yy {
     const T&
     as () const YY_NOEXCEPT
     {
-      YYASSERT (yytypeid_);
-      YYASSERT (*yytypeid_ == typeid (T));
-      YYASSERT (sizeof (T) <= size);
+      YY_ASSERT (yytypeid_);
+      YY_ASSERT (*yytypeid_ == typeid (T));
+      YY_ASSERT (sizeof (T) <= size);
       return *yyas_<T> ();
     }
 
@@ -347,8 +366,8 @@ namespace yy {
     void
     swap (self_type& that) YY_NOEXCEPT
     {
-      YYASSERT (yytypeid_);
-      YYASSERT (*yytypeid_ == *that.yytypeid_);
+      YY_ASSERT (yytypeid_);
+      YY_ASSERT (*yytypeid_ == *that.yytypeid_);
       std::swap (as<T> (), that.as<T> ());
     }
 
@@ -1281,9 +1300,6 @@ switch (yytype)
       /// \a empty when empty.
       symbol_number_type type_get () const YY_NOEXCEPT;
 
-      /// The token.
-      token_type token () const YY_NOEXCEPT;
-
       /// The symbol type.
       /// \a empty_symbol when empty.
       /// An int, not token_number_type, to be able to store empty_symbol.
@@ -1304,78 +1320,78 @@ switch (yytype)
       symbol_type (int tok, location_type l)
         : super_type(token_type (tok), std::move (l))
       {
-        YYASSERT (tok == token::TOK_END || tok == token::TOK_UNDERSCORE || tok == token::TOK_AS || tok == token::TOK_CASE || tok == token::TOK_DATA || tok == token::TOK_DEFAULT || tok == token::TOK_DERIVING || tok == token::TOK_DO || tok == token::TOK_ELSE || tok == token::TOK_HIDING || tok == token::TOK_IF || tok == token::TOK_IMPORT || tok == token::TOK_IN || tok == token::TOK_INFIX || tok == token::TOK_INFIXL || tok == token::TOK_INFIXR || tok == token::TOK_INSTANCE || tok == token::TOK_LET || tok == token::TOK_MODULE || tok == token::TOK_NEWTYPE || tok == token::TOK_OF || tok == token::TOK_QUALIFIED || tok == token::TOK_THEN || tok == token::TOK_TYPE || tok == token::TOK_WHERE || tok == token::TOK_BUILTIN || tok == token::TOK_FORALL || tok == token::TOK_FOREIGN || tok == token::TOK_EXPORT || tok == token::TOK_LABEL || tok == token::TOK_DYNAMIC || tok == token::TOK_SAFE || tok == token::TOK_INTERRUPTIBLE || tok == token::TOK_UNSAFE || tok == token::TOK_MDO || tok == token::TOK_FAMILY || tok == token::TOK_ROLE || tok == token::TOK_STDCALL || tok == token::TOK_CCALL || tok == token::TOK_CAPI || tok == token::TOK_PRIM || tok == token::TOK_JAVASCRIPT || tok == token::TOK_PROC || tok == token::TOK_REC || tok == token::TOK_GROUP || tok == token::TOK_BY || tok == token::TOK_USING || tok == token::TOK_PATTERN || tok == token::TOK_STATIC || tok == token::TOK_STOCK || tok == token::TOK_ANYCLASS || tok == token::TOK_VIA || tok == token::TOK_UNIT || tok == token::TOK_SIGNATURE || tok == token::TOK_DEPENDENCY || tok == token::TOK_INLINE_PRAG || tok == token::TOK_SPECIALIZE_PRAG || tok == token::TOK_SPECIALIZE_INLINE_PRAG || tok == token::TOK_SOURCE_PRAG || tok == token::TOK_RULES_PRAG || tok == token::TOK_CORE_PRAG || tok == token::TOK_SCC_PRAG || tok == token::TOK_GENERATED_PRAG || tok == token::TOK_DEPRECATED_PRAG || tok == token::TOK_WARNING_PRAG || tok == token::TOK_UNPACK_PRAG || tok == token::TOK_NOUNPACK_PRAG || tok == token::TOK_ANN_PRAG || tok == token::TOK_MINIMAL_PRAG || tok == token::TOK_CTYPE_PRAG || tok == token::TOK_OVERLAPPING_PRAG || tok == token::TOK_OVERLAPPABLE_PRAG || tok == token::TOK_OVERLAPS_PRAG || tok == token::TOK_INCOHERENT_PRAG || tok == token::TOK_COMPLETE_PRAG || tok == token::TOK_CLOSE_PRAG || tok == token::TOK_DOTDOT || tok == token::TOK_COLON || tok == token::TOK_DCOLON || tok == token::TOK_EQUAL || tok == token::TOK_LAM || tok == token::TOK_LCASE || tok == token::TOK_VBAR || tok == token::TOK_LARROW || tok == token::TOK_RARROW || tok == token::TOK_AT || tok == token::TOK_TILDE || tok == token::TOK_DARROW || tok == token::TOK_MINUS || tok == token::TOK_BANG || tok == token::TOK_STAR || tok == token::TOK_lARROWTAIL || tok == token::TOK_rARROWTAIL || tok == token::TOK_LARROWTAIL || tok == token::TOK_RARROWTAIL || tok == token::TOK_DOT || tok == token::TOK_TYPEAPP || tok == token::TOK_OCURLY || tok == token::TOK_CCURLY || tok == token::TOK_VOCURLY || tok == token::TOK_VCCURLY || tok == token::TOK_OBRACK || tok == token::TOK_CBRACK || tok == token::TOK_OPABRACK || tok == token::TOK_CPABRACK || tok == token::TOK_OPAREN || tok == token::TOK_CPAREN || tok == token::TOK_OUBXPAREN || tok == token::TOK_CUBXPAREN || tok == token::TOK_OPARENBAR || tok == token::TOK_CPARENBAR || tok == token::TOK_SEMI || tok == token::TOK_COMMA || tok == token::TOK_BACKQUOTE || tok == token::TOK_SIMPLEQUOTE || tok == 392 || tok == 393 || tok == 394 || tok == 395);
+        YY_ASSERT (tok == token::TOK_END || tok == token::TOK_UNDERSCORE || tok == token::TOK_AS || tok == token::TOK_CASE || tok == token::TOK_DATA || tok == token::TOK_DEFAULT || tok == token::TOK_DERIVING || tok == token::TOK_DO || tok == token::TOK_ELSE || tok == token::TOK_HIDING || tok == token::TOK_IF || tok == token::TOK_IMPORT || tok == token::TOK_IN || tok == token::TOK_INFIX || tok == token::TOK_INFIXL || tok == token::TOK_INFIXR || tok == token::TOK_INSTANCE || tok == token::TOK_LET || tok == token::TOK_MODULE || tok == token::TOK_NEWTYPE || tok == token::TOK_OF || tok == token::TOK_QUALIFIED || tok == token::TOK_THEN || tok == token::TOK_TYPE || tok == token::TOK_WHERE || tok == token::TOK_BUILTIN || tok == token::TOK_FORALL || tok == token::TOK_FOREIGN || tok == token::TOK_EXPORT || tok == token::TOK_LABEL || tok == token::TOK_DYNAMIC || tok == token::TOK_SAFE || tok == token::TOK_INTERRUPTIBLE || tok == token::TOK_UNSAFE || tok == token::TOK_MDO || tok == token::TOK_FAMILY || tok == token::TOK_ROLE || tok == token::TOK_STDCALL || tok == token::TOK_CCALL || tok == token::TOK_CAPI || tok == token::TOK_PRIM || tok == token::TOK_JAVASCRIPT || tok == token::TOK_PROC || tok == token::TOK_REC || tok == token::TOK_GROUP || tok == token::TOK_BY || tok == token::TOK_USING || tok == token::TOK_PATTERN || tok == token::TOK_STATIC || tok == token::TOK_STOCK || tok == token::TOK_ANYCLASS || tok == token::TOK_VIA || tok == token::TOK_UNIT || tok == token::TOK_SIGNATURE || tok == token::TOK_DEPENDENCY || tok == token::TOK_INLINE_PRAG || tok == token::TOK_SPECIALIZE_PRAG || tok == token::TOK_SPECIALIZE_INLINE_PRAG || tok == token::TOK_SOURCE_PRAG || tok == token::TOK_RULES_PRAG || tok == token::TOK_CORE_PRAG || tok == token::TOK_SCC_PRAG || tok == token::TOK_GENERATED_PRAG || tok == token::TOK_DEPRECATED_PRAG || tok == token::TOK_WARNING_PRAG || tok == token::TOK_UNPACK_PRAG || tok == token::TOK_NOUNPACK_PRAG || tok == token::TOK_ANN_PRAG || tok == token::TOK_MINIMAL_PRAG || tok == token::TOK_CTYPE_PRAG || tok == token::TOK_OVERLAPPING_PRAG || tok == token::TOK_OVERLAPPABLE_PRAG || tok == token::TOK_OVERLAPS_PRAG || tok == token::TOK_INCOHERENT_PRAG || tok == token::TOK_COMPLETE_PRAG || tok == token::TOK_CLOSE_PRAG || tok == token::TOK_DOTDOT || tok == token::TOK_COLON || tok == token::TOK_DCOLON || tok == token::TOK_EQUAL || tok == token::TOK_LAM || tok == token::TOK_LCASE || tok == token::TOK_VBAR || tok == token::TOK_LARROW || tok == token::TOK_RARROW || tok == token::TOK_AT || tok == token::TOK_TILDE || tok == token::TOK_DARROW || tok == token::TOK_MINUS || tok == token::TOK_BANG || tok == token::TOK_STAR || tok == token::TOK_lARROWTAIL || tok == token::TOK_rARROWTAIL || tok == token::TOK_LARROWTAIL || tok == token::TOK_RARROWTAIL || tok == token::TOK_DOT || tok == token::TOK_TYPEAPP || tok == token::TOK_OCURLY || tok == token::TOK_CCURLY || tok == token::TOK_VOCURLY || tok == token::TOK_VCCURLY || tok == token::TOK_OBRACK || tok == token::TOK_CBRACK || tok == token::TOK_OPABRACK || tok == token::TOK_CPABRACK || tok == token::TOK_OPAREN || tok == token::TOK_CPAREN || tok == token::TOK_OUBXPAREN || tok == token::TOK_CUBXPAREN || tok == token::TOK_OPARENBAR || tok == token::TOK_CPARENBAR || tok == token::TOK_SEMI || tok == token::TOK_COMMA || tok == token::TOK_BACKQUOTE || tok == token::TOK_SIMPLEQUOTE || tok == 392 || tok == 393 || tok == 394 || tok == 395);
       }
 #else
       symbol_type (int tok, const location_type& l)
         : super_type(token_type (tok), l)
       {
-        YYASSERT (tok == token::TOK_END || tok == token::TOK_UNDERSCORE || tok == token::TOK_AS || tok == token::TOK_CASE || tok == token::TOK_DATA || tok == token::TOK_DEFAULT || tok == token::TOK_DERIVING || tok == token::TOK_DO || tok == token::TOK_ELSE || tok == token::TOK_HIDING || tok == token::TOK_IF || tok == token::TOK_IMPORT || tok == token::TOK_IN || tok == token::TOK_INFIX || tok == token::TOK_INFIXL || tok == token::TOK_INFIXR || tok == token::TOK_INSTANCE || tok == token::TOK_LET || tok == token::TOK_MODULE || tok == token::TOK_NEWTYPE || tok == token::TOK_OF || tok == token::TOK_QUALIFIED || tok == token::TOK_THEN || tok == token::TOK_TYPE || tok == token::TOK_WHERE || tok == token::TOK_BUILTIN || tok == token::TOK_FORALL || tok == token::TOK_FOREIGN || tok == token::TOK_EXPORT || tok == token::TOK_LABEL || tok == token::TOK_DYNAMIC || tok == token::TOK_SAFE || tok == token::TOK_INTERRUPTIBLE || tok == token::TOK_UNSAFE || tok == token::TOK_MDO || tok == token::TOK_FAMILY || tok == token::TOK_ROLE || tok == token::TOK_STDCALL || tok == token::TOK_CCALL || tok == token::TOK_CAPI || tok == token::TOK_PRIM || tok == token::TOK_JAVASCRIPT || tok == token::TOK_PROC || tok == token::TOK_REC || tok == token::TOK_GROUP || tok == token::TOK_BY || tok == token::TOK_USING || tok == token::TOK_PATTERN || tok == token::TOK_STATIC || tok == token::TOK_STOCK || tok == token::TOK_ANYCLASS || tok == token::TOK_VIA || tok == token::TOK_UNIT || tok == token::TOK_SIGNATURE || tok == token::TOK_DEPENDENCY || tok == token::TOK_INLINE_PRAG || tok == token::TOK_SPECIALIZE_PRAG || tok == token::TOK_SPECIALIZE_INLINE_PRAG || tok == token::TOK_SOURCE_PRAG || tok == token::TOK_RULES_PRAG || tok == token::TOK_CORE_PRAG || tok == token::TOK_SCC_PRAG || tok == token::TOK_GENERATED_PRAG || tok == token::TOK_DEPRECATED_PRAG || tok == token::TOK_WARNING_PRAG || tok == token::TOK_UNPACK_PRAG || tok == token::TOK_NOUNPACK_PRAG || tok == token::TOK_ANN_PRAG || tok == token::TOK_MINIMAL_PRAG || tok == token::TOK_CTYPE_PRAG || tok == token::TOK_OVERLAPPING_PRAG || tok == token::TOK_OVERLAPPABLE_PRAG || tok == token::TOK_OVERLAPS_PRAG || tok == token::TOK_INCOHERENT_PRAG || tok == token::TOK_COMPLETE_PRAG || tok == token::TOK_CLOSE_PRAG || tok == token::TOK_DOTDOT || tok == token::TOK_COLON || tok == token::TOK_DCOLON || tok == token::TOK_EQUAL || tok == token::TOK_LAM || tok == token::TOK_LCASE || tok == token::TOK_VBAR || tok == token::TOK_LARROW || tok == token::TOK_RARROW || tok == token::TOK_AT || tok == token::TOK_TILDE || tok == token::TOK_DARROW || tok == token::TOK_MINUS || tok == token::TOK_BANG || tok == token::TOK_STAR || tok == token::TOK_lARROWTAIL || tok == token::TOK_rARROWTAIL || tok == token::TOK_LARROWTAIL || tok == token::TOK_RARROWTAIL || tok == token::TOK_DOT || tok == token::TOK_TYPEAPP || tok == token::TOK_OCURLY || tok == token::TOK_CCURLY || tok == token::TOK_VOCURLY || tok == token::TOK_VCCURLY || tok == token::TOK_OBRACK || tok == token::TOK_CBRACK || tok == token::TOK_OPABRACK || tok == token::TOK_CPABRACK || tok == token::TOK_OPAREN || tok == token::TOK_CPAREN || tok == token::TOK_OUBXPAREN || tok == token::TOK_CUBXPAREN || tok == token::TOK_OPARENBAR || tok == token::TOK_CPARENBAR || tok == token::TOK_SEMI || tok == token::TOK_COMMA || tok == token::TOK_BACKQUOTE || tok == token::TOK_SIMPLEQUOTE || tok == 392 || tok == 393 || tok == 394 || tok == 395);
+        YY_ASSERT (tok == token::TOK_END || tok == token::TOK_UNDERSCORE || tok == token::TOK_AS || tok == token::TOK_CASE || tok == token::TOK_DATA || tok == token::TOK_DEFAULT || tok == token::TOK_DERIVING || tok == token::TOK_DO || tok == token::TOK_ELSE || tok == token::TOK_HIDING || tok == token::TOK_IF || tok == token::TOK_IMPORT || tok == token::TOK_IN || tok == token::TOK_INFIX || tok == token::TOK_INFIXL || tok == token::TOK_INFIXR || tok == token::TOK_INSTANCE || tok == token::TOK_LET || tok == token::TOK_MODULE || tok == token::TOK_NEWTYPE || tok == token::TOK_OF || tok == token::TOK_QUALIFIED || tok == token::TOK_THEN || tok == token::TOK_TYPE || tok == token::TOK_WHERE || tok == token::TOK_BUILTIN || tok == token::TOK_FORALL || tok == token::TOK_FOREIGN || tok == token::TOK_EXPORT || tok == token::TOK_LABEL || tok == token::TOK_DYNAMIC || tok == token::TOK_SAFE || tok == token::TOK_INTERRUPTIBLE || tok == token::TOK_UNSAFE || tok == token::TOK_MDO || tok == token::TOK_FAMILY || tok == token::TOK_ROLE || tok == token::TOK_STDCALL || tok == token::TOK_CCALL || tok == token::TOK_CAPI || tok == token::TOK_PRIM || tok == token::TOK_JAVASCRIPT || tok == token::TOK_PROC || tok == token::TOK_REC || tok == token::TOK_GROUP || tok == token::TOK_BY || tok == token::TOK_USING || tok == token::TOK_PATTERN || tok == token::TOK_STATIC || tok == token::TOK_STOCK || tok == token::TOK_ANYCLASS || tok == token::TOK_VIA || tok == token::TOK_UNIT || tok == token::TOK_SIGNATURE || tok == token::TOK_DEPENDENCY || tok == token::TOK_INLINE_PRAG || tok == token::TOK_SPECIALIZE_PRAG || tok == token::TOK_SPECIALIZE_INLINE_PRAG || tok == token::TOK_SOURCE_PRAG || tok == token::TOK_RULES_PRAG || tok == token::TOK_CORE_PRAG || tok == token::TOK_SCC_PRAG || tok == token::TOK_GENERATED_PRAG || tok == token::TOK_DEPRECATED_PRAG || tok == token::TOK_WARNING_PRAG || tok == token::TOK_UNPACK_PRAG || tok == token::TOK_NOUNPACK_PRAG || tok == token::TOK_ANN_PRAG || tok == token::TOK_MINIMAL_PRAG || tok == token::TOK_CTYPE_PRAG || tok == token::TOK_OVERLAPPING_PRAG || tok == token::TOK_OVERLAPPABLE_PRAG || tok == token::TOK_OVERLAPS_PRAG || tok == token::TOK_INCOHERENT_PRAG || tok == token::TOK_COMPLETE_PRAG || tok == token::TOK_CLOSE_PRAG || tok == token::TOK_DOTDOT || tok == token::TOK_COLON || tok == token::TOK_DCOLON || tok == token::TOK_EQUAL || tok == token::TOK_LAM || tok == token::TOK_LCASE || tok == token::TOK_VBAR || tok == token::TOK_LARROW || tok == token::TOK_RARROW || tok == token::TOK_AT || tok == token::TOK_TILDE || tok == token::TOK_DARROW || tok == token::TOK_MINUS || tok == token::TOK_BANG || tok == token::TOK_STAR || tok == token::TOK_lARROWTAIL || tok == token::TOK_rARROWTAIL || tok == token::TOK_LARROWTAIL || tok == token::TOK_RARROWTAIL || tok == token::TOK_DOT || tok == token::TOK_TYPEAPP || tok == token::TOK_OCURLY || tok == token::TOK_CCURLY || tok == token::TOK_VOCURLY || tok == token::TOK_VCCURLY || tok == token::TOK_OBRACK || tok == token::TOK_CBRACK || tok == token::TOK_OPABRACK || tok == token::TOK_CPABRACK || tok == token::TOK_OPAREN || tok == token::TOK_CPAREN || tok == token::TOK_OUBXPAREN || tok == token::TOK_CUBXPAREN || tok == token::TOK_OPARENBAR || tok == token::TOK_CPARENBAR || tok == token::TOK_SEMI || tok == token::TOK_COMMA || tok == token::TOK_BACKQUOTE || tok == token::TOK_SIMPLEQUOTE || tok == 392 || tok == 393 || tok == 394 || tok == 395);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, char v, location_type l)
         : super_type(token_type (tok), std::move (v), std::move (l))
       {
-        YYASSERT (tok == token::TOK_CHAR || tok == token::TOK_PRIMCHAR);
+        YY_ASSERT (tok == token::TOK_CHAR || tok == token::TOK_PRIMCHAR);
       }
 #else
       symbol_type (int tok, const char& v, const location_type& l)
         : super_type(token_type (tok), v, l)
       {
-        YYASSERT (tok == token::TOK_CHAR || tok == token::TOK_PRIMCHAR);
+        YY_ASSERT (tok == token::TOK_CHAR || tok == token::TOK_PRIMCHAR);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, double v, location_type l)
         : super_type(token_type (tok), std::move (v), std::move (l))
       {
-        YYASSERT (tok == token::TOK_RATIONAL || tok == token::TOK_PRIMDOUBLE);
+        YY_ASSERT (tok == token::TOK_RATIONAL || tok == token::TOK_PRIMDOUBLE);
       }
 #else
       symbol_type (int tok, const double& v, const location_type& l)
         : super_type(token_type (tok), v, l)
       {
-        YYASSERT (tok == token::TOK_RATIONAL || tok == token::TOK_PRIMDOUBLE);
+        YY_ASSERT (tok == token::TOK_RATIONAL || tok == token::TOK_PRIMDOUBLE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, float v, location_type l)
         : super_type(token_type (tok), std::move (v), std::move (l))
       {
-        YYASSERT (tok == token::TOK_PRIMFLOAT);
+        YY_ASSERT (tok == token::TOK_PRIMFLOAT);
       }
 #else
       symbol_type (int tok, const float& v, const location_type& l)
         : super_type(token_type (tok), v, l)
       {
-        YYASSERT (tok == token::TOK_PRIMFLOAT);
+        YY_ASSERT (tok == token::TOK_PRIMFLOAT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, int v, location_type l)
         : super_type(token_type (tok), std::move (v), std::move (l))
       {
-        YYASSERT (tok == token::TOK_INTEGER || tok == token::TOK_PRIMINTEGER || tok == token::TOK_PRINTWORD);
+        YY_ASSERT (tok == token::TOK_INTEGER || tok == token::TOK_PRIMINTEGER || tok == token::TOK_PRINTWORD);
       }
 #else
       symbol_type (int tok, const int& v, const location_type& l)
         : super_type(token_type (tok), v, l)
       {
-        YYASSERT (tok == token::TOK_INTEGER || tok == token::TOK_PRIMINTEGER || tok == token::TOK_PRINTWORD);
+        YY_ASSERT (tok == token::TOK_INTEGER || tok == token::TOK_PRIMINTEGER || tok == token::TOK_PRINTWORD);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, std::string v, location_type l)
         : super_type(token_type (tok), std::move (v), std::move (l))
       {
-        YYASSERT (tok == token::TOK_VARID || tok == token::TOK_CONID || tok == token::TOK_VARSYM || tok == token::TOK_CONSYM || tok == token::TOK_QVARID || tok == token::TOK_QCONID || tok == token::TOK_QVARSYM || tok == token::TOK_QCONSYM || tok == token::TOK_IPDUPVARID || tok == token::TOK_LABELVARID || tok == token::TOK_STRING || tok == token::TOK_PRIMSTRING);
+        YY_ASSERT (tok == token::TOK_VARID || tok == token::TOK_CONID || tok == token::TOK_VARSYM || tok == token::TOK_CONSYM || tok == token::TOK_QVARID || tok == token::TOK_QCONID || tok == token::TOK_QVARSYM || tok == token::TOK_QCONSYM || tok == token::TOK_IPDUPVARID || tok == token::TOK_LABELVARID || tok == token::TOK_STRING || tok == token::TOK_PRIMSTRING);
       }
 #else
       symbol_type (int tok, const std::string& v, const location_type& l)
         : super_type(token_type (tok), v, l)
       {
-        YYASSERT (tok == token::TOK_VARID || tok == token::TOK_CONID || tok == token::TOK_VARSYM || tok == token::TOK_CONSYM || tok == token::TOK_QVARID || tok == token::TOK_QCONID || tok == token::TOK_QVARSYM || tok == token::TOK_QCONSYM || tok == token::TOK_IPDUPVARID || tok == token::TOK_LABELVARID || tok == token::TOK_STRING || tok == token::TOK_PRIMSTRING);
+        YY_ASSERT (tok == token::TOK_VARID || tok == token::TOK_CONID || tok == token::TOK_VARSYM || tok == token::TOK_CONSYM || tok == token::TOK_QVARID || tok == token::TOK_QCONID || tok == token::TOK_QVARSYM || tok == token::TOK_QCONSYM || tok == token::TOK_IPDUPVARID || tok == token::TOK_LABELVARID || tok == token::TOK_STRING || tok == token::TOK_PRIMSTRING);
       }
 #endif
     };
@@ -3447,8 +3463,8 @@ switch (yytype)
     parser (const parser&);
     parser& operator= (const parser&);
 
-    /// State numbers.
-    typedef int state_type;
+    /// Stored state numbers (used for stacks).
+    typedef short state_type;
 
     /// Generate an error message.
     /// \param yystate   the state where the error occurred.
@@ -3459,7 +3475,7 @@ switch (yytype)
     /// Compute post-reduction state.
     /// \param yystate   the current state
     /// \param yysym     the nonterminal to push on the stack
-    state_type yy_lr_goto_state_ (state_type yystate, int yysym);
+    static state_type yy_lr_goto_state_ (state_type yystate, int yysym);
 
     /// Whether the given \c yypact_ value indicates a defaulted state.
     /// \param yyvalue   the value to check
@@ -3473,40 +3489,42 @@ switch (yytype)
     static const short yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
-    static token_number_type yytranslate_ (token_type t);
+    /// In theory \a t should be a token_type, but character literals
+    /// are valid, yet not members of the token_type enum.
+    static token_number_type yytranslate_ (int t);
 
     // Tables.
-  // YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
-  // STATE-NUM.
-  static const short yypact_[];
+    // YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
+    // STATE-NUM.
+    static const short yypact_[];
 
-  // YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
-  // Performed when YYTABLE does not specify something else to do.  Zero
-  // means the default is an error.
-  static const unsigned short yydefact_[];
+    // YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
+    // Performed when YYTABLE does not specify something else to do.  Zero
+    // means the default is an error.
+    static const short yydefact_[];
 
-  // YYPGOTO[NTERM-NUM].
-  static const short yypgoto_[];
+    // YYPGOTO[NTERM-NUM].
+    static const short yypgoto_[];
 
-  // YYDEFGOTO[NTERM-NUM].
-  static const short yydefgoto_[];
+    // YYDEFGOTO[NTERM-NUM].
+    static const short yydefgoto_[];
 
-  // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
-  // positive, shift that token.  If negative, reduce the rule whose
-  // number is the opposite.  If YYTABLE_NINF, syntax error.
-  static const short yytable_[];
+    // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
+    // positive, shift that token.  If negative, reduce the rule whose
+    // number is the opposite.  If YYTABLE_NINF, syntax error.
+    static const short yytable_[];
 
-  static const short yycheck_[];
+    static const short yycheck_[];
 
-  // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
-  // symbol of state STATE-NUM.
-  static const unsigned short yystos_[];
+    // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
+    // symbol of state STATE-NUM.
+    static const short yystos_[];
 
-  // YYR1[YYN] -- Symbol number of symbol that rule YYN derives.
-  static const unsigned short yyr1_[];
+    // YYR1[YYN] -- Symbol number of symbol that rule YYN derives.
+    static const short yyr1_[];
 
-  // YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.
-  static const unsigned char yyr2_[];
+    // YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.
+    static const signed char yyr2_[];
 
 
     /// Convert the symbol name \a n to a form suitable for a diagnostic.
@@ -3516,8 +3534,8 @@ switch (yytype)
     /// For a symbol, its name in clear.
     static const char* const yytname_[];
 #if YYDEBUG
-  // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-  static const unsigned short yyrline_[];
+    // YYRLINE[YYN] -- Source line where rule number YYN was defined.
+    static const short yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r);
     /// Print the state stack on the debug stream.
@@ -3569,7 +3587,8 @@ switch (yytype)
       symbol_number_type type_get () const YY_NOEXCEPT;
 
       /// The state number used to denote an empty symbol.
-      enum { empty_state = -1 };
+      /// We use the initial state, as it does not have a value.
+      enum { empty_state = 0 };
 
       /// The state.
       /// \a empty when empty.
@@ -3591,6 +3610,10 @@ switch (yytype)
       /// Assignment, needed by push_back by some old implementations.
       /// Moves the contents of that.
       stack_symbol_type& operator= (stack_symbol_type& that);
+
+      /// Assignment, needed by push_back by other implementations.
+      /// Needed by some other old implementations.
+      stack_symbol_type& operator= (const stack_symbol_type& that);
 #endif
     };
 
@@ -3603,6 +3626,7 @@ switch (yytype)
       typedef typename S::reverse_iterator iterator;
       typedef typename S::const_reverse_iterator const_iterator;
       typedef typename S::size_type size_type;
+      typedef typename std::ptrdiff_t index_type;
 
       stack (size_type n = 200)
         : seq_ (n)
@@ -3611,37 +3635,19 @@ switch (yytype)
       /// Random access.
       ///
       /// Index 0 returns the topmost element.
-      T&
-      operator[] (size_type i)
-      {
-        return seq_[size () - 1 - i];
-      }
-
-      /// Random access.
-      ///
-      /// Index 0 returns the topmost element.
-      T&
-      operator[] (int i)
-      {
-        return operator[] (size_type (i));
-      }
-
-      /// Random access.
-      ///
-      /// Index 0 returns the topmost element.
       const T&
-      operator[] (size_type i) const
+      operator[] (index_type i) const
       {
-        return seq_[size () - 1 - i];
+        return seq_[size_type (size () - 1 - i)];
       }
 
       /// Random access.
       ///
       /// Index 0 returns the topmost element.
-      const T&
-      operator[] (int i) const
+      T&
+      operator[] (index_type i)
       {
-        return operator[] (size_type (i));
+        return seq_[size_type (size () - 1 - i)];
       }
 
       /// Steal the contents of \a t.
@@ -3656,7 +3662,7 @@ switch (yytype)
 
       /// Pop elements from the stack.
       void
-      pop (int n = 1) YY_NOEXCEPT
+      pop (std::ptrdiff_t n = 1) YY_NOEXCEPT
       {
         for (; 0 < n; --n)
           seq_.pop_back ();
@@ -3670,10 +3676,16 @@ switch (yytype)
       }
 
       /// Number of elements on the stack.
-      size_type
+      index_type
       size () const YY_NOEXCEPT
       {
-        return seq_.size ();
+        return index_type (seq_.size ());
+      }
+
+      std::ptrdiff_t
+      ssize () const YY_NOEXCEPT
+      {
+        return std::ptrdiff_t (size ());
       }
 
       /// Iterator on top of the stack (going downwards).
@@ -3694,20 +3706,20 @@ switch (yytype)
       class slice
       {
       public:
-        slice (const stack& stack, int range)
+        slice (const stack& stack, index_type range)
           : stack_ (stack)
           , range_ (range)
         {}
 
         const T&
-        operator[] (int i) const
+        operator[] (index_type i) const
         {
           return stack_[range_ - i];
         }
 
       private:
         const stack& stack_;
-        int range_;
+        index_type range_;
       };
 
     private:
@@ -3742,6 +3754,10 @@ switch (yytype)
     /// Pop \a n symbols from the stack.
     void yypop_ (int n = 1);
 
+    /// Some specific tokens.
+    static const token_number_type yy_error_token_ = 1;
+    static const token_number_type yy_undef_token_ = 2;
+
     /// Constants.
     enum
     {
@@ -3749,8 +3765,6 @@ switch (yytype)
       yylast_ = 5826,     ///< Last index in yytable_.
       yynnts_ = 205,  ///< Number of nonterminal symbols.
       yyfinal_ = 12, ///< Termination state number.
-      yyterror_ = 1,
-      yyerrcode_ = 256,
       yyntokens_ = 141  ///< Number of tokens.
     };
 
@@ -3761,7 +3775,7 @@ switch (yytype)
 
   inline
   parser::token_number_type
-  parser::yytranslate_ (token_type t)
+  parser::yytranslate_ (int t)
   {
     // YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to
     // TOKEN-NUM as returned by yylex.
@@ -3810,15 +3824,14 @@ switch (yytype)
      125,   126,   127,   128,   129,   130,   131,   132,   133,   134,
      135,   136,   137,   138,   139,   140
     };
-    const unsigned user_token_number_max_ = 395;
-    const token_number_type undef_token_ = 2;
+    const int user_token_number_max_ = 395;
 
-    if (static_cast<int> (t) <= yyeof_)
+    if (t <= 0)
       return yyeof_;
-    else if (static_cast<unsigned> (t) <= user_token_number_max_)
+    else if (t <= user_token_number_max_)
       return translate_table[t];
     else
-      return undef_token_;
+      return yy_undef_token_;
   }
 
   // basic_symbol.
@@ -4543,37 +4556,8 @@ switch (yytype)
     return type;
   }
 
-  inline
-  parser::token_type
-  parser::by_type::token () const YY_NOEXCEPT
-  {
-    // YYTOKNUM[NUM] -- (External) token number corresponding to the
-    // (internal) symbol number NUM (which must be that of a token).  */
-    static
-    const unsigned short
-    yytoken_number_[] =
-    {
-       0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
-     275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
-     285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
-     295,   296,   297,   298,   299,   300,   301,   302,   303,   304,
-     305,   306,   307,   308,   309,   310,   311,   312,   313,   314,
-     315,   316,   317,   318,   319,   320,   321,   322,   323,   324,
-     325,   326,   327,   328,   329,   330,   331,   332,   333,   334,
-     335,   336,   337,   338,   339,   340,   341,   342,   343,   344,
-     345,   346,   347,   348,   349,   350,   351,   352,   353,   354,
-     355,   356,   357,   358,   359,   360,   361,   362,   363,   364,
-     365,   366,   367,   368,   369,   370,   371,   372,   373,   374,
-     375,   376,   377,   378,   379,   380,   381,   382,   383,   384,
-     385,   386,   387,   388,   389,   390,   391,   392,   393,   394,
-     395
-    };
-    return token_type (yytoken_number_[type]);
-  }
-
 } // yy
-#line 4577 "parser.hh"
+#line 4561 "parser.hh"
 
 
 
