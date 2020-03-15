@@ -1,25 +1,27 @@
-size = 1   Test.#11 = Foreign.String.unpack_cpp_string Test.#12
-size = 1   Test.#12 = "case: failed pattern match"
-size = 1   Test.#19 = 'y'
-size = 1   Test.#20 = 'o'
-size = 1   Test.#21 = '!'
-size = 1   Test.#22 = Test.#21:[]
-size = 1   Test.#23 = Test.#20:Test.#22
-size = 1   Test.#24 = Test.#19:Test.#23
-size = 1   Test.#26 = Foreign.String.unpack_cpp_string Test.#27
-size = 1   Test.#27 = "case: failed pattern match"
-size = 1   Test.#34 = 2
-size = 1   Test.#35 = 10
+size = 1   Test.#10 = Test.#4:Test.#9
+size = 1   Test.#12 = Foreign.String.unpack_cpp_string Test.#13
+size = 1   Test.#13 = "case: failed pattern match"
+size = 1   Test.#20 = 'y'
+size = 1   Test.#21 = 'o'
+size = 1   Test.#22 = '!'
+size = 1   Test.#23 = []
+size = 1   Test.#24 = Test.#22:Test.#23
+size = 1   Test.#25 = Test.#21:Test.#24
+size = 1   Test.#26 = Test.#20:Test.#25
+size = 1   Test.#28 = Foreign.String.unpack_cpp_string Test.#29
+size = 1   Test.#29 = "case: failed pattern match"
+size = 1   Test.#37 = 2
+size = 1   Test.#38 = 10
 size = 1   Test.#4 = 'y'
 size = 1   Test.#5 = 'o'
 size = 1   Test.#6 = '!'
-size = 1   Test.#7 = Test.#6:[]
-size = 1   Test.#8 = Test.#5:Test.#7
-size = 1   Test.#9 = Test.#4:Test.#8
-size = 1   Test.$v#1 = Compiler.Base.error Test.#9
-size = 1   Test.$v#2 = Compiler.Base.error Test.#11
-size = 1   Test.$v#3 = Compiler.Base.error Test.#24
-size = 1   Test.$v#4 = Compiler.Base.error Test.#26
+size = 1   Test.#7 = []
+size = 1   Test.#8 = Test.#6:Test.#7
+size = 1   Test.#9 = Test.#5:Test.#8
+size = 1   Test.$v#1 = Compiler.Base.error Test.#10
+size = 1   Test.$v#2 = Compiler.Base.error Test.#12
+size = 1   Test.$v#3 = Compiler.Base.error Test.#26
+size = 1   Test.$v#4 = Compiler.Base.error Test.#28
 size = 1   Test.f = \#1 -> case #1 of {#2:#3 -> #2; [] -> Test.$v#1; _ -> Test.$v#2}
-size = 3   Test.g = \#13 -> let {#28 = 10} in let {#29 = case #13 of {#17:#18 -> #17; [] -> Test.$v#3; _ -> Test.$v#4}} in Prelude:add #28 #29
-size = 1   Test.h = Prelude:add Test.#35 Test.#34
+size = 3   Test.g = \#14 -> let {#30 = 10} in let {#31 = case #14 of {#18:#19 -> #18; [] -> Test.$v#3; _ -> Test.$v#4}} in Prelude:add #30 #31
+size = 1   Test.h = Prelude:add Test.#38 Test.#37
