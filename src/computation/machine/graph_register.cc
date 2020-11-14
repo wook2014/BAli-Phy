@@ -438,7 +438,7 @@ void reg_heap::do_pending_effect_unregistrations()
 
 int reg_heap::force_count(int r) const
 {
-    if (not reg_is_changeable(r)) return 0;
+    if (not reg_is_changeable_or_forcing(r)) return 0;
 
     // Count a reference from the program_result_head.
     int count = 0;
@@ -447,12 +447,12 @@ int reg_heap::force_count(int r) const
 
     // Look at steps that USE the root's result
     for(auto& [r2,_]: regs[r].used_by)
-        if (prog_steps[r2] > 0)
+        if (prog_force_counts[r2] > 0)
             count++;
 
     // Look at steps that FORCE the root's result
     for(auto& [r2,_]: regs[r].forced_by)
-        if (prog_steps[r2] > 0)
+        if (prog_force_counts[r2] > 0)
             count++;
 
     // Look at steps that CALL the root's result
