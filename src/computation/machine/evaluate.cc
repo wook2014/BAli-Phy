@@ -71,6 +71,7 @@ void throw_reg_exception(reg_heap& M, int t, int R, myexception& e, bool changea
 }
 
 /// These are LAZY operation args! They don't evaluate arguments until they are evaluated by the operation (and then only once).
+template <std::pair<int,int>(reg_heap::*incremental_evaluate)(int)>
 class RegOperationArgs final: public OperationArgs
 {
     const int r;
@@ -88,7 +89,7 @@ class RegOperationArgs final: public OperationArgs
     /// Evaluate the reg r2, record dependencies, and return the reg following call chains.
     int evaluate_reg_force(int r2)
         {
-            auto [r3, value] = M.incremental_evaluate1(r2);
+            auto [r3, value] = (M.*incremental_evaluate)(r2);
 
             if (M.reg_is_changeable_or_forcing(r3))
             {
@@ -103,7 +104,7 @@ class RegOperationArgs final: public OperationArgs
     int evaluate_reg_to_reg(int r2)
         {
             // Compute the value, and follow index_var chains (which are not changeable).
-            auto [r3, value] = M.incremental_evaluate1(r2);
+            auto [r3, value] = (M.*incremental_evaluate)(r2);
 
             // Note that although r2 is newly used, r3 might be already used if it was 
             // found from r2 through a non-changeable reg_var chain.
@@ -366,7 +367,7 @@ pair<int,int> reg_heap::incremental_evaluate1_(int r)
             try
             {
                 closure_stack.push_back( closure_at(r) );
-                RegOperationArgs Args(r, s, sp, *this);
+                RegOperationArgs<&reg_heap::incremental_evaluate1> Args(r, s, sp, *this);
                 auto O = expression_at(r).head().assert_is_a<Operation>()->op;
                 closure value = (*O)(Args);
                 closure_stack.pop_back();
@@ -442,106 +443,6 @@ pair<int,int> reg_heap::incremental_evaluate1_(int r)
     std::cerr<<"incremental_evaluate: unreachable?";
     std::abort();
 }
-
-/// These are LAZY operation args! They don't evaluate arguments until they are evaluated by the operation (and then only once).
-class RegOperationArgs2 final: public OperationArgs
-{
-    const int r;
-
-    const int s;
-
-    const int sp;  // creator step
-
-    const bool first_eval;
-
-    const closure& current_closure() const {return memory().closure_stack.back();}
-
-    bool evaluate_changeables() const {return true;}
-
-    /// Evaluate the reg r2, record dependencies, and return the reg following call chains.
-    int evaluate_reg_force(int r2)
-        {
-            auto [r3, value] = M.incremental_evaluate2(r2);
-
-            if (M.reg_is_changeable_or_forcing(r3))
-            {
-                if (first_eval)
-                    M.set_forced_reg(r, r3);
-            }
-
-            return value;
-        }
-
-    /// Evaluate the reg r2, record a dependency on r2, and return the reg following call chains.
-    int evaluate_reg_to_reg(int r2)
-        {
-            // Compute the value, and follow index_var chains (which are not changeable).
-            auto [r3, value] = M.incremental_evaluate2(r2);
-
-            // Note that although r2 is newly used, r3 might be already used if it was 
-            // found from r2 through a non-changeable reg_var chain.
-            if (M.reg_is_to_changeable(r3))
-            {
-                used_changeable = true;
-                if (first_eval)
-                    M.set_used_reg(r, r3);
-            }
-            else if (M.reg_is_changeable_or_forcing(r3))
-            {
-                if (first_eval)
-                    M.set_forced_reg(r, r3);
-            }
-
-            return value;
-        }
-
-    const closure& evaluate_reg_to_closure(int r2)
-        {
-            int r3 = evaluate_reg_to_reg(r2);
-            return M[r3];
-        }
-
-    const closure& evaluate_reg_to_closure_(int r2)
-        {
-            int r3 = evaluate_reg_force(r2);
-            return M[r3];
-        }
-
-public:
-
-    bool used_changeable = false;
-
-    void make_changeable()
-    {
-        used_changeable = true;
-    }
-
-    // If we unreference regs that evaluate to a variable, then we unreference p->let q=2 in q
-    // and point references to q instead of p.  But then it would not be true that a variable can
-    // only be referenced if the slot that created it is still referenced.
-
-    int allocate_reg()
-        {
-            int s_alloc = used_changeable?s:sp;
-            int r_alloc = OperationArgs::allocate_reg();
-            if (s_alloc > 0)
-                M.mark_reg_created_by_step(r_alloc, s_alloc);
-            return r_alloc;
-        }
-
-    void set_effect(const effect& e)
-        {
-            make_changeable();
-            memory().mark_step_with_effect(s);
-            e.register_effect(M, s);
-        }
-
-    RegOperationArgs2* clone() const {return new RegOperationArgs2(*this);}
-
-    RegOperationArgs2(int r_, int s_, int sp_, reg_heap& m)
-        :OperationArgs(m), r(r_), s(s_), sp(sp_), first_eval(m.reg_is_unevaluated(r))
-        { }
-};
 
 /// Evaluate r and look through index_var chains to return the first reg that is NOT a reg_var.
 /// The returned reg is guaranteed to be (a) in WHNF (a lambda or constructor) and (b) not an reg_var.
@@ -704,7 +605,7 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
             try
             {
                 closure_stack.push_back( closure_at(r) );
-                RegOperationArgs2 Args(r, s, sp, *this);
+                RegOperationArgs<&reg_heap::incremental_evaluate2> Args(r, s, sp, *this);
                 auto O = expression_at(r).head().assert_is_a<Operation>()->op;
                 closure value = (*O)(Args);
                 closure_stack.pop_back();
