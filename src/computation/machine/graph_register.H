@@ -560,7 +560,8 @@ public:
     int result_for_reg(int r) const;
     bool reg_has_call(int r) const;
     int call_for_reg(int r) const;
-    void force_reg2(int r);
+    void force_reg_no_call(int r);
+    void force_reg_changeable(int r);
 
     const closure& access_value_for_reg(int R1) const;
 
@@ -762,9 +763,11 @@ inline bool reg_heap::reg_is_to_changeable(int r) const
 
 inline bool reg_heap::has_force2(int r) const
 {
-    /* A reg is force only if
+    /* During unshare_regs2, a reg is forced only if
      * - It is not marked unforced (unshare_force_bit)
      * - It is evaluated in the PPET (prog_results)
+     * During evaluation, we also have to consider if constant_with_force regs are forced.
+     * - ???
      */
     return (not prog_unshare[r].test(unshare_force_bit)) and prog_results[r] > 0;
 }
