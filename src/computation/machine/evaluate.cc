@@ -222,7 +222,23 @@ pair<int,int> reg_heap::incremental_evaluate1_(int r)
         //    std::cerr<<"   statement: "<<r<<":   "<<regs.access(r).E.print()<<std::endl;
 #endif
 
-        if (reg_is_constant_no_force(r) or reg_is_constant_with_force(r)) return {r,r};
+        if (reg_is_constant_no_force(r)) return {r,r};
+
+        else if (reg_is_constant_with_force(r))
+        {
+            if (result_for_reg(r) < 0)
+            {
+                if (not tokens[root_token].children.empty())
+                {
+                    int t = tokens[root_token].children[0];
+                    tokens[t].vm_result.add_value(r, non_computed_index);
+                }
+                prog_results[r] = r;
+            }
+
+            assert(result_for_reg(r) == r);
+            return {r, r};
+        }
 
         else if (reg_is_changeable(r))
         {
@@ -320,7 +336,7 @@ pair<int,int> reg_heap::incremental_evaluate1_(int r)
             {
                 //  If thisis unevaluated, then I think we must have just forced these regs.
                 for(auto [fr,_]: regs[r].forced_regs)
-                    assert(has_force2(fr) or reg_is_constant_no_force(fr) or reg_is_constant_with_force(fr));
+                    assert(has_force2(fr));
 
                 if (reg_is_to_changeable(r3))
                     mark_reg_index_var_with_force_to_changeable(r);
@@ -348,7 +364,16 @@ pair<int,int> reg_heap::incremental_evaluate1_(int r)
             if (regs[r].forced_regs.empty())
                 mark_reg_constant_no_force(r);
             else
+            {
                 mark_reg_constant_with_force(r);
+
+                if (not tokens[root_token].children.empty())
+                {
+                    int t = tokens[root_token].children[0];
+                    tokens[t].vm_result.add_value(r, non_computed_index);
+                }
+                prog_results[r] = r;
+            }
             assert( not has_step1(r) );
             assert(not reg_is_unevaluated(r));
             return {r,r};
@@ -504,9 +529,18 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
 
         else if (reg_is_constant_with_force(r))
         {
+            if (result_for_reg(r) < 0)
+            {
+                int t = tokens[root_token].children[0];
+                tokens[t].vm_result.add_value(r, non_computed_index);
+                prog_results[r] = r;
+            }
+            assert(result_for_reg(r) == r);
+
             if (not has_force2(r))
                 force_reg_no_call(r);
-            return {r,r};
+
+            return {r, r};
         }
 
         else if (reg_is_changeable(r))
@@ -646,7 +680,13 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
             if (regs[r].forced_regs.empty())
                 mark_reg_constant_no_force(r);
             else
+            {
                 mark_reg_constant_with_force(r);
+
+                int t = tokens[root_token].children[0];
+                tokens[t].vm_result.add_value(r, non_computed_index);
+                prog_results[r] = r;
+            }
             assert( not has_step1(r) );
             assert(not reg_is_unevaluated(r));
             return {r,r};

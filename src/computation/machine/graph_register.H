@@ -763,11 +763,11 @@ inline bool reg_heap::reg_is_to_changeable(int r) const
 
 inline bool reg_heap::has_force2(int r) const
 {
-    /* During unshare_regs2, a reg is forced only if
+    assert(reg_is_changeable_or_forcing(r));
+
+    /* A reg is forced only if
      * - It is not marked unforced (unshare_force_bit)
      * - It is evaluated in the PPET (prog_results)
-     * During evaluation, we also have to consider if constant_with_force regs are forced.
-     * - ???
      */
     return (not prog_unshare[r].test(unshare_force_bit)) and prog_results[r] > 0;
 }
