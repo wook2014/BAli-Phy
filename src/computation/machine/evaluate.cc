@@ -592,7 +592,7 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
                 prog_unshare[r].reset(unshare_result_bit);
 
                 if (not has_force2(r))
-                    force_reg_changeable(r);
+                    force_reg_no_call(r);
 
                 prog_unshare[r].reset(unshare_force_bit);
 
