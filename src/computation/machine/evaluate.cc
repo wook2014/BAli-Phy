@@ -567,7 +567,7 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
             {
                 int s = step_index_for_reg(r);
                 // Evaluate S, looking through unchangeable redirections
-                auto [call, value] = incremental_evaluate2(steps[s].call);
+                auto [call, result] = incremental_evaluate2(steps[s].call);
 
                 // If computation_for_reg(r).call can be evaluated to refer to S w/o moving through any changable operations, 
                 // then it should be safe to change computation_for_reg(r).call to refer to S, even if r is changeable.
@@ -580,10 +580,9 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
                     set_call(s, call);
                 }
 
-                // r gets its value from S.
                 int t = tokens[root_token].children[0];
 
-                bool reshare_result = prog_unshare[r].test(unshare_result_bit) and (prog_results[r] == value);
+                bool reshare_result = prog_unshare[r].test(unshare_result_bit) and (prog_results[r] == result);
                 if (not reshare_result)
                 {
                     tokens[t].vm_result.add_value(r, prog_results[r]);
@@ -597,7 +596,7 @@ pair<int,int> reg_heap::incremental_evaluate2_(int r)
                 prog_unshare[r].reset(unshare_force_bit);
 
                 total_changeable_eval_with_call2++;
-                return {r, value};
+                return {r, result};
             }
         }
         else if (unevaluated_reg_is_index_var_no_force(r))
